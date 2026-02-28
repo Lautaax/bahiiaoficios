@@ -1,11 +1,40 @@
-<div align="center">
+# Portal de Oficios Bahía Blanca
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Este proyecto es una implementación de referencia para una plataforma de conexión entre clientes y profesionales de oficios.
 
-  <h1>Built with AI Studio</h2>
+## Estructura del Proyecto
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- **/src/types**: Definiciones de TypeScript para el modelo de datos (Usuarios, Perfiles, Reseñas).
+- **/src/components**: Componentes de UI reutilizables (ej: `ProfessionalCard`).
+- **/src/services**: Lógica de negocio y consultas a Firestore. Incluye datos de prueba (MOCK) para la demostración.
+- **/functions**: Código del Backend (Cloud Functions) para triggers de base de datos.
+- **/firestore.rules**: Reglas de seguridad para la base de datos.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Despliegue en Firebase
 
-</div>
+### 1. Base de Datos (Firestore)
+Las reglas de seguridad se encuentran en `firestore.rules`. Debes copiarlas a la consola de Firebase o desplegarlas usando el CLI:
+```bash
+firebase deploy --only firestore:rules
+```
+
+### 2. Índices Compuestos
+Para la consulta de profesionales ordenada por VIP y Rating, debes crear el siguiente índice en la colección `usuarios`:
+- **Campos**:
+  - `perfilProfesional.rubro`: Ascendente
+  - `perfilProfesional.isVip`: Descendente
+  - `perfilProfesional.ratingAvg`: Descendente
+
+### 3. Cloud Functions
+El código para la actualización automática de ratings está en `functions/index.js`.
+Despliega las funciones con:
+```bash
+firebase deploy --only functions
+```
+
+## Ejecución Local
+El frontend utiliza Vite. Para desarrollo local:
+```bash
+npm run dev
+```
+Nota: En esta demo, la aplicación utiliza datos simulados (`MOCK_PROFESSIONALS`) para demostrar la funcionalidad de UI y filtrado sin necesidad de credenciales reales de Firebase.
