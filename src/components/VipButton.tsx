@@ -15,9 +15,9 @@ interface Plan {
 
 const PLANS: Plan[] = [
   { id: '1_month', months: 1, price: 5000, originalPrice: 5000, discount: 0, label: 'Mensual' },
-  { id: '3_months', months: 3, price: 13500, originalPrice: 15000, discount: 10, label: 'Trimestral' },
-  { id: '6_months', months: 6, price: 24000, originalPrice: 30000, discount: 20, label: 'Semestral' },
-  { id: '12_months', months: 12, price: 42000, originalPrice: 60000, discount: 30, label: 'Anual' },
+  { id: '3_months', months: 3, price: 13800, originalPrice: 15000, discount: 8, label: 'Trimestral' },
+  { id: '6_months', months: 6, price: 25800, originalPrice: 30000, discount: 14, label: 'Semestral' },
+  { id: '12_months', months: 12, price: 48000, originalPrice: 60000, discount: 20, label: 'Anual' },
 ];
 
 export const VipButton: React.FC = () => {

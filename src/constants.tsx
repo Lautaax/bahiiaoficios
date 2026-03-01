@@ -1,9 +1,9 @@
-import { Lightbulb, Flame, ShowerHead, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car, Container } from 'lucide-react';
+import { Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car } from 'lucide-react';
 
 export const PROFESSIONS = [
   { name: 'Electricista', icon: Lightbulb },
   { name: 'Gasista', icon: Flame },
-  { name: 'Plomero', icon: ShowerHead },
+  { name: 'Plomero', icon: Droplets },
   { name: 'Albañil', icon: BrickWall },
   { name: 'Pintor', icon: Brush },
   { name: 'Carpintero', icon: Hammer },
@@ -17,7 +17,7 @@ export const PROFESSIONS = [
   { name: 'Pintor Autos', icon: SprayCan },
   { name: 'Mecánico Motos', icon: Bike },
   { name: 'Mecánico Autos', icon: Car },
-  { name: 'Mecánico Camiones', icon: Container },
+  { name: 'Mecánico Camiones', icon: Truck },
 ];
 
 export const ZONAS = [
