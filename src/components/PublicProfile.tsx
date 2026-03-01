@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 
@@ -248,6 +248,28 @@ export const PublicProfile: React.FC = () => {
               {descripcion || "Este profesional no ha añadido una descripción todavía."}
             </p>
           </div>
+
+          {/* Portfolio Section */}
+          {professional.profesionalInfo.fotosTrabajos && professional.profesionalInfo.fotosTrabajos.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <IconImage className="text-indigo-600" />
+                Trabajos Realizados
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {professional.profesionalInfo.fotosTrabajos.map((url, index) => (
+                  <div key={index} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <img 
+                      src={url} 
+                      alt={`Trabajo ${index + 1}`} 
+                      className="w-full h-full object-cover"
+                      onClick={() => window.open(url, '_blank')}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Reviews Section */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">

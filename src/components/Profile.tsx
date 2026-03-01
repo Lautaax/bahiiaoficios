@@ -4,7 +4,7 @@ import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { User as UserType, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase } from 'lucide-react';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
@@ -40,12 +40,16 @@ export const Profile: React.FC = () => {
   const [dniUploadStatus, setDniUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [dniUploadProgress, setDniUploadProgress] = useState(0);
 
+  // Works Images State
+  const [existingWorkImages, setExistingWorkImages] = useState<string[]>([]);
+  const [newWorkFiles, setNewWorkFiles] = useState<File[]>([]);
+  const [newWorkPreviews, setNewWorkPreviews] = useState<string[]>([]);
+  const [uploadingWorks, setUploadingWorks] = useState(false);
+
   useEffect(() => {
     const status = searchParams.get('status');
     if (status === 'success') {
       setSuccess(true);
-      // Optimistically update UI or show a specific message
-      // In a real app, we might want to poll the backend or wait for the webhook to update the user
     } else if (status === 'failure') {
       setError('El pago no se pudo completar. Por favor, intenta nuevamente.');
     } else if (status === 'pending') {
@@ -75,6 +79,7 @@ export const Profile: React.FC = () => {
       if (currentUser.profesionalInfo?.fotoDni) {
         setDniUploadStatus('success');
       }
+      setExistingWorkImages(currentUser.profesionalInfo?.fotosTrabajos || []);
     }
   }, [currentUser]);
 
@@ -98,6 +103,29 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const handleWorkImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setNewWorkFiles(prev => [...prev, ...files]);
+      
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setNewWorkPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeExistingWorkImage = (index: number) => {
+    setExistingWorkImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewWorkImage = (index: number) => {
+    setNewWorkFiles(prev => prev.filter((_, i) => i !== index));
+    setNewWorkPreviews(prev => {
+      // Revoke URL to avoid memory leaks
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -111,6 +139,7 @@ export const Profile: React.FC = () => {
       
       let newFotoUrl = formData.fotoUrl;
       let newFotoDni = formData.fotoDni;
+      let finalWorkImages = [...existingWorkImages];
 
       // Upload Profile Image
       if (imageFile) {
@@ -181,6 +210,29 @@ export const Profile: React.FC = () => {
         }
       }
 
+      // Upload New Work Images
+      if (newWorkFiles.length > 0) {
+        setUploadingWorks(true);
+        try {
+          const uploadPromises = newWorkFiles.map(async (file) => {
+            const timestamp = Date.now();
+            const randomSuffix = Math.floor(Math.random() * 1000);
+            const storageRef = ref(storage, `work_images/${currentUser.uid}/${timestamp}_${randomSuffix}`);
+            await uploadBytes(storageRef, file);
+            return await getDownloadURL(storageRef);
+          });
+
+          const uploadedUrls = await Promise.all(uploadPromises);
+          finalWorkImages = [...finalWorkImages, ...uploadedUrls];
+        } catch (workUploadError) {
+          console.error("Error uploading work images:", workUploadError);
+          setError('Error al subir algunas imágenes de trabajos.');
+          // Continue anyway to save other data
+        } finally {
+          setUploadingWorks(false);
+        }
+      }
+
       const updateData: any = {
         nombre: formData.nombre,
         zona: formData.zona,
@@ -189,6 +241,12 @@ export const Profile: React.FC = () => {
       };
 
       if (formData.rol === 'profesional') {
+        if (!formData.cuit || !formData.telefono) {
+          setError('Para perfiles profesionales, el CUIT/CUIL y el teléfono son obligatorios.');
+          setLoading(false);
+          return;
+        }
+
         // Ensure professional info exists or is updated
         // Saving contact info to profesionalInfo as requested: telefono, direccion, contactEmail
         updateData.profesionalInfo = {
@@ -197,7 +255,7 @@ export const Profile: React.FC = () => {
           isVip: currentUser.profesionalInfo?.isVip || false,
           ratingAvg: currentUser.profesionalInfo?.ratingAvg || 0,
           reviewCount: currentUser.profesionalInfo?.reviewCount || 0,
-          fotosTrabajos: currentUser.profesionalInfo?.fotosTrabajos || [],
+          fotosTrabajos: finalWorkImages,
           telefono: formData.telefono,
           direccion: formData.direccion,
           contactEmail: formData.contactEmail,
@@ -210,6 +268,11 @@ export const Profile: React.FC = () => {
 
       await updateDoc(userRef, updateData);
       
+      // Clear new files after successful save
+      setNewWorkFiles([]);
+      setNewWorkPreviews([]);
+      setExistingWorkImages(finalWorkImages);
+
       setSuccess(true);
       
     } catch (err) {
@@ -392,7 +455,9 @@ export const Profile: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono de Contacto</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Teléfono de Contacto <span className="text-red-500">*</span>
+                  </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Phone size={14} className="text-gray-400" />
@@ -443,7 +508,9 @@ export const Profile: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CUIT/CUIL</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    CUIT/CUIL <span className="text-red-500">*</span>
+                  </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <FileText size={14} className="text-gray-400" />
@@ -603,6 +670,60 @@ export const Profile: React.FC = () => {
                     </>
                   )}
                 </div>
+              </div>
+            </div>
+            {/* Works Images Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Trabajos Realizados (Portafolio)</label>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4">
+                  {/* Existing Images */}
+                  {existingWorkImages.map((url, index) => (
+                    <div key={`existing-${index}`} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                      <img src={url} alt={`Trabajo ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingWorkImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* New Images Previews */}
+                  {newWorkPreviews.map((url, index) => (
+                    <div key={`new-${index}`} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-indigo-200 dark:border-indigo-800 ring-2 ring-indigo-500 ring-opacity-50">
+                      <img src={url} alt={`Nuevo Trabajo ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeNewWorkImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-indigo-600/70 text-white text-[10px] text-center py-0.5">
+                        Nuevo
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Upload Button */}
+                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <IconImage size={24} className="text-gray-400 mb-1" />
+                    <span className="text-xs text-gray-500 text-center px-1">Agregar Fotos</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleWorkImagesChange}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Sube fotos de tus trabajos anteriores para mostrar tu experiencia a los clientes.
+                </p>
               </div>
             </div>
           </div>

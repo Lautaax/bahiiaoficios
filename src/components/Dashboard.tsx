@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Search, Filter, MapPin, Crown, X } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 
 export const Dashboard: React.FC = () => {
@@ -16,6 +16,7 @@ export const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [indexErrorLink, setIndexErrorLink] = useState<string | null>(null);
   const [showVipWelcome, setShowVipWelcome] = useState(false);
+  const [isRubroOpen, setIsRubroOpen] = useState(false);
 
   useEffect(() => {
     if (currentUser?.rol === 'profesional' && currentUser?.profesionalInfo?.isVip) {
@@ -159,19 +160,66 @@ export const Dashboard: React.FC = () => {
             {/* Filtros */}
             <div className="flex gap-4">
                 {/* Filtro Rubro */}
-                <div className="relative min-w-[180px]">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="relative min-w-[220px]">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Filter className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                    value={selectedRubro}
-                    onChange={(e) => setSelectedRubro(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm appearance-none"
-                >
-                    {rubros.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                    ))}
-                </select>
+                  </div>
+                  
+                  <button
+                    onClick={() => setIsRubroOpen(!isRubroOpen)}
+                    className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {selectedRubro === 'Todos' ? (
+                        <span className="text-gray-700">Todos los Rubros</span>
+                      ) : (
+                        <>
+                          {(() => {
+                            const p = PROFESSIONS.find(p => p.name === selectedRubro);
+                            const Icon = p?.icon;
+                            return Icon ? <Icon size={16} className="text-indigo-600 shrink-0" /> : null;
+                          })()}
+                          <span className="text-gray-900 font-medium truncate">{selectedRubro}</span>
+                        </>
+                      )}
+                    </div>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform ${isRubroOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isRubroOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setIsRubroOpen(false)}
+                      ></div>
+                      <div className="absolute z-20 mt-1 w-full bg-white shadow-xl max-h-80 rounded-xl py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm custom-scrollbar">
+                        <div
+                          className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-indigo-50 transition-colors ${selectedRubro === 'Todos' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-900'}`}
+                          onClick={() => {
+                            setSelectedRubro('Todos');
+                            setIsRubroOpen(false);
+                          }}
+                        >
+                          <span className="block truncate ml-8">Todos los Rubros</span>
+                        </div>
+                        {PROFESSIONS.map((profession) => (
+                          <div
+                            key={profession.name}
+                            className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-indigo-50 transition-colors flex items-center gap-3 ${selectedRubro === profession.name ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-900'}`}
+                            onClick={() => {
+                              setSelectedRubro(profession.name);
+                              setIsRubroOpen(false);
+                            }}
+                          >
+                            <profession.icon size={18} className={`${selectedRubro === profession.name ? 'text-indigo-600' : 'text-gray-400'}`} />
+                            <span className="block truncate">
+                              {profession.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Filtro Zona */}
@@ -190,6 +238,35 @@ export const Dashboard: React.FC = () => {
                 </select>
                 </div>
             </div>
+          </div>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="mb-10">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Explorar por Categoría</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {PROFESSIONS.map((profession) => (
+              <button
+                key={profession.name}
+                onClick={() => setSelectedRubro(profession.name === selectedRubro ? 'Todos' : profession.name)}
+                className={`group flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
+                  selectedRubro === profession.name
+                    ? 'bg-indigo-50 border-indigo-200 shadow-sm ring-1 ring-indigo-200'
+                    : 'bg-white border-gray-200 hover:border-indigo-200 hover:shadow-sm'
+                }`}
+              >
+                <div className={`p-3 rounded-full mb-3 transition-colors ${
+                  selectedRubro === profession.name ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-50 text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'
+                }`}>
+                  <profession.icon size={24} />
+                </div>
+                <span className={`text-sm font-medium text-center ${
+                  selectedRubro === profession.name ? 'text-indigo-700' : 'text-gray-700'
+                }`}>
+                  {profession.name}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
