@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
 import { Search, Filter, MapPin, Crown, X } from 'lucide-react';
-import { MOCK_PROFESSIONALS } from '../services/firestoreService';
 
 export const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -34,54 +33,47 @@ export const Dashboard: React.FC = () => {
       setLoading(true);
       setIndexErrorLink(null);
       try {
-        // Construct basic query
-        // Note: Compound queries with multiple orderBy and where clauses require an index in Firestore.
-        // If the index is missing, this might fail in a real environment until created.
-        // For this demo, we will fetch professionals and filter/sort client-side if needed,
-        // or try to use the optimal query.
-        
         const usersRef = collection(db, 'usuarios');
         
-        // We start with filtering by role 'profesional'
-        const q = query(
-          usersRef, 
-          where('rol', '==', 'profesional'),
-          // We can't easily mix inequality filters on different fields without advanced indexes.
-          // The prompt asks for:
-          // 1. rol == 'profesional'
-          // 2. orderBy 'isVip' desc
-          // 3. orderBy 'ratingAvg' desc
-          orderBy('profesionalInfo.isVip', 'desc'),
-          orderBy('profesionalInfo.ratingAvg', 'desc'),
-          limit(20)
-        );
+        // Try optimal query first
+        try {
+          const q = query(
+            usersRef, 
+            where('rol', '==', 'profesional'),
+            orderBy('profesionalInfo.isVip', 'desc'),
+            orderBy('profesionalInfo.ratingAvg', 'desc'),
+            limit(20)
+          );
 
-        const querySnapshot = await getDocs(q);
-        const docs = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
-        
-        if (docs.length === 0) {
-            // Fallback to mock data if Firestore is empty (for demo purposes)
-            setProfessionals(MOCK_PROFESSIONALS);
-        } else {
-            setProfessionals(docs);
+          const querySnapshot = await getDocs(q);
+          const docs = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as unknown as User));
+          setProfessionals(docs);
+        } catch (error: any) {
+          // If index is missing, fallback to simple query and client-side sort
+          if (error.code === 'failed-precondition' && error.message.includes('index')) {
+             console.warn("Missing index, falling back to client-side sort");
+             const simpleQ = query(
+               usersRef,
+               where('rol', '==', 'profesional'),
+               limit(50)
+             );
+             const querySnapshot = await getDocs(simpleQ);
+             let docs = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as unknown as User));
+             
+             // Client-side sort
+             docs = docs.sort((a, b) => {
+                if (a.profesionalInfo?.isVip && !b.profesionalInfo?.isVip) return -1;
+                if (!a.profesionalInfo?.isVip && b.profesionalInfo?.isVip) return 1;
+                return (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0);
+             });
+             
+             setProfessionals(docs);
+          } else {
+            throw error;
+          }
         }
       } catch (error: any) {
         console.error("Error fetching professionals:", error);
-        
-        // Check for missing index error
-        if (error.code === 'failed-precondition' && error.message.includes('index')) {
-            // Extract the link from the error message if possible, or use a generic message
-            // The error message usually contains the URL
-            const match = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-            if (match) {
-                setIndexErrorLink(match[0]);
-            } else {
-                setIndexErrorLink("https://console.firebase.google.com");
-            }
-        }
-        
-        // Fallback to mock data on error (e.g. missing index)
-        setProfessionals(MOCK_PROFESSIONALS);
       } finally {
         setLoading(false);
       }

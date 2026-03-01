@@ -147,8 +147,24 @@ export const Profile: React.FC = () => {
         setDniUploadProgress(0);
         
         try {
+          // Compress image
+          const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true
+          };
+          
+          let fileToUpload = dniFile;
+          try {
+            // Dynamic import to avoid global side effects
+            const imageCompression = (await import('browser-image-compression')).default;
+            fileToUpload = await imageCompression(dniFile, options);
+          } catch (compressionError) {
+            console.error("Error compressing image, uploading original:", compressionError);
+          }
+
           const storageRef = ref(storage, `dni_images/${currentUser.uid}`);
-          const uploadTask = uploadBytesResumable(storageRef, dniFile);
+          const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
 
           // Wrap uploadTask in a promise to await completion
           newFotoDni = await new Promise<string>((resolve, reject) => {

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search as SearchIcon, MapPin, Star, ShieldCheck, Filter, BadgeCheck } from 'lucide-react';
+import { Search as SearchIcon } from 'lucide-react';
 import { searchProfessionals } from '../services/firestoreService';
 import { User } from '../types';
 import { api } from '../services/api';
 import { Category } from '../types';
+import { ProfessionalCard } from './ProfessionalCard';
 
 export function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -124,53 +125,7 @@ export function Search() {
         ) : results.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {results.map((pro) => (
-              <div key={pro.uid} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden group">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={pro.fotoUrl || `https://ui-avatars.com/api/?name=${pro.nombre}&background=random`} 
-                        alt={pro.nombre}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm"
-                      />
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <h3 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{pro.nombre}</h3>
-                          {pro.profesionalInfo?.isVip && (
-                            <ShieldCheck className="w-4 h-4 text-yellow-500" fill="currentColor" fillOpacity={0.2} title="VIP" />
-                          )}
-                          {pro.profesionalInfo?.fotoDni && (
-                            <BadgeCheck className="w-4 h-4 text-blue-500" fill="currentColor" fillOpacity={0.1} title="Identidad Verificada" />
-                          )}
-                        </div>
-                        <p className="text-sm text-indigo-600 font-medium">{pro.profesionalInfo?.rubro}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-md">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm font-bold text-yellow-700">{pro.profesionalInfo?.ratingAvg}</span>
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
-                    {pro.profesionalInfo?.descripcion}
-                  </p>
-                  
-                  <div className="flex items-center text-xs text-gray-500 mb-4">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    {pro.zona}, {pro.ciudad}
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">
-                      {pro.profesionalInfo?.reviewCount} reseñas
-                    </span>
-                    <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
-                      Ver Perfil
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ProfessionalCard key={pro.uid} professional={pro} />
             ))}
           </div>
         ) : (

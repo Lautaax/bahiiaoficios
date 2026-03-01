@@ -11,6 +11,7 @@ import { Search } from './components/Search';
 import { Dashboard } from './components/Dashboard';
 import { VipButton } from './components/VipButton';
 import { Profile } from './components/Profile';
+import { PublicProfile } from './components/PublicProfile';
 import { CompleteProfile } from './components/CompleteProfile';
 
 function Navbar() {
@@ -102,6 +103,9 @@ function Layout({ children }: { children: React.ReactNode }) {
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-12 py-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
           <p>© 2026 Bahia Oficios. Todos los derechos reservados.</p>
+          <p className="mt-1 text-xs">
+            Diseñado por <a href="https://www.instagram.com/_lautaaj/?__pwa=1" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">@_lautaaj</a>
+          </p>
           <div className="mt-2 flex justify-center gap-4">
             <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Términos</span>
             <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</span>
@@ -137,6 +141,12 @@ function App() {
             <Route path="/search" element={
               <Layout>
                 <Search />
+              </Layout>
+            } />
+
+            <Route path="/profesional/:id" element={
+              <Layout>
+                <PublicProfile />
               </Layout>
             } />
 

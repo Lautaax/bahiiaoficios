@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { User, Review } from '../types';
 import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
@@ -25,6 +26,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
       if (!professional.uid) return;
       
       try {
+        // Try optimal query first
         const q = query(
           collection(db, 'resenas'),
           where('profesionalId', '==', professional.uid),
@@ -40,8 +42,32 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
           } as Review);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching latest review:", error);
+        // Fallback for missing index
+        if (error.code === 'failed-precondition') {
+           try {
+             const simpleQ = query(
+               collection(db, 'resenas'),
+               where('profesionalId', '==', professional.uid),
+               limit(10) // Fetch a few to sort client-side
+             );
+             const querySnapshot = await getDocs(simpleQ);
+             if (!querySnapshot.empty) {
+                const reviews = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
+                } as Review));
+                
+                // Sort client-side
+                reviews.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+                setLatestReview(reviews[0]);
+             }
+           } catch (fallbackError) {
+             console.error("Error in fallback fetch:", fallbackError);
+           }
+        }
       }
     };
 
@@ -61,6 +87,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     if (!showReviews && reviews.length === 0) {
       setLoadingReviews(true);
       try {
+        // Try optimal query first
         const q = query(
           collection(db, 'resenas'),
           where('profesionalId', '==', uid),
@@ -74,8 +101,30 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
         })) as Review[];
         setReviews(fetchedReviews);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching reviews:", error);
+        // Fallback for missing index
+        if (error.code === 'failed-precondition') {
+            try {
+                const simpleQ = query(
+                    collection(db, 'resenas'),
+                    where('profesionalId', '==', uid),
+                    limit(20) // Fetch more to sort client-side
+                );
+                const querySnapshot = await getDocs(simpleQ);
+                const fetchedReviews = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
+                })) as Review[];
+                
+                // Sort client-side
+                fetchedReviews.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+                setReviews(fetchedReviews.slice(0, 5));
+            } catch (fallbackError) {
+                console.error("Error in fallback fetch reviews:", fallbackError);
+            }
+        }
       } finally {
         setLoadingReviews(false);
       }
@@ -149,6 +198,12 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             </div>
             
             <div className="flex gap-2">
+              <Link 
+                to={`/profesional/${uid}`}
+                className="px-4 py-2.5 rounded-lg text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200"
+              >
+                Ver Perfil
+              </Link>
               {isClient && (
                 <button 
                   onClick={() => setShowReviewForm(!showReviewForm)}
