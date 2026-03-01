@@ -43,9 +43,10 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           } as Review);
         }
       } catch (error: any) {
-        console.error("Error fetching latest review:", error);
         // Fallback for missing index
         if (error.code === 'failed-precondition') {
+           // Suppress error log for known missing index issue, as we have a fallback
+           console.warn("Index missing for latest review query, using fallback.");
            try {
              const simpleQ = query(
                collection(db, 'resenas'),
@@ -102,9 +103,9 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
         })) as Review[];
         setReviews(fetchedReviews);
       } catch (error: any) {
-        console.error("Error fetching reviews:", error);
         // Fallback for missing index
         if (error.code === 'failed-precondition') {
+            console.warn("Index missing for reviews query, using fallback.");
             try {
                 const simpleQ = query(
                     collection(db, 'resenas'),

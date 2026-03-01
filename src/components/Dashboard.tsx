@@ -62,8 +62,11 @@ export const Dashboard: React.FC = () => {
              
              // Client-side sort
              docs = docs.sort((a, b) => {
-                if (a.profesionalInfo?.isVip && !b.profesionalInfo?.isVip) return -1;
-                if (!a.profesionalInfo?.isVip && b.profesionalInfo?.isVip) return 1;
+                const isVipA = !!a.profesionalInfo?.isVip;
+                const isVipB = !!b.profesionalInfo?.isVip;
+
+                if (isVipA && !isVipB) return -1;
+                if (!isVipA && isVipB) return 1;
                 return (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0);
              });
              

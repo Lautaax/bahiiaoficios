@@ -62,9 +62,9 @@ export const PublicProfile: React.FC = () => {
       })) as Review[];
       setReviews(fetchedReviews);
     } catch (err: any) {
-      console.error("Error fetching reviews:", err);
       // Fallback for missing index
       if (err.code === 'failed-precondition') {
+          console.warn("Index missing for reviews query in PublicProfile, using fallback.");
           try {
               const simpleQ = query(
                   collection(db, 'resenas'),

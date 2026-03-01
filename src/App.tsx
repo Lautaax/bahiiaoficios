@@ -14,6 +14,10 @@ import { Profile } from './components/Profile';
 import { PublicProfile } from './components/PublicProfile';
 import { CompleteProfile } from './components/CompleteProfile';
 
+import { Terms } from './components/Terms';
+import { Privacy } from './components/Privacy';
+import { Help } from './components/Help';
+
 function Navbar() {
   const { currentUser, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -107,9 +111,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             Diseñado por <a href="https://www.instagram.com/_lautaaj/?__pwa=1" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">@_lautaaj</a>
           </p>
           <div className="mt-2 flex justify-center gap-4">
-            <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Términos</span>
-            <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</span>
-            <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Ayuda</span>
+            <Link to="/terms" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Términos</Link>
+            <Link to="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</Link>
+            <Link to="/help" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Ayuda</Link>
           </div>
         </div>
       </footer>
@@ -153,6 +157,24 @@ function App() {
             <Route path="/dashboard" element={
               <Layout>
                 <Dashboard />
+              </Layout>
+            } />
+            
+            <Route path="/terms" element={
+              <Layout>
+                <Terms />
+              </Layout>
+            } />
+
+            <Route path="/privacy" element={
+              <Layout>
+                <Privacy />
+              </Layout>
+            } />
+
+            <Route path="/help" element={
+              <Layout>
+                <Help />
               </Layout>
             } />
 
