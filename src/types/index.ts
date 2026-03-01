@@ -19,6 +19,9 @@ export interface ProfesionalInfo {
   direccion?: string;
   fotoDni?: string;
   contactEmail?: string;
+  cuit?: string;
+  haceFactura?: boolean;
+  tipoFactura?: 'A' | 'C';
 }
 
 export interface User {
@@ -31,6 +34,7 @@ export interface User {
   zona: string; // e.g., 'Centro', 'Patagonia', 'Villa Mitre'
   profesionalInfo?: ProfesionalInfo; // Only if rol === 'profesional'
   createdAt?: any;
+  isNewUser?: boolean;
 }
 
 export interface Review {

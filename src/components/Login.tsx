@@ -16,39 +16,28 @@ export const Login: React.FC = () => {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, provider);
-      await checkAndCreateUserDoc(result.user);
-      navigate('/'); // Redirect to home/dashboard after successful login
+      
+      // Check if user profile exists
+      const userDocRef = doc(db, 'usuarios', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // New user -> Redirect to complete profile
+        navigate('/complete-profile');
+      } else {
+        // Existing user -> Redirect based on role
+        const userData = userDoc.data();
+        if (userData?.rol === 'profesional') {
+          navigate('/dashboard-profesional');
+        } else {
+          navigate('/');
+        }
+      }
     } catch (err: any) {
       console.error(err);
       setError('Error al iniciar sesión con proveedor social.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkAndCreateUserDoc = async (user: any) => {
-    const userDocRef = doc(db, 'usuarios', user.uid);
-    const userDoc = await getDoc(userDocRef);
-
-    if (!userDoc.exists()) {
-      // Create default client profile for social login users
-      await setDoc(userDocRef, {
-        uid: user.uid,
-        nombre: user.displayName || 'Usuario',
-        email: user.email || '',
-        rol: 'cliente',
-        ciudad: 'Bahía Blanca',
-        zona: 'Centro', // Default zone
-        createdAt: serverTimestamp(),
-        fotoUrl: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=random`,
-      });
-    } else {
-        // If user exists, check role for redirection if needed (handled in component logic usually)
-        const userData = userDoc.data();
-        if (userData.rol === 'profesional') {
-             navigate('/dashboard-profesional');
-             return;
-        }
     }
   };
 
@@ -68,17 +57,17 @@ export const Login: React.FC = () => {
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        const role = userData.rol;
+        const role = userData?.rol;
 
         // 3. Redirect based on role
         if (role === 'profesional') {
-          navigate('/dashboard-profesional'); // Example route
+          navigate('/dashboard-profesional');
         } else {
-          navigate('/'); // Client goes to home
+          navigate('/');
         }
       } else {
-        // Fallback if user exists in Auth but not in Firestore
-        navigate('/');
+        // User exists in Auth but not in Firestore -> Complete Profile
+        navigate('/complete-profile');
       }
 
     } catch (err: any) {

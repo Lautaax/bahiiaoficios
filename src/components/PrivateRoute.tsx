@@ -1,13 +1,15 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
+  allowNewUser?: boolean;
 }
 
-export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowNewUser = false }) => {
   const { currentUser, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -17,5 +19,18 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     );
   }
 
-  return currentUser ? <>{children}</> : <Navigate to="/login" />;
+  if (!currentUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (currentUser.isNewUser && !allowNewUser) {
+    return <Navigate to="/complete-profile" replace />;
+  }
+
+  if (!currentUser.isNewUser && allowNewUser) {
+    // If user is NOT new but tries to access complete-profile (allowNewUser=true), redirect to home
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 };

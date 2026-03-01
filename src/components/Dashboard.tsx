@@ -1,18 +1,32 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Search, Filter, MapPin } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X } from 'lucide-react';
 import { MOCK_PROFESSIONALS } from '../services/firestoreService';
 
 export const Dashboard: React.FC = () => {
+  const { currentUser } = useAuth();
   const [professionals, setProfessionals] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRubro, setSelectedRubro] = useState<string>('Todos');
   const [selectedZona, setSelectedZona] = useState<string>('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const [indexErrorLink, setIndexErrorLink] = useState<string | null>(null);
+  const [showVipWelcome, setShowVipWelcome] = useState(false);
+
+  useEffect(() => {
+    if (currentUser?.rol === 'profesional' && currentUser?.profesionalInfo?.isVip) {
+      // Check if we've already shown this message in this session
+      const hasSeenVipMessage = sessionStorage.getItem('hasSeenVipMessage');
+      if (!hasSeenVipMessage) {
+        setShowVipWelcome(true);
+        sessionStorage.setItem('hasSeenVipMessage', 'true');
+      }
+    }
+  }, [currentUser]);
 
   // Fetch professionals from Firestore
   useEffect(() => {
@@ -99,6 +113,30 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* VIP Welcome Message */}
+        {showVipWelcome && (
+          <div className="mb-8 bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-200 rounded-xl p-6 relative shadow-sm">
+            <button 
+              onClick={() => setShowVipWelcome(false)}
+              className="absolute top-4 right-4 text-amber-800 hover:text-amber-900"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex items-start gap-4">
+              <div className="bg-amber-400 p-3 rounded-full text-white shadow-md">
+                <Crown size={32} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-amber-900 mb-2">¡Bienvenido al Club VIP! 🌟</h3>
+                <p className="text-amber-800">
+                  Tu perfil ahora está destacado y aparecerá en los primeros resultados de búsqueda. 
+                  ¡Prepárate para recibir más clientes!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero / Search Section */}
         <div className="mb-8 space-y-4">
           <h2 className="text-3xl font-bold text-gray-900">Encontrá al experto que necesitás</h2>

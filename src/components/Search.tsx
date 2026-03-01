@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search as SearchIcon, MapPin, Star, ShieldCheck, Filter } from 'lucide-react';
+import { Search as SearchIcon, MapPin, Star, ShieldCheck, Filter, BadgeCheck } from 'lucide-react';
 import { searchProfessionals } from '../services/firestoreService';
 import { User } from '../types';
 import { api } from '../services/api';
@@ -137,7 +137,10 @@ export function Search() {
                         <div className="flex items-center gap-1">
                           <h3 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{pro.nombre}</h3>
                           {pro.profesionalInfo?.isVip && (
-                            <ShieldCheck className="w-4 h-4 text-indigo-500" fill="currentColor" fillOpacity={0.2} />
+                            <ShieldCheck className="w-4 h-4 text-yellow-500" fill="currentColor" fillOpacity={0.2} title="VIP" />
+                          )}
+                          {pro.profesionalInfo?.fotoDni && (
+                            <BadgeCheck className="w-4 h-4 text-blue-500" fill="currentColor" fillOpacity={0.1} title="Identidad Verificada" />
                           )}
                         </div>
                         <p className="text-sm text-indigo-600 font-medium">{pro.profesionalInfo?.rubro}</p>

@@ -4,7 +4,7 @@ import {
   User as FirebaseUser,
   signOut as firebaseSignOut
 } from 'firebase/auth';
-import { doc, getDoc, Firestore } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { User } from '../types';
 
@@ -29,37 +29,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        try {
-          // Fetch user data from Firestore
-          const userDocRef = doc(db, 'usuarios', firebaseUser.uid);
-          const userDoc = await getDoc(userDocRef);
+    let unsubscribeFirestore: () => void;
 
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as Omit<User, 'uid'>;
-            setCurrentUser({ uid: firebaseUser.uid, ...userData });
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+      
+      if (firebaseUser) {
+        // Set up real-time listener for user document
+        const userDocRef = doc(db, 'usuarios', firebaseUser.uid);
+        
+        unsubscribeFirestore = onSnapshot(userDocRef, (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            const userData = docSnapshot.data() as Omit<User, 'uid'>;
+            setCurrentUser({ uid: firebaseUser.uid, ...userData, isNewUser: false });
           } else {
-            // Fallback if document doesn't exist yet (e.g. during creation race condition)
-            console.warn('User document not found in Firestore');
-            setCurrentUser(null);
+            // User exists in Auth but not in Firestore (New User)
+            console.log('User document not found in Firestore, treating as new user');
+            setCurrentUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              nombre: firebaseUser.displayName || '',
+              fotoUrl: firebaseUser.photoURL || '',
+              rol: 'cliente', // Default, will be set in complete profile
+              ciudad: '',
+              zona: '',
+              isNewUser: true
+            });
           }
-        } catch (error) {
+          setLoading(false);
+        }, (error) => {
           console.error('Error fetching user data:', error);
           setCurrentUser(null);
-        }
+          setLoading(false);
+        });
       } else {
+        if (unsubscribeFirestore) {
+          unsubscribeFirestore();
+        }
         setCurrentUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+    };
   }, []);
 
   const logout = async () => {
     await firebaseSignOut(auth);
-    setCurrentUser(null);
+    // Cleanup is handled by useEffect
   };
 
   const value = {

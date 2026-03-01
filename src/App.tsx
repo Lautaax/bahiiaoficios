@@ -11,6 +11,7 @@ import { Search } from './components/Search';
 import { Dashboard } from './components/Dashboard';
 import { VipButton } from './components/VipButton';
 import { Profile } from './components/Profile';
+import { CompleteProfile } from './components/CompleteProfile';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -121,6 +122,12 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             
+            <Route path="/complete-profile" element={
+              <PrivateRoute allowNewUser={true}>
+                <CompleteProfile />
+              </PrivateRoute>
+            } />
+
             <Route path="/" element={
               <Layout>
                 <Home />

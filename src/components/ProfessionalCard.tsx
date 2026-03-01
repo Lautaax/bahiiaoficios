@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Review } from '../types';
 import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
@@ -14,10 +14,39 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [latestReview, setLatestReview] = useState<Review | null>(null);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   
   const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const fetchLatestReview = async () => {
+      if (!professional.uid) return;
+      
+      try {
+        const q = query(
+          collection(db, 'resenas'),
+          where('profesionalId', '==', professional.uid),
+          orderBy('fecha', 'desc'),
+          limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          setLatestReview({
+            id: doc.id,
+            ...doc.data(),
+            fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
+          } as Review);
+        }
+      } catch (error) {
+        console.error("Error fetching latest review:", error);
+      }
+    };
+
+    fetchLatestReview();
+  }, [professional.uid]);
 
   if (professional.rol !== 'profesional' || !professional.profesionalInfo) {
     return null;
@@ -142,6 +171,34 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
               </button>
             </div>
           </div>
+
+          {/* Latest Review Highlight (when list is hidden) */}
+          {!showReviews && latestReview && (
+            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in">
+              <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100">
+                <div className="flex justify-between items-start mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                      Última reseña
+                    </span>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {latestReview.clienteNombre || 'Usuario'}
+                    </span>
+                  </div>
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star 
+                        key={i} 
+                        size={10} 
+                        className={`${i < latestReview.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} 
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-gray-600 text-xs italic line-clamp-2">"{latestReview.comentario}"</p>
+              </div>
+            </div>
+          )}
 
           {/* Reviews Section */}
           {showReviews && (

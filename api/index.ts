@@ -1,16 +1,25 @@
-import express from "express";
-import { createServer as createViteServer } from "vite";
+import express from 'express';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import admin from 'firebase-admin';
 import axios from 'axios';
 
-// Initialize Firebase Admin
+const app = express();
+app.use(express.json());
+
+// Initialize Firebase Admin (Lazy)
 if (!admin.apps.length) {
   try {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault()
-    });
-    console.log("Firebase Admin initialized successfully");
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } else {
+        admin.initializeApp({
+            credential: admin.credential.applicationDefault()
+        });
+    }
+    console.log("Firebase Admin initialized");
   } catch (error) {
     console.error("Failed to initialize Firebase Admin:", error);
   }
@@ -79,74 +88,66 @@ async function getMpClient(): Promise<MercadoPagoConfig | null> {
     return null;
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", environment: "vercel" });
+});
 
-  // Middleware to parse JSON bodies
-  app.use(express.json());
+app.post("/api/create_preference", async (req, res) => {
+  const client = await getMpClient();
 
-  // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
+  if (!client) {
+    return res.status(500).json({ error: "Mercado Pago not configured." });
+  }
 
-  app.post("/api/create_preference", async (req, res) => {
-    const client = await getMpClient();
-
-    if (!client) {
-      return res.status(500).json({ error: "Mercado Pago not configured" });
-    }
-
-    try {
-      const { title, price, quantity, userEmail, redirectUrl, metadata } = req.body;
-      const baseUrl = redirectUrl || process.env.APP_URL || 'http://localhost:3000';
-      // Ensure notification URL is absolute and accessible
-      // In local dev, webhooks won't work without a tunnel (ngrok), but we set it anyway
-      const notificationUrl = `${process.env.SHARED_APP_URL || baseUrl}/api/webhook`;
-      
-      const preference = new Preference(client);
-      const result = await preference.create({
-        body: {
-          items: [
-            {
-              id: "vip-subscription",
-              title: title || "Membresía VIP",
-              unit_price: Number(price) || 5000,
-              quantity: Number(quantity) || 1,
-              currency_id: "ARS",
-            },
-          ],
-          payer: {
-            email: userEmail || "test_user@test.com"
+  try {
+    const { title, price, quantity, userEmail, redirectUrl, metadata } = req.body;
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = redirectUrl || `${protocol}://${host}`;
+    const notificationUrl = `${baseUrl}/api/webhook`;
+    
+    const preference = new Preference(client);
+    const result = await preference.create({
+      body: {
+        items: [
+          {
+            id: "vip-subscription",
+            title: title || "Membresía VIP",
+            unit_price: Number(price) || 5000,
+            quantity: Number(quantity) || 1,
+            currency_id: "ARS",
           },
-          back_urls: {
-            success: `${baseUrl}/profile?status=success`,
-            failure: `${baseUrl}/profile?status=failure`,
-            pending: `${baseUrl}/profile?status=pending`,
-          },
-          auto_return: "approved",
-          notification_url: notificationUrl,
-          metadata: metadata || {},
-        }
-      });
+        ],
+        payer: {
+          email: userEmail || "test_user@test.com"
+        },
+        back_urls: {
+          success: `${baseUrl}/profile?status=success`,
+          failure: `${baseUrl}/profile?status=failure`,
+          pending: `${baseUrl}/profile?status=pending`,
+        },
+        auto_return: "approved",
+        notification_url: notificationUrl,
+        metadata: metadata || {},
+      }
+    });
 
-      res.json({ id: result.id, init_point: result.init_point });
-    } catch (error) {
-      console.error("Error creating preference:", error);
-      res.status(500).json({ error: "Failed to create preference" });
-    }
-  });
+    res.json({ id: result.id, init_point: result.init_point });
+  } catch (error) {
+    console.error("Error creating preference:", error);
+    res.status(500).json({ error: "Failed to create preference" });
+  }
+});
 
-  app.post("/api/webhook", async (req, res) => {
+app.post("/api/webhook", async (req, res) => {
     const { type, data } = req.body;
-    const topic = req.body.topic || type; // MP sometimes sends 'topic' instead of 'type'
+    const topic = req.body.topic || type;
     const id = data?.id || req.body.data?.id;
 
     try {
       if (topic === "payment" && id) {
         const client = await getMpClient();
-
+        
         if (!client) {
             console.error("MP Client not initialized");
             return res.status(500).send("MP Client not initialized");
@@ -178,8 +179,6 @@ async function startServer() {
               console.log(`User ${user_id} upgraded to VIP until ${expirationDate}`);
             } catch (dbError) {
               console.error("Error updating Firestore:", dbError);
-              // We don't return 500 here because we want to acknowledge the webhook
-              // even if our internal DB update failed (we should log it for manual fix)
             }
           } else {
             console.warn("Missing userId or months in payment metadata");
@@ -193,29 +192,6 @@ async function startServer() {
       console.error("Webhook error:", error);
       res.status(500).send("Error");
     }
-  });
+});
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Production static file serving would go here if needed
-    // But for this environment, we rely on Vite dev server mostly
-    // Or we can serve dist folder if built
-    const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-  }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
+export default app;
