@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { useSearchParams } from 'react-router-dom';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
@@ -7,8 +8,14 @@ import { ProfessionalCard } from './ProfessionalCard';
 import { Search, Filter, MapPin, Crown, X, ChevronDown } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 
+// Helper to normalize strings (remove accents)
+const normalizeString = (str: string) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
+
 export const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
+  const [searchParams] = useSearchParams();
   const [professionals, setProfessionals] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRubro, setSelectedRubro] = useState<string>('Todos');
@@ -17,6 +24,32 @@ export const Dashboard: React.FC = () => {
   const [indexErrorLink, setIndexErrorLink] = useState<string | null>(null);
   const [showVipWelcome, setShowVipWelcome] = useState(false);
   const [isRubroOpen, setIsRubroOpen] = useState(false);
+
+  useEffect(() => {
+    const search = searchParams.get('search');
+    const rubro = searchParams.get('rubro');
+
+    if (rubro) {
+      setSelectedRubro(rubro);
+      setSearchTerm('');
+    } else if (search) {
+      const term = search.trim();
+      const normalizedSearch = normalizeString(term);
+      
+      // Check if the search term matches a profession name exactly (normalized)
+      // This handles cases like "Gasista" or "gasista" -> Filter by Rubro: Gasista
+      const matchedProfession = PROFESSIONS.find(p => normalizeString(p.name) === normalizedSearch);
+      
+      if (matchedProfession) {
+        setSelectedRubro(matchedProfession.name);
+        setSearchTerm('');
+      } else {
+        // Otherwise, it's a general search (name, description, etc.)
+        setSelectedRubro('Todos');
+        setSearchTerm(term);
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (currentUser?.rol === 'profesional' && currentUser?.profesionalInfo?.isVip) {
@@ -91,18 +124,44 @@ export const Dashboard: React.FC = () => {
   // (Doing this client-side allows for more flexible text search without Algolia/Elasticsearch)
   const filteredProfessionals = useMemo(() => {
     return professionals.filter(p => {
-      const matchesRubro = selectedRubro === 'Todos' || p.profesionalInfo?.rubro === selectedRubro;
+      const matchesRubro = selectedRubro === 'Todos' || 
+        (p.profesionalInfo?.rubros && p.profesionalInfo.rubros.includes(selectedRubro)) || 
+        p.profesionalInfo?.rubro === selectedRubro;
       const matchesZona = selectedZona === 'Todas' || p.zona === selectedZona;
       
-      const term = searchTerm.toLowerCase();
+      const term = normalizeString(searchTerm.trim());
       const matchesSearch = !term || 
-        p.nombre.toLowerCase().includes(term) || 
-        p.profesionalInfo?.descripcion.toLowerCase().includes(term) ||
-        p.zona.toLowerCase().includes(term);
+        normalizeString(p.nombre).includes(term) || 
+        normalizeString(p.profesionalInfo?.descripcion || '').includes(term) ||
+        normalizeString(p.zona).includes(term) ||
+        (p.profesionalInfo?.rubros && p.profesionalInfo.rubros.some(r => normalizeString(r).includes(term))) ||
+        normalizeString(p.profesionalInfo?.rubro || '').includes(term);
 
       return matchesRubro && matchesZona && matchesSearch;
     });
   }, [professionals, selectedRubro, selectedZona, searchTerm]);
+
+  // Calculate Popular Professions based on supply (count of professionals in each category)
+  // This makes the list dynamic based on the actual data
+  const popularProfessions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    professionals.forEach(p => {
+      const rubros = p.profesionalInfo?.rubros || (p.profesionalInfo?.rubro ? [p.profesionalInfo.rubro] : []);
+      rubros.forEach(r => {
+        counts[r] = (counts[r] || 0) + 1;
+      });
+    });
+
+    // Sort by count descending, then random shuffle for equal counts to keep it dynamic
+    return [...PROFESSIONS]
+      .sort((a, b) => {
+        const countA = counts[a.name] || 0;
+        const countB = counts[b.name] || 0;
+        return countB - countA; // Descending order
+      })
+      .slice(0, 6); // Show top 6
+  }, [professionals]);
 
   const rubros = ['Todos', ...PROFESSIONS.map(p => p.name)];
   const zonas = ['Todas', ...ZONAS];
@@ -153,7 +212,10 @@ export const Dashboard: React.FC = () => {
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
                 placeholder="Buscar por nombre, zona o servicio..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (e.target.value) setSelectedRubro('Todos');
+                }}
               />
             </div>
 
@@ -198,6 +260,7 @@ export const Dashboard: React.FC = () => {
                           onClick={() => {
                             setSelectedRubro('Todos');
                             setIsRubroOpen(false);
+                            setSearchTerm('');
                           }}
                         >
                           <span className="block truncate ml-8">Todos los Rubros</span>
@@ -209,6 +272,7 @@ export const Dashboard: React.FC = () => {
                             onClick={() => {
                               setSelectedRubro(profession.name);
                               setIsRubroOpen(false);
+                              setSearchTerm('');
                             }}
                           >
                             <profession.icon size={18} className={`${selectedRubro === profession.name ? 'text-indigo-600' : 'text-gray-400'}`} />
@@ -243,12 +307,23 @@ export const Dashboard: React.FC = () => {
 
         {/* Categories Grid */}
         <div className="mb-10">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Explorar por Categoría</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Rubros Populares</h3>
+            <button 
+              onClick={() => setIsRubroOpen(true)}
+              className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              Ver todos
+            </button>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {PROFESSIONS.map((profession) => (
+            {popularProfessions.map((profession) => (
               <button
                 key={profession.name}
-                onClick={() => setSelectedRubro(profession.name === selectedRubro ? 'Todos' : profession.name)}
+                onClick={() => {
+                  setSelectedRubro(profession.name === selectedRubro ? 'Todos' : profession.name);
+                  setSearchTerm('');
+                }}
                 className={`group flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
                   selectedRubro === profession.name
                     ? 'bg-indigo-50 border-indigo-200 shadow-sm ring-1 ring-indigo-200'

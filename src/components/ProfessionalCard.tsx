@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
@@ -19,8 +19,35 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const [latestReview, setLatestReview] = useState<Review | null>(null);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   
   const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    if (professional.uid) {
+      setIsFavorite(favorites.includes(professional.uid));
+    }
+  }, [professional.uid]);
+
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!professional.uid) return;
+
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    let newFavorites;
+    
+    if (isFavorite) {
+      newFavorites = favorites.filter((id: string) => id !== professional.uid);
+    } else {
+      newFavorites = [...favorites, professional.uid];
+    }
+    
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+    setIsFavorite(!isFavorite);
+  };
 
   useEffect(() => {
     const fetchLatestReview = async () => {
@@ -156,6 +183,18 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           </div>
         )}
 
+        {/* Favorite Button */}
+        <button
+          onClick={toggleFavorite}
+          className="absolute top-3 left-3 z-20 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all hover:scale-110 group"
+          title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+        >
+          <Heart 
+            size={20} 
+            className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 group-hover:text-red-400'}`} 
+          />
+        </button>
+
         <div className="p-5 flex flex-col h-full">
           {/* Header */}
           <div className="flex items-start gap-4 mb-4">
@@ -176,10 +215,30 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-bold text-lg text-gray-900 truncate">{nombre}</h3>
               </div>
-              <div className="flex items-center gap-1.5 text-indigo-600 font-bold text-sm mb-1 uppercase tracking-wide">
-                <ProfessionIcon size={16} />
-                <span>{rubro}</span>
+              
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 0 ? (
+                  professional.profesionalInfo.rubros.slice(0, 3).map((r, idx) => {
+                    const pData = PROFESSIONS.find(p => p.name === r);
+                    const Icon = pData?.icon || Briefcase;
+                    return (
+                      <span key={idx} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-medium border border-indigo-100">
+                        <Icon size={12} />
+                        {r}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <div className="flex items-center gap-1.5 text-indigo-600 font-bold text-sm uppercase tracking-wide">
+                    <ProfessionIcon size={16} />
+                    <span>{rubro}</span>
+                  </div>
+                )}
+                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 3 && (
+                  <span className="text-xs text-gray-500 flex items-center">+{professional.profesionalInfo.rubros.length - 3}</span>
+                )}
               </div>
+
               <div className="flex items-center text-gray-500 text-xs gap-1">
                 <MapPin size={12} />
                 <span>{zona}, Bahía Blanca</span>

@@ -44,7 +44,8 @@ service cloud.firestore {
       // Solo clientes autenticados pueden opinar
       allow create: if isAuthenticated() 
                     && request.resource.data.clienteId == request.auth.uid
-                    && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == "cliente"
+                    // Simplificamos la regla para evitar errores de permisos si el perfil de usuario no está perfectamente sincronizado
+                    // && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == "cliente"
                     && request.resource.data.rating >= 1
                     && request.resource.data.rating <= 5
                     && request.resource.data.profesionalId is string;

@@ -147,8 +147,20 @@ export const PublicProfile: React.FC = () => {
               </div>
 
               <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{nombre}</h1>
-                <p className="text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wide text-sm mb-2">{rubro}</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{nombre}</h1>
+                
+                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 0 ? (
+                  <div className="flex flex-wrap justify-center gap-2 mb-3">
+                    {professional.profesionalInfo.rubros.map((r, idx) => (
+                      <span key={idx} className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-800">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide text-sm mb-2">{rubro}</p>
+                )}
+
                 <div className="flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm gap-1">
                   <MapPin size={14} />
                   <span>{zona}, Bahía Blanca</span>

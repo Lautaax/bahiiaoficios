@@ -8,7 +8,8 @@ export interface Category {
 export type Role = 'cliente' | 'profesional';
 
 export interface ProfesionalInfo {
-  rubro: string; // e.g., 'Plomero', 'Electricista', 'Gasista'
+  rubro: string; // Deprecated: primary profession for backward compatibility
+  rubros?: string[]; // List of all professions
   descripcion: string;
   isVip: boolean;
   ratingAvg: number;

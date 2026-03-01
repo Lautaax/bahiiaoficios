@@ -21,6 +21,7 @@ export const Profile: React.FC = () => {
     zona: '',
     fotoUrl: '',
     rubro: '',
+    rubros: [] as string[],
     descripcion: '',
     rol: 'cliente' as Role,
     telefono: '',
@@ -64,6 +65,7 @@ export const Profile: React.FC = () => {
         zona: currentUser.zona || '',
         fotoUrl: currentUser.fotoUrl || '',
         rubro: currentUser.profesionalInfo?.rubro || 'Electricista',
+        rubros: currentUser.profesionalInfo?.rubros || (currentUser.profesionalInfo?.rubro ? [currentUser.profesionalInfo.rubro] : []),
         descripcion: currentUser.profesionalInfo?.descripcion || '',
         rol: currentUser.rol || 'cliente',
         telefono: currentUser.profesionalInfo?.telefono || '',
@@ -105,7 +107,7 @@ export const Profile: React.FC = () => {
 
   const handleWorkImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
+      const files = Array.from(e.target.files) as File[];
       setNewWorkFiles(prev => [...prev, ...files]);
       
       const newPreviews = files.map(file => URL.createObjectURL(file));
@@ -250,7 +252,8 @@ export const Profile: React.FC = () => {
         // Ensure professional info exists or is updated
         // Saving contact info to profesionalInfo as requested: telefono, direccion, contactEmail
         updateData.profesionalInfo = {
-          rubro: formData.rubro,
+          rubro: formData.rubros.length > 0 ? formData.rubros[0] : formData.rubro,
+          rubros: formData.rubros,
           descripcion: formData.descripcion,
           isVip: currentUser.profesionalInfo?.isVip || false,
           ratingAvg: currentUser.profesionalInfo?.ratingAvg || 0,
@@ -429,16 +432,36 @@ export const Profile: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rubro</label>
-                <select
-                  name="rubro"
-                  value={formData.rubro}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">Seleccionar Rubro</option>
-                  {rubros.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rubros (Selecciona uno o más)</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                  {PROFESSIONS.map((p) => {
+                    const isSelected = formData.rubros.includes(p.name);
+                    return (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => {
+                          const newRubros = isSelected
+                            ? formData.rubros.filter(r => r !== p.name)
+                            : [...formData.rubros, p.name];
+                          setFormData({ ...formData, rubros: newRubros });
+                        }}
+                        className={`flex items-center gap-2 p-2 rounded-lg border transition-all text-sm text-left ${
+                          isSelected
+                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500'
+                            : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <p.icon size={16} className={isSelected ? 'text-indigo-600' : 'text-gray-400'} />
+                        <span className="truncate">{p.name}</span>
+                        {isSelected && <CheckCircle size={14} className="ml-auto text-indigo-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                {formData.rubros.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Debes seleccionar al menos un rubro.</p>
+                )}
               </div>
 
               <div>

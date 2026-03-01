@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Category } from '../types';
 import { api } from '../services/api';
@@ -8,10 +8,23 @@ import { api } from '../services/api';
 export function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.getCategories().then(data => setCategories(data.slice(0, 8)));
   }, []);
+
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/dashboard?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   return (
     <div className="bg-white">
@@ -41,14 +54,15 @@ export function Home() {
                   className="w-full bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-500 py-3 px-2"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
-              <Link 
-                to={`/search?q=${searchTerm}`}
+              <button 
+                onClick={handleSearch}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-md font-bold text-lg transition-colors flex items-center justify-center"
               >
                 Buscar
-              </Link>
+              </button>
             </div>
             
             <div className="mt-8 flex justify-center gap-6 text-sm font-medium text-indigo-200">
@@ -76,7 +90,7 @@ export function Home() {
           {categories.map((cat) => (
             <Link 
               key={cat.id} 
-              to={`/search?category=${cat.slug}`}
+              to={`/dashboard?rubro=${encodeURIComponent(cat.name)}`}
               className="group bg-gray-50 hover:bg-white border border-gray-100 hover:border-indigo-100 hover:shadow-xl rounded-xl p-6 transition-all duration-300 flex flex-col items-center text-center"
             >
               <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -88,7 +102,7 @@ export function Home() {
         </div>
         
         <div className="mt-12 text-center">
-          <Link to="/search" className="inline-flex items-center text-indigo-600 font-semibold hover:text-indigo-800">
+          <Link to="/dashboard" className="inline-flex items-center text-indigo-600 font-semibold hover:text-indigo-800">
             Ver todas las categorías <ArrowRight className="ml-2 w-4 h-4" />
           </Link>
         </div>
