@@ -36,7 +36,7 @@ function Navbar() {
               <MapPin className="text-white" size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Oficios Bahía</h1>
+              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Bahia Oficios</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Portal de Profesionales</p>
             </div>
           </Link>
@@ -101,7 +101,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Footer */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-12 py-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
-          <p>© 2024 Oficios Bahía. Todos los derechos reservados.</p>
+          <p>© 2026 Bahia Oficios. Todos los derechos reservados.</p>
           <div className="mt-2 flex justify-center gap-4">
             <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Términos</span>
             <span className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</span>
