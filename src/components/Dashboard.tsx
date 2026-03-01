@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
 import { Search, Filter, MapPin, Crown, X } from 'lucide-react';
+import { PROFESSIONS, ZONAS } from '../constants';
 
 export const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -102,8 +103,8 @@ export const Dashboard: React.FC = () => {
     });
   }, [professionals, selectedRubro, selectedZona, searchTerm]);
 
-  const rubros = ['Todos', 'Electricista', 'Gasista', 'Plomero', 'Albañil', 'Pintor', 'Carpintero', 'Jardinero', 'Mecánico', 'Cerrajero', 'Flete', 'Limpieza', 'Techista'];
-  const zonas = ['Todas', 'Centro', 'Universitario', 'Villa Mitre', 'Patagonia', 'Norte', 'Bella Vista', 'Palihue', 'San Andrés', 'Tiro Federal', 'Ingeniero White'];
+  const rubros = ['Todos', ...PROFESSIONS.map(p => p.name)];
+  const zonas = ['Todas', ...ZONAS];
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">

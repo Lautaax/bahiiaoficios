@@ -3,10 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
-import { User, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { User as UserType, Role } from '../types';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
+import { PROFESSIONS, ZONAS } from '../constants';
 
 export const Profile: React.FC = () => {
   const { currentUser } = useAuth();
@@ -14,7 +15,6 @@ export const Profile: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
-  const [showRoleConfirmation, setShowRoleConfirmation] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -96,23 +96,6 @@ export const Profile: React.FC = () => {
       setDniFile(file);
       setDniPreview(URL.createObjectURL(file));
     }
-  };
-
-  const toggleRole = () => {
-    if (formData.rol === 'cliente') {
-      setShowRoleConfirmation(true);
-    } else {
-      setFormData(prev => ({ ...prev, rol: 'cliente' }));
-    }
-  };
-
-  const confirmRoleChange = () => {
-    setFormData(prev => ({ ...prev, rol: 'profesional' }));
-    setShowRoleConfirmation(false);
-  };
-
-  const cancelRoleChange = () => {
-    setShowRoleConfirmation(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -237,8 +220,8 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const rubros = ['Electricista', 'Gasista', 'Plomero', 'Albañil', 'Pintor', 'Carpintero', 'Jardinero', 'Mecánico', 'Cerrajero', 'Flete', 'Limpieza', 'Techista'];
-  const zonas = ['Centro', 'Universitario', 'Villa Mitre', 'Patagonia', 'Norte', 'Bella Vista', 'Palihue', 'San Andrés', 'Tiro Federal', 'Ingeniero White'];
+  const rubros = PROFESSIONS.map(p => p.name);
+  const zonas = ZONAS;
 
   if (!currentUser) return <div>Cargando...</div>;
 
@@ -246,51 +229,7 @@ export const Profile: React.FC = () => {
     <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Editar Perfil</h2>
-        <button 
-          type="button"
-          onClick={toggleRole}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            formData.rol === 'profesional' 
-              ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' 
-              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-          }`}
-        >
-          <UserCog size={14} />
-          {formData.rol === 'profesional' ? 'Modo Profesional' : 'Modo Cliente'}
-        </button>
       </div>
-
-      {showRoleConfirmation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full shadow-xl border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3 mb-4 text-amber-600 dark:text-amber-500">
-              <AlertTriangle size={24} />
-              <h3 className="text-lg font-bold">¿Cambiar a Profesional?</h3>
-            </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Al cambiar tu rol a <strong>Profesional</strong>, se habilitarán campos adicionales para que puedas ofrecer tus servicios, subir fotos de trabajos y verificar tu identidad.
-              <br/><br/>
-              ¿Deseas continuar?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={cancelRoleChange}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmRoleChange}
-                className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md font-medium"
-              >
-                Continuar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {success && (
         <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center">
@@ -315,6 +254,34 @@ export const Profile: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tipo de Perfil Selection */}
+        <div className="grid grid-cols-2 gap-4">
+          <div 
+            onClick={() => setFormData({...formData, rol: 'cliente'})}
+            className={`cursor-pointer p-4 rounded-lg border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+              formData.rol === 'cliente' 
+                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-500' 
+                : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <User size={28} />
+            <span className="font-bold">Soy Cliente</span>
+            <span className="text-xs text-center opacity-80">Busco profesionales</span>
+          </div>
+          <div 
+            onClick={() => setFormData({...formData, rol: 'profesional'})}
+            className={`cursor-pointer p-4 rounded-lg border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+              formData.rol === 'profesional' 
+                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-500' 
+                : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <Briefcase size={28} />
+            <span className="font-bold">Soy Profesional</span>
+            <span className="text-xs text-center opacity-80">Ofrezco mis servicios</span>
+          </div>
+        </div>
+
         {/* Foto de Perfil */}
         <div className="flex items-center gap-4">
           <div className="relative">

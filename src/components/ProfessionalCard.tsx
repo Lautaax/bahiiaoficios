@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { PROFESSIONS } from '../constants';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -83,6 +84,10 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion } = professional.profesionalInfo;
 
   const isClient = currentUser?.rol === 'cliente';
+
+  // Find profession icon
+  const professionData = PROFESSIONS.find(p => p.name === rubro);
+  const ProfessionIcon = professionData?.icon || Briefcase;
 
   const handleShowReviews = async () => {
     if (!showReviews && reviews.length === 0) {
@@ -171,7 +176,10 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-bold text-lg text-gray-900 truncate">{nombre}</h3>
               </div>
-              <p className="text-indigo-600 font-bold text-sm mb-1 uppercase tracking-wide">{rubro}</p>
+              <div className="flex items-center gap-1.5 text-indigo-600 font-bold text-sm mb-1 uppercase tracking-wide">
+                <ProfessionIcon size={16} />
+                <span>{rubro}</span>
+              </div>
               <div className="flex items-center text-gray-500 text-xs gap-1">
                 <MapPin size={12} />
                 <span>{zona}, Bahía Blanca</span>
@@ -345,7 +353,10 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                 />
                 <div>
                   <h3 className="font-bold text-xl">{nombre}</h3>
-                  <p className="text-indigo-100 text-sm">{rubro}</p>
+                  <div className="flex items-center gap-1.5 text-indigo-100 text-sm">
+                    <ProfessionIcon size={14} />
+                    <span>{rubro}</span>
+                  </div>
                 </div>
               </div>
             </div>

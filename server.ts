@@ -3,6 +3,13 @@ import { createServer as createViteServer } from "vite";
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import admin from 'firebase-admin';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -100,7 +107,13 @@ async function startServer() {
 
     try {
       const { title, price, quantity, userEmail, redirectUrl, metadata } = req.body;
-      const baseUrl = redirectUrl || process.env.APP_URL || 'http://localhost:3000';
+      
+      // Clean up baseUrl
+      let baseUrl = redirectUrl || process.env.APP_URL || 'http://localhost:3000';
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+      
       // Ensure notification URL is absolute and accessible
       // In local dev, webhooks won't work without a tunnel (ngrok), but we set it anyway
       const notificationUrl = `${process.env.SHARED_APP_URL || baseUrl}/api/webhook`;
@@ -195,23 +208,41 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Production static file serving would go here if needed
-    // But for this environment, we rely on Vite dev server mostly
-    // Or we can serve dist folder if built
-    const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-  }
+  // Vite middleware for development and production (in this environment)
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
+
+  // Specific handler for /profile to ensure it works after redirect
+  app.get('/profile', async (req, res) => {
+    try {
+      const url = req.originalUrl;
+      const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+      const html = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+    } catch (e: any) {
+      console.error("Error serving index.html for /profile:", e);
+      res.status(500).end(e.message);
+    }
+  });
+
+  // Fallback handler for SPA
+  // If Vite middleware doesn't handle the request (e.g. it's not a static file),
+  // we manually serve index.html transformed by Vite.
+  app.use('*', async (req, res) => {
+    try {
+      console.log(`Fallback handler hit for: ${req.originalUrl}`);
+      const url = req.originalUrl;
+      const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+      const html = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+    } catch (e: any) {
+      console.error("Error serving index.html:", e);
+      res.status(500).end(e.message);
+    }
+  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
