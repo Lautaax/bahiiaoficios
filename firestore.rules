@@ -25,7 +25,8 @@ service cloud.firestore {
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profesionalInfo']) && 
                      'profesionalInfo' in resource.data &&
                      (request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['profileViews']) ||
-                      request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['whatsappClicks'])));
+                      request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['whatsappClicks']) ||
+                      request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['ratingAvg', 'reviewCount'])));
       allow delete: if isOwner(userId);
     }
     
@@ -79,6 +80,13 @@ service cloud.firestore {
       allow create: if true;
       allow update: if true;
       allow delete: if false;
+    }
+
+    match /notificaciones/{notifId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
   }
 }

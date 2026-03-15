@@ -12,6 +12,7 @@ export const PublicProfile: React.FC = () => {
   const navigate = useNavigate();
   const [professional, setProfessional] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { currentUser } = useAuth();
@@ -73,6 +74,7 @@ export const PublicProfile: React.FC = () => {
         fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
       })) as Review[];
       setReviews(fetchedReviews);
+      setReviewsLoaded(true);
     } catch (err: any) {
       // Fallback for missing index
       if (err.code === 'failed-precondition') {
@@ -93,6 +95,7 @@ export const PublicProfile: React.FC = () => {
               // Sort client-side
               fetchedReviews.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
               setReviews(fetchedReviews);
+              setReviewsLoaded(true);
           } catch (fallbackError) {
               console.error("Error in fallback fetch reviews:", fallbackError);
           }
@@ -105,6 +108,45 @@ export const PublicProfile: React.FC = () => {
       fetchReviews();
     }
   }, [professional]);
+
+  // Sync ratings if they are out of sync
+  useEffect(() => {
+    if (professional && reviewsLoaded) {
+      const currentCount = professional.profesionalInfo?.reviewCount || 0;
+      const currentAvg = professional.profesionalInfo?.ratingAvg || 0;
+      
+      const totalRating = reviews.reduce((acc, rev) => acc + rev.rating, 0);
+      const newAvg = reviews.length > 0 ? totalRating / reviews.length : 0;
+      
+      // Check if either count or avg is out of sync (using a small epsilon for float comparison)
+      if (currentCount !== reviews.length || Math.abs(currentAvg - newAvg) > 0.01) {
+        const syncRatings = async () => {
+          try {
+            const userRef = doc(db, 'usuarios', professional.uid);
+            await updateDoc(userRef, {
+              'profesionalInfo.ratingAvg': newAvg,
+              'profesionalInfo.reviewCount': reviews.length
+            });
+            // Update local state to reflect changes immediately
+            setProfessional(prev => {
+              if (!prev || !prev.profesionalInfo) return prev;
+              return {
+                ...prev,
+                profesionalInfo: {
+                  ...prev.profesionalInfo,
+                  ratingAvg: newAvg,
+                  reviewCount: reviews.length
+                }
+              };
+            });
+          } catch (e) {
+            console.error("Error syncing ratings:", e);
+          }
+        };
+        syncRatings();
+      }
+    }
+  }, [reviews, professional, reviewsLoaded]);
 
   const handleWhatsAppClick = async () => {
     if (!id || !professional?.profesionalInfo) return;
@@ -244,10 +286,15 @@ export const PublicProfile: React.FC = () => {
                       <span>ATENCIÓN URGENCIAS 24/7</span>
                     </div>
                   )}
-                  {disponibilidadInmediata && (
+                  {disponibilidadInmediata ? (
                     <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs px-3 py-1 rounded-full font-bold border border-green-100 dark:border-green-800">
                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                       <span>DISPONIBLE AHORA</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-full font-bold border border-gray-200 dark:border-gray-700">
+                      <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                      <span>OCUPADO</span>
                     </div>
                   )}
                 </div>

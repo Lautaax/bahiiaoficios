@@ -38,23 +38,35 @@ export const QuoteRequestForm: React.FC = () => {
     setError('');
 
     try {
-      // Find ALL professionals matching the criteria
+      // Find professionals matching the criteria
       const profQuery = query(
         collection(db, 'usuarios'),
         where('rol', '==', 'profesional'),
-        where('profesionalInfo.rubro', '==', formData.rubro)
+        where('zona', '==', formData.zona)
       );
       
       const profSnapshot = await getDocs(profQuery);
-      const assignedProfessionals = profSnapshot.docs.map(doc => doc.id);
+      
+      // Filter by rubro in memory and sort by rating
+      let matchedProfessionals = profSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as any))
+        .filter(prof => 
+          prof.profesionalInfo?.rubro === formData.rubro || 
+          (prof.profesionalInfo?.rubros && prof.profesionalInfo.rubros.includes(formData.rubro))
+        )
+        .sort((a, b) => (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0));
+
+      // Take up to 10 professionals so the first 3 can respond
+      const topProfessionals = matchedProfessionals.slice(0, 10);
+      const assignedProfessionals = topProfessionals.map(p => p.id);
 
       if (assignedProfessionals.length === 0) {
-        setError('No encontramos profesionales en ese rubro por el momento. Intenta buscar manualmente.');
+        setError('No encontramos profesionales en ese rubro y zona por el momento. Intenta buscar manualmente o cambia la zona.');
         setLoading(false);
         return;
       }
 
-      await addDoc(collection(db, 'quoteRequests'), {
+      const quoteRef = await addDoc(collection(db, 'quoteRequests'), {
         clienteId: currentUser.uid,
         clienteNombre: currentUser.nombre,
         clienteEmail: currentUser.email,
@@ -67,6 +79,19 @@ export const QuoteRequestForm: React.FC = () => {
         profesionalesAsignados: assignedProfessionals,
         respuestas: [] // Array to track who responded
       });
+
+      // Create notifications for the assigned professionals
+      for (const profId of assignedProfessionals) {
+        await addDoc(collection(db, 'notificaciones'), {
+          userId: profId,
+          tipo: 'nueva_solicitud',
+          titulo: 'Nueva solicitud de presupuesto',
+          mensaje: `Hay una nueva solicitud de presupuesto para ${formData.rubro} en tu zona (${formData.zona}).`,
+          leida: false,
+          fecha: serverTimestamp(),
+          referenciaId: quoteRef.id
+        });
+      }
 
       setSuccess(true);
     } catch (err) {

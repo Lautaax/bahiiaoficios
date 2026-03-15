@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Star, Image as ImageIcon, X } from 'lucide-react';
 import { uploadToImgur } from '../services/imgurService';
@@ -78,6 +78,23 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
         fotos: uploadedUrls,
         fecha: serverTimestamp(),
       });
+
+      // Update professional's rating
+      const profRef = doc(db, 'usuarios', profesionalId);
+      const profSnap = await getDoc(profRef);
+      if (profSnap.exists()) {
+        const profData = profSnap.data();
+        const currentCount = profData.profesionalInfo?.reviewCount || 0;
+        const currentAvg = profData.profesionalInfo?.ratingAvg || 0;
+        
+        const newCount = currentCount + 1;
+        const newAvg = ((currentAvg * currentCount) + rating) / newCount;
+        
+        await updateDoc(profRef, {
+          'profesionalInfo.ratingAvg': newAvg,
+          'profesionalInfo.reviewCount': newCount
+        });
+      }
 
       setSuccess(true);
       setComment('');

@@ -7,6 +7,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Role } from '../types';
 import { Upload } from 'lucide-react';
 import { uploadToImgur } from '../services/imgurService';
+import { ZONAS, PROFESSIONS } from '../constants';
 
 export const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -23,8 +24,8 @@ export const SignUp: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const rubros = ['Electricista', 'Gasista', 'Plomero', 'Albañil', 'Pintor', 'Carpintero', 'Jardinero', 'Mecánico', 'Cerrajero', 'Flete', 'Limpieza', 'Techista'];
-  const zonas = ['Centro', 'Universitario', 'Villa Mitre', 'Patagonia', 'Norte', 'Bella Vista', 'Palihue', 'San Andrés', 'Tiro Federal', 'Ingeniero White'];
+  const rubros = PROFESSIONS.map(p => p.name);
+  const zonas = ZONAS;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -37,6 +38,14 @@ export const SignUp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validar teléfono
+    const phoneRegex = /^[0-9]{10,15}$/;
+    if (!phoneRegex.test(telefono.replace(/\D/g, ''))) {
+      setError('Por favor, ingresa un número de teléfono válido (solo números, mínimo 10 dígitos).');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -72,7 +81,7 @@ export const SignUp: React.FC = () => {
         uid,
         nombre,
         email,
-        telefono,
+        telefono: telefono.replace(/\D/g, ''),
         rol: role, // Mapping local state 'role' to DB field 'rol'
         ciudad: 'Bahía Blanca',
         zona,
@@ -89,7 +98,7 @@ export const SignUp: React.FC = () => {
           ratingAvg: 0,
           reviewCount: 0,
           fotosTrabajos: [],
-          telefono: telefono
+          telefono: telefono.replace(/\D/g, '')
         };
       }
 

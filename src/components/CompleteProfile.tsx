@@ -5,7 +5,8 @@ import { db, storage } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
-import { Upload, User, Briefcase } from 'lucide-react';
+import { Upload, User, Briefcase, Phone } from 'lucide-react';
+import { ZONAS, PROFESSIONS } from '../constants';
 
 import { uploadToImgur } from '../services/imgurService';
 
@@ -18,13 +19,14 @@ export const CompleteProfile: React.FC = () => {
   const [zona, setZona] = useState('Centro');
   const [rubro, setRubro] = useState('Electricista');
   const [descripcion, setDescripcion] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const rubros = ['Electricista', 'Gasista', 'Plomero', 'Albañil', 'Pintor', 'Carpintero', 'Jardinero', 'Mecánico', 'Cerrajero', 'Flete', 'Limpieza', 'Techista'];
-  const zonas = ['Centro', 'Universitario', 'Villa Mitre', 'Patagonia', 'Norte', 'Bella Vista', 'Palihue', 'San Andrés', 'Tiro Federal', 'Ingeniero White'];
+  const rubros = PROFESSIONS.map(p => p.name);
+  const zonas = ZONAS;
 
   useEffect(() => {
     if (currentUser) {
@@ -52,6 +54,14 @@ export const CompleteProfile: React.FC = () => {
 
     if (!currentUser) return;
 
+    // Validar teléfono
+    const phoneRegex = /^[0-9]{10,15}$/;
+    if (!phoneRegex.test(telefono.replace(/\D/g, ''))) {
+      setError('Por favor, ingresa un número de teléfono válido (solo números, mínimo 10 dígitos).');
+      setLoading(false);
+      return;
+    }
+
     try {
       let fotoUrl = currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`;
 
@@ -78,6 +88,7 @@ export const CompleteProfile: React.FC = () => {
         uid: currentUser.uid,
         nombre,
         email: currentUser.email,
+        telefono: telefono.replace(/\D/g, ''),
         rol: role,
         ciudad: 'Bahía Blanca',
         zona,
@@ -92,7 +103,8 @@ export const CompleteProfile: React.FC = () => {
           isVip: false,
           ratingAvg: 0,
           reviewCount: 0,
-          fotosTrabajos: []
+          fotosTrabajos: [],
+          telefono: telefono.replace(/\D/g, '')
         };
       }
 
@@ -174,6 +186,24 @@ export const CompleteProfile: React.FC = () => {
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
               />
+            </div>
+
+            <div>
+              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">Teléfono (WhatsApp)</label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  id="telefono"
+                  type="tel"
+                  required
+                  placeholder="Ej: 2915551234"
+                  className="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

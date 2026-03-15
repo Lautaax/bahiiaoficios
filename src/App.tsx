@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { collection, getCountFromServer, doc, getDoc, setDoc, increment, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { NotificationsDropdown } from './components/NotificationsDropdown';
 import { Login } from './components/Login';
 import { SignUp } from './components/SignUp';
 import { PrivateRoute } from './components/PrivateRoute';
@@ -86,6 +87,8 @@ function Navbar() {
                 </div>
                 <span className="hidden sm:inline">Hola, {currentUser.nombre}</span>
               </Link>
+              
+              <NotificationsDropdown />
               
               <Link to="/chats" className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Mis Mensajes">
                 <MessageSquare size={20} />
