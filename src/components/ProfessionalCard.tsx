@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart, AlertCircle } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { PROFESSIONS } from '../constants';
 
 interface ProfessionalCardProps {
@@ -22,6 +22,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const [isFavorite, setIsFavorite] = useState(false);
   
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
@@ -108,7 +109,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified } = professional.profesionalInfo;
 
   const isClient = currentUser?.rol === 'cliente';
 
@@ -165,6 +166,55 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     setShowReviews(!showReviews);
   };
 
+  const handleWhatsAppClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const userRef = doc(db, 'usuarios', uid);
+      await updateDoc(userRef, {
+        'profesionalInfo.whatsappClicks': (professional.profesionalInfo.whatsappClicks || 0) + 1
+      });
+    } catch (error) {
+      console.error("Error updating whatsapp clicks:", error);
+    }
+  };
+
+  const handleContactClick = async () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    if (currentUser.uid === uid) return;
+
+    try {
+      const q = query(
+        collection(db, 'chats'),
+        where('clientId', '==', currentUser.uid),
+        where('workerId', '==', uid)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const existingChatId = querySnapshot.docs[0].id;
+        navigate(`/chat/${existingChatId}`);
+      } else {
+        const newChatRef = await addDoc(collection(db, 'chats'), {
+          clientId: currentUser.uid,
+          workerId: uid,
+          clientName: currentUser.nombre,
+          workerName: nombre,
+          lastMessage: '',
+          lastMessageTime: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        navigate(`/chat/${newChatRef.id}`);
+      }
+    } catch (error) {
+      console.error("Error creating/navigating to chat:", error);
+      alert("Hubo un error al intentar iniciar el chat. Por favor, intenta de nuevo.");
+    }
+  };
+
   return (
     <>
       <div 
@@ -214,6 +264,11 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             <div className="flex-1 min-w-0 pt-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-bold text-lg text-gray-900 truncate">{nombre}</h3>
+                {isVerified && (
+                  <div className="flex items-center text-blue-600" title="Perfil Verificado">
+                    <ShieldCheck size={18} className="fill-blue-100" />
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-1.5 mb-2">
@@ -242,6 +297,21 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
               <div className="flex items-center text-gray-500 text-xs gap-1">
                 <MapPin size={12} />
                 <span>{zona}, Bahía Blanca</span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mt-2">
+                {haceUrgencias && (
+                  <div className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full font-medium border border-red-100">
+                    <AlertCircle size={12} />
+                    <span>Urgencias 24/7</span>
+                  </div>
+                )}
+                {disponibilidadInmediata && (
+                  <div className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium border border-green-100">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>Disponible ahora</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -281,17 +351,35 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   <MessageSquare size={20} />
                 </button>
               )}
-              <button 
-                onClick={() => setShowContactModal(true)}
-                className={`
-                  px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md active:scale-95
-                  ${isVip 
-                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'}
-                `}
-              >
-                Contactar
-              </button>
+              {telefono ? (
+                <a 
+                  href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi tu perfil en Bahía Oficios y necesito presupuesto para...`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`
+                    flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md active:scale-95
+                    ${isVip 
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
+                      : 'bg-green-600 hover:bg-green-700 text-white'}
+                  `}
+                  onClick={handleWhatsAppClick}
+                >
+                  <MessageSquare size={16} />
+                  WhatsApp
+                </a>
+              ) : (
+                <button 
+                  onClick={() => setShowContactModal(true)}
+                  className={`
+                    px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md active:scale-95
+                    ${isVip 
+                      ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600' 
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'}
+                  `}
+                >
+                  Contactar
+                </button>
+              )}
             </div>
           </div>
 
@@ -485,6 +573,14 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                     </div>
                   </div>
                 )}
+
+                <button
+                  onClick={handleContactClick}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors font-medium shadow-sm"
+                >
+                  <MessageSquare size={20} />
+                  Contactar por Chat
+                </button>
               </div>
               
               <div className="mt-6 pt-4 border-t border-gray-100 text-center">

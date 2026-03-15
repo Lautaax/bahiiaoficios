@@ -23,6 +23,11 @@ export interface ProfesionalInfo {
   cuit?: string;
   haceFactura?: boolean;
   tipoFactura?: 'A' | 'C';
+  haceUrgencias?: boolean;
+  disponibilidadInmediata?: boolean;
+  isVerified?: boolean;
+  profileViews?: number;
+  whatsappClicks?: number;
 }
 
 export interface User {
@@ -46,4 +51,19 @@ export interface Review {
   comentario: string;
   fecha: Date;
   clienteNombre: string;
+  fotos?: string[];
+}
+
+export interface QuoteRequest {
+  id: string;
+  clienteId: string;
+  clienteNombre: string;
+  clienteEmail: string;
+  clienteTelefono?: string;
+  rubro: string;
+  zona: string;
+  descripcion: string;
+  fecha: any;
+  estado: 'pendiente' | 'contactado' | 'cerrado';
+  profesionalesAsignados: string[]; // Array of professional UIDs
 }

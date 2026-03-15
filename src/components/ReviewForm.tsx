@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Star } from 'lucide-react';
+import { Star, Image as ImageIcon, X } from 'lucide-react';
+import { uploadToImgur } from '../services/imgurService';
 
 interface ReviewFormProps {
   profesionalId: string;
@@ -15,6 +16,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -23,6 +26,31 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
   if (!currentUser || currentUser.rol !== 'cliente') {
     return null;
   }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files) as File[];
+      if (images.length + newFiles.length > 3) {
+        setError('Puedes subir un máximo de 3 fotos.');
+        return;
+      }
+      setImages([...images, ...newFiles]);
+      
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setImagePreviews([...imagePreviews, ...newPreviews]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...images];
+    newImages.splice(index, 1);
+    setImages(newImages);
+
+    const newPreviews = [...imagePreviews];
+    URL.revokeObjectURL(newPreviews[index]);
+    newPreviews.splice(index, 1);
+    setImagePreviews(newPreviews);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,18 +63,27 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
     setError('');
 
     try {
+      let uploadedUrls: string[] = [];
+      if (images.length > 0) {
+        const uploadPromises = images.map(file => uploadToImgur(file));
+        uploadedUrls = await Promise.all(uploadPromises);
+      }
+
       await addDoc(collection(db, 'resenas'), {
         profesionalId,
         clienteId: currentUser.uid,
         clienteNombre: currentUser.nombre,
         rating,
         comentario: comment,
+        fotos: uploadedUrls,
         fecha: serverTimestamp(),
       });
 
       setSuccess(true);
       setComment('');
       setRating(0);
+      setImages([]);
+      setImagePreviews([]);
       if (onReviewSubmitted) onReviewSubmitted();
       
       // Reset success message after 3 seconds
@@ -105,13 +142,45 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
             required
           />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors w-full sm:w-auto"
-          >
-            {loading ? 'Enviando...' : 'Publicar Reseña'}
-          </button>
+          {imagePreviews.length > 0 && (
+            <div className="flex gap-2 mt-2 mb-2 overflow-x-auto py-1">
+              {imagePreviews.map((preview, idx) => (
+                <div key={idx} className="relative flex-shrink-0">
+                  <img src={preview} alt={`Preview ${idx}`} className="h-16 w-16 object-cover rounded-md border border-gray-200" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-2">
+            <label className="cursor-pointer flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+              <ImageIcon size={16} />
+              <span>Añadir fotos (Max 3)</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple 
+                className="hidden" 
+                onChange={handleImageChange}
+                disabled={images.length >= 3}
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors w-full sm:w-auto"
+            >
+              {loading ? 'Enviando...' : 'Publicar Reseña'}
+            </button>
+          </div>
         </form>
       )}
     </div>

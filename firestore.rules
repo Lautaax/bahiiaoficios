@@ -20,12 +20,13 @@ service cloud.firestore {
 
     match /usuarios/{userId} {
       allow read: if true; // Cualquiera puede ver perfiles
-      allow write: if isOwner(userId); // Solo el dueño edita su perfil
-      
-      // El dueño puede editar, PERO NO puede tocar campos sensibles del perfil profesional
-      // Esta regla es redundante con la de arriba si 'isOwner' ya permite write, pero la mantenemos para validación de campos
-      // Sin embargo, la regla de arriba 'allow write' sobrescribe restricciones más específicas si devuelve true.
-      // Para aplicar la restricción de campos, debemos refinar la regla de update.
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || 
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profesionalInfo']) && 
+                     'profesionalInfo' in resource.data &&
+                     (request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['profileViews']) ||
+                      request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['whatsappClicks'])));
+      allow delete: if isOwner(userId);
     }
     
     // Reglas refinadas para usuarios (reemplazando el bloque anterior para mayor claridad y seguridad)
@@ -42,15 +43,42 @@ service cloud.firestore {
       allow read: if true;
       
       // Solo clientes autenticados pueden opinar
+      // Simplificado temporalmente para depuración
       allow create: if isAuthenticated() 
-                    && request.resource.data.clienteId == request.auth.uid
-                    // Simplificamos la regla para evitar errores de permisos si el perfil de usuario no está perfectamente sincronizado
-                    // && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == "cliente"
-                    && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5
                     && request.resource.data.profesionalId is string;
                     
       allow update, delete: if false;
+    }
+
+    match /quoteRequests/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.clienteId == request.auth.uid || request.auth.uid in resource.data.profesionalesAsignados);
+      allow create: if isAuthenticated() && request.resource.data.clienteId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.clienteId == request.auth.uid || request.auth.uid in resource.data.profesionalesAsignados);
+    }
+
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.workerId == request.auth.uid);
+      allow create: if isAuthenticated() && (request.resource.data.clientId == request.auth.uid || request.resource.data.workerId == request.auth.uid);
+      allow update: if isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.workerId == request.auth.uid);
+      
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.clientId == request.auth.uid || get(/databases/$(database)/documents/chats/$(chatId)).data.workerId == request.auth.uid);
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid && (get(/databases/$(database)/documents/chats/$(chatId)).data.clientId == request.auth.uid || get(/databases/$(database)/documents/chats/$(chatId)).data.workerId == request.auth.uid);
+      }
+    }
+
+    match /blogQuestions/{questionId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    match /siteStats/{statId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false;
     }
   }
 }

@@ -6,11 +6,13 @@ import { auth, db, storage } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { Role } from '../types';
 import { Upload } from 'lucide-react';
+import { uploadToImgur } from '../services/imgurService';
 
 export const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nombre, setNombre] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [role, setRole] = useState<Role>('cliente');
   const [zona, setZona] = useState('Centro');
   const [rubro, setRubro] = useState('Electricista'); // Default for professionals
@@ -47,12 +49,21 @@ export const SignUp: React.FC = () => {
       // 2. Upload Image if exists
       if (imageFile) {
         try {
-          const storageRef = ref(storage, `profile_images/${uid}`);
-          await uploadBytes(storageRef, imageFile);
-          fotoUrl = await getDownloadURL(storageRef);
+          // Try Imgur upload first
+          fotoUrl = await uploadToImgur(imageFile);
         } catch (uploadError) {
-          console.error("Error uploading image:", uploadError);
-          // Continue without custom image if upload fails
+          console.error("Error uploading image to Imgur:", uploadError);
+          
+          // Fallback to Firebase Storage if Imgur fails (e.g. missing Client ID)
+          try {
+             console.log("Falling back to Firebase Storage...");
+             const storageRef = ref(storage, `profile_images/${uid}`);
+             await uploadBytes(storageRef, imageFile);
+             fotoUrl = await getDownloadURL(storageRef);
+          } catch (firebaseError) {
+             console.error("Error uploading image to Firebase:", firebaseError);
+             // Continue without custom image if both fail
+          }
         }
       }
 
@@ -61,6 +72,7 @@ export const SignUp: React.FC = () => {
         uid,
         nombre,
         email,
+        telefono,
         rol: role, // Mapping local state 'role' to DB field 'rol'
         ciudad: 'Bahía Blanca',
         zona,
@@ -76,7 +88,8 @@ export const SignUp: React.FC = () => {
           isVip: false,
           ratingAvg: 0,
           reviewCount: 0,
-          fotosTrabajos: []
+          fotosTrabajos: [],
+          telefono: telefono
         };
       }
 
@@ -153,6 +166,19 @@ export const SignUp: React.FC = () => {
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">Teléfono</label>
+              <input
+                id="telefono"
+                name="telefono"
+                type="tel"
+                required
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
               />
             </div>
             

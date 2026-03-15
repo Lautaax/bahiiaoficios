@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { MapPin, LogOut, User as UserIcon, Moon, Sun, Settings } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { MapPin, LogOut, User as UserIcon, Moon, Sun, Settings, MessageSquare, Users, Eye } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { collection, getCountFromServer, doc, getDoc, setDoc, increment, updateDoc } from 'firebase/firestore';
+import { db } from './firebase';
 import { Login } from './components/Login';
 import { SignUp } from './components/SignUp';
 import { PrivateRoute } from './components/PrivateRoute';
@@ -13,7 +15,12 @@ import { VipButton } from './components/VipButton';
 import { Profile } from './components/Profile';
 import { PublicProfile } from './components/PublicProfile';
 import { CompleteProfile } from './components/CompleteProfile';
-
+import { Chat } from './components/Chat';
+import { ChatList } from './components/ChatList';
+import { ProfessionalDashboard } from './components/ProfessionalDashboard';
+import { QuoteRequestForm } from './components/QuoteRequestForm';
+import { Blog } from './components/Blog';
+import { BlogPost } from './components/BlogPost';
 import { Terms } from './components/Terms';
 import { Privacy } from './components/Privacy';
 import { Help } from './components/Help';
@@ -45,6 +52,9 @@ function Navbar() {
               <p className="text-xs text-gray-500 dark:text-gray-400">Portal de Profesionales</p>
             </div>
           </Link>
+          <Link to="/blog" className="hidden md:block ml-6 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            Blog y Consejos
+          </Link>
         </div>
         <div className="flex items-center gap-4">
           {/* Theme Toggle */}
@@ -59,8 +69,13 @@ function Navbar() {
           {currentUser ? (
             <div className="flex items-center gap-4">
               <Link to="/dashboard" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Dashboard
+                Directorio
               </Link>
+              {currentUser.rol === 'profesional' && (
+                <Link to="/dashboard-profesional" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  Mi Panel
+                </Link>
+              )}
               <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 <div className="relative">
                   {currentUser.fotoUrl ? (
@@ -72,6 +87,10 @@ function Navbar() {
                 <span className="hidden sm:inline">Hola, {currentUser.nombre}</span>
               </Link>
               
+              <Link to="/chats" className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Mis Mensajes">
+                <MessageSquare size={20} />
+              </Link>
+
               <Link to="/profile" className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Editar Perfil">
                 <Settings size={20} />
               </Link>
@@ -99,6 +118,44 @@ function Navbar() {
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const [stats, setStats] = useState({ users: 0, visits: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Increment site visits
+        const statsRef = doc(db, 'siteStats', 'global');
+        const statsDoc = await getDoc(statsRef);
+        
+        let currentVisits = 0;
+        if (!statsDoc.exists()) {
+          await setDoc(statsRef, { visits: 1 });
+          currentVisits = 1;
+        } else {
+          // Only increment once per session to avoid spamming
+          if (!sessionStorage.getItem('siteVisited')) {
+            await updateDoc(statsRef, { visits: increment(1) });
+            currentVisits = statsDoc.data().visits + 1;
+            sessionStorage.setItem('siteVisited', 'true');
+          } else {
+            currentVisits = statsDoc.data().visits;
+          }
+        }
+
+        // Get user count
+        const coll = collection(db, 'usuarios');
+        const snapshot = await getCountFromServer(coll);
+        const userCount = snapshot.data().count;
+
+        setStats({ users: userCount, visits: currentVisits });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-200">
       <Navbar />
@@ -106,6 +163,18 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Footer */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-12 py-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
+          <div className="flex justify-center gap-8 mb-6">
+            <div className="flex flex-col items-center">
+              <Users size={20} className="text-indigo-500 mb-1" />
+              <span className="font-bold text-gray-700 dark:text-gray-300">{stats.users}</span>
+              <span className="text-xs">Usuarios Registrados</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <Eye size={20} className="text-indigo-500 mb-1" />
+              <span className="font-bold text-gray-700 dark:text-gray-300">{stats.visits}</span>
+              <span className="text-xs">Visitas Totales</span>
+            </div>
+          </div>
           <p>© 2026 Bahia Oficios. Todos los derechos reservados.</p>
           <p className="mt-1 text-xs">
             Diseñado por <a href="https://www.instagram.com/_lautaaj/?__pwa=1" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">@_lautaaj</a>
@@ -187,27 +256,50 @@ function App() {
                 </Layout>
               </PrivateRoute>
             } />
+
+            <Route path="/chats" element={
+              <PrivateRoute>
+                <Layout>
+                  <ChatList />
+                </Layout>
+              </PrivateRoute>
+            } />
+
+            <Route path="/chat/:chatId" element={
+              <PrivateRoute>
+                <Layout>
+                  <Chat />
+                </Layout>
+              </PrivateRoute>
+            } />
             
             {/* Placeholder for professional dashboard */}
             <Route path="/dashboard-profesional" element={
               <PrivateRoute>
                 <Layout>
-                  <div className="max-w-4xl mx-auto p-8">
-                    <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Dashboard Profesional</h1>
-                    
-                    <div className="grid gap-6">
-                      <VipButton />
-                      
-                      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">Mis Estadísticas</h3>
-                        <p className="text-gray-500 dark:text-gray-400">Aquí verás tus métricas de visitas y contactos.</p>
-                      </div>
-                    </div>
-
-                    <Link to="/" className="text-indigo-600 dark:text-indigo-400 underline mt-8 block text-center">Volver al inicio</Link>
-                  </div>
+                  <ProfessionalDashboard />
                 </Layout>
               </PrivateRoute>
+            } />
+            
+            <Route path="/solicitar-presupuesto" element={
+              <Layout>
+                <div className="py-8">
+                  <QuoteRequestForm />
+                </div>
+              </Layout>
+            } />
+            
+            <Route path="/blog" element={
+              <Layout>
+                <Blog />
+              </Layout>
+            } />
+            
+            <Route path="/blog/:id" element={
+              <Layout>
+                <BlogPost />
+              </Layout>
             } />
           </Routes>
         </ThemeProvider>

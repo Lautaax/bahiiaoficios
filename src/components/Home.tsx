@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase, MessageSquare } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Category } from '../types';
@@ -74,6 +74,17 @@ export function Home() {
                 <MapPin className="w-5 h-5 text-red-400" />
                 <span>Solo Bahía Blanca</span>
               </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-indigo-800/50">
+              <p className="text-indigo-100 mb-4">¿No sabes a quién elegir?</p>
+              <Link 
+                to="/solicitar-presupuesto"
+                className="inline-flex items-center gap-2 bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg"
+              >
+                <MessageSquare size={20} className="text-indigo-600" />
+                Solicitar Presupuesto Múltiple
+              </Link>
             </div>
           </motion.div>
         </div>

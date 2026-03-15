@@ -4,7 +4,7 @@ import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { User as UserType, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage } from 'lucide-react';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
@@ -30,7 +30,9 @@ export const Profile: React.FC = () => {
     fotoDni: '',
     cuit: '',
     haceFactura: false,
-    tipoFactura: '' as 'A' | 'C' | ''
+    tipoFactura: '' as 'A' | 'C' | '',
+    haceUrgencias: false,
+    disponibilidadInmediata: false
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -74,7 +76,9 @@ export const Profile: React.FC = () => {
         fotoDni: currentUser.profesionalInfo?.fotoDni || '',
         cuit: currentUser.profesionalInfo?.cuit || '',
         haceFactura: currentUser.profesionalInfo?.haceFactura || false,
-        tipoFactura: currentUser.profesionalInfo?.tipoFactura || ''
+        tipoFactura: currentUser.profesionalInfo?.tipoFactura || '',
+        haceUrgencias: currentUser.profesionalInfo?.haceUrgencias || false,
+        disponibilidadInmediata: currentUser.profesionalInfo?.disponibilidadInmediata || false
       });
       setImagePreview(currentUser.fotoUrl || null);
       setDniPreview(currentUser.profesionalInfo?.fotoDni || null);
@@ -265,7 +269,9 @@ export const Profile: React.FC = () => {
           fotoDni: newFotoDni,
           cuit: formData.cuit,
           haceFactura: formData.haceFactura,
-          tipoFactura: formData.haceFactura ? formData.tipoFactura : null
+          tipoFactura: formData.haceFactura ? formData.tipoFactura : null,
+          haceUrgencias: formData.haceUrgencias,
+          disponibilidadInmediata: formData.disponibilidadInmediata
         };
       }
 
@@ -595,11 +601,55 @@ export const Profile: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center">
+                  <input
+                    id="haceUrgencias"
+                    name="haceUrgencias"
+                    type="checkbox"
+                    checked={formData.haceUrgencias}
+                    onChange={(e) => setFormData({...formData, haceUrgencias: e.target.checked})}
+                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="haceUrgencias" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+                    ¿Atiendes Urgencias 24/7?
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center">
+                  <input
+                    id="disponibilidadInmediata"
+                    name="disponibilidadInmediata"
+                    type="checkbox"
+                    checked={formData.disponibilidadInmediata}
+                    onChange={(e) => setFormData({...formData, disponibilidadInmediata: e.target.checked})}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="disponibilidadInmediata" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+                    ¿Tienes disponibilidad inmediata?
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* DNI Photo Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto del DNI (Verificación)</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Foto del DNI (Verificación)</label>
+                {currentUser?.profesionalInfo?.isVerified ? (
+                  <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium border border-blue-200">
+                    <ShieldCheck size={14} />
+                    Perfil Verificado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium border border-gray-200">
+                    Pendiente de Verificación
+                  </span>
+                )}
+              </div>
               <div className={`flex items-center gap-4 p-4 border-2 border-dashed rounded-lg bg-gray-50 dark:bg-gray-800 transition-colors ${
                 dniUploadStatus === 'error' ? 'border-red-300 bg-red-50' : 
                 dniUploadStatus === 'success' ? 'border-green-300 bg-green-50' : 
@@ -697,7 +747,10 @@ export const Profile: React.FC = () => {
             </div>
             {/* Works Images Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Trabajos Realizados (Portafolio)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Portafolio de Trabajos</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                ¡Incentivamos a que subas fotos de tus trabajos previos! En servicios manuales, una imagen vale más que cualquier descripción y ayuda a generar más confianza en los clientes.
+              </p>
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-4">
                   {/* Existing Images */}

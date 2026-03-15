@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import { useSearchParams } from 'react-router-dom';
+import { collection, query, where, orderBy, limit, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { useSearchParams, Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Search, Filter, MapPin, Crown, X, ChevronDown } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 
 // Helper to normalize strings (remove accents)
@@ -21,9 +21,12 @@ export const Dashboard: React.FC = () => {
   const [selectedRubro, setSelectedRubro] = useState<string>('Todos');
   const [selectedZona, setSelectedZona] = useState<string>('Todas');
   const [searchTerm, setSearchTerm] = useState('');
+  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(false);
+  const [haceUrgencias, setHaceUrgencias] = useState(false);
   const [indexErrorLink, setIndexErrorLink] = useState<string | null>(null);
   const [showVipWelcome, setShowVipWelcome] = useState(false);
   const [isRubroOpen, setIsRubroOpen] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     const search = searchParams.get('search');
@@ -124,9 +127,17 @@ export const Dashboard: React.FC = () => {
   // (Doing this client-side allows for more flexible text search without Algolia/Elasticsearch)
   const filteredProfessionals = useMemo(() => {
     return professionals.filter(p => {
+      const isCategory = PROFESSIONS.some(prof => prof.category === selectedRubro);
+      const professionsInCategory = isCategory ? PROFESSIONS.filter(prof => prof.category === selectedRubro).map(prof => prof.name) : [];
+
       const matchesRubro = selectedRubro === 'Todos' || 
-        (p.profesionalInfo?.rubros && p.profesionalInfo.rubros.includes(selectedRubro)) || 
-        p.profesionalInfo?.rubro === selectedRubro;
+        (isCategory ? 
+          ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.some(r => professionsInCategory.includes(r))) || 
+          (p.profesionalInfo?.rubro && professionsInCategory.includes(p.profesionalInfo.rubro)))
+          :
+          ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.includes(selectedRubro)) || 
+          p.profesionalInfo?.rubro === selectedRubro)
+        );
       const matchesZona = selectedZona === 'Todas' || p.zona === selectedZona;
       
       const term = normalizeString(searchTerm.trim());
@@ -137,27 +148,35 @@ export const Dashboard: React.FC = () => {
         (p.profesionalInfo?.rubros && p.profesionalInfo.rubros.some(r => normalizeString(r).includes(term))) ||
         normalizeString(p.profesionalInfo?.rubro || '').includes(term);
 
-      return matchesRubro && matchesZona && matchesSearch;
-    });
-  }, [professionals, selectedRubro, selectedZona, searchTerm]);
+      const matchesDisponibilidad = !disponibilidadInmediata || p.profesionalInfo?.disponibilidadInmediata;
+      const matchesUrgencias = !haceUrgencias || p.profesionalInfo?.haceUrgencias;
 
-  // Calculate Popular Professions based on supply (count of professionals in each category)
+      return matchesRubro && matchesZona && matchesSearch && matchesDisponibilidad && matchesUrgencias;
+    });
+  }, [professionals, selectedRubro, selectedZona, searchTerm, disponibilidadInmediata, haceUrgencias]);
+
+  // Calculate Popular Categories based on supply (count of professionals in each category)
   // This makes the list dynamic based on the actual data
-  const popularProfessions = useMemo(() => {
+  const popularCategories = useMemo(() => {
     const counts: Record<string, number> = {};
     
     professionals.forEach(p => {
       const rubros = p.profesionalInfo?.rubros || (p.profesionalInfo?.rubro ? [p.profesionalInfo.rubro] : []);
       rubros.forEach(r => {
-        counts[r] = (counts[r] || 0) + 1;
+        const profession = PROFESSIONS.find(prof => prof.name === r);
+        if (profession && profession.category) {
+          counts[profession.category] = (counts[profession.category] || 0) + 1;
+        }
       });
     });
 
-    // Sort by count descending, then random shuffle for equal counts to keep it dynamic
-    return [...PROFESSIONS]
+    const uniqueCategories = Array.from(new Set(PROFESSIONS.map(p => p.category || 'Otros')));
+
+    // Sort by count descending
+    return uniqueCategories
       .sort((a, b) => {
-        const countA = counts[a.name] || 0;
-        const countB = counts[b.name] || 0;
+        const countA = counts[a] || 0;
+        const countB = counts[b] || 0;
         return countB - countA; // Descending order
       })
       .slice(0, 6); // Show top 6
@@ -169,6 +188,11 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Client Quote Requests */}
+        {currentUser?.rol === 'cliente' && (
+          <ClientQuoteRequests />
+        )}
+
         {/* VIP Welcome Message */}
         {showVipWelcome && (
           <div className="mb-8 bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-200 rounded-xl p-6 relative shadow-sm">
@@ -265,20 +289,34 @@ export const Dashboard: React.FC = () => {
                         >
                           <span className="block truncate ml-8">Todos los Rubros</span>
                         </div>
-                        {PROFESSIONS.map((profession) => (
-                          <div
-                            key={profession.name}
-                            className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-indigo-50 transition-colors flex items-center gap-3 ${selectedRubro === profession.name ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-900'}`}
-                            onClick={() => {
-                              setSelectedRubro(profession.name);
-                              setIsRubroOpen(false);
-                              setSearchTerm('');
-                            }}
-                          >
-                            <profession.icon size={18} className={`${selectedRubro === profession.name ? 'text-indigo-600' : 'text-gray-400'}`} />
-                            <span className="block truncate">
-                              {profession.name}
-                            </span>
+                        {Object.entries(
+                          PROFESSIONS.reduce((acc, profession) => {
+                            const category = profession.category || 'Otros';
+                            if (!acc[category]) acc[category] = [];
+                            acc[category].push(profession);
+                            return acc;
+                          }, {} as Record<string, typeof PROFESSIONS>)
+                        ).map(([category, professions]) => (
+                          <div key={category}>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50">
+                              {category}
+                            </div>
+                            {professions.map((profession) => (
+                              <div
+                                key={profession.name}
+                                className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-indigo-50 transition-colors flex items-center gap-3 ${selectedRubro === profession.name ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-900'}`}
+                                onClick={() => {
+                                  setSelectedRubro(profession.name);
+                                  setIsRubroOpen(false);
+                                  setSearchTerm('');
+                                }}
+                              >
+                                <profession.icon size={18} className={`${selectedRubro === profession.name ? 'text-indigo-600' : 'text-gray-400'}`} />
+                                <span className="block truncate">
+                                  {profession.name}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
@@ -301,47 +339,97 @@ export const Dashboard: React.FC = () => {
                     ))}
                 </select>
                 </div>
+
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`px-4 py-3 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                    showAdvancedFilters || disponibilidadInmediata || haceUrgencias
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Filter size={18} />
+                  Filtros Avanzados
+                </button>
             </div>
           </div>
+
+          {/* Advanced Filters Panel */}
+          {showAdvancedFilters && (
+            <div className="mt-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2">
+              <h3 className="text-sm font-bold text-gray-900 mb-3">Filtros Avanzados</h3>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={disponibilidadInmediata}
+                    onChange={(e) => setDisponibilidadInmediata(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span className="text-sm text-gray-700">Disponibilidad Inmediata</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={haceUrgencias}
+                    onChange={(e) => setHaceUrgencias(e.target.checked)}
+                    className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  />
+                  <span className="text-sm text-gray-700">Atención de Urgencias 24h</span>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Categories Grid */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Rubros Populares</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Sectores Populares</h3>
             <button 
               onClick={() => setIsRubroOpen(true)}
               className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
             >
-              Ver todos
+              Ver todos los rubros
             </button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {popularProfessions.map((profession) => (
-              <button
-                key={profession.name}
-                onClick={() => {
-                  setSelectedRubro(profession.name === selectedRubro ? 'Todos' : profession.name);
-                  setSearchTerm('');
-                }}
-                className={`group flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
-                  selectedRubro === profession.name
-                    ? 'bg-indigo-50 border-indigo-200 shadow-sm ring-1 ring-indigo-200'
-                    : 'bg-white border-gray-200 hover:border-indigo-200 hover:shadow-sm'
-                }`}
-              >
-                <div className={`p-3 rounded-full mb-3 transition-colors ${
-                  selectedRubro === profession.name ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-50 text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'
-                }`}>
-                  <profession.icon size={24} />
-                </div>
-                <span className={`text-sm font-medium text-center ${
-                  selectedRubro === profession.name ? 'text-indigo-700' : 'text-gray-700'
-                }`}>
-                  {profession.name}
-                </span>
-              </button>
-            ))}
+            {popularCategories.map((category) => {
+              const categoryIcons: Record<string, any> = {
+                'Hogar y Construcción': House,
+                'Servicios Generales': Wrench,
+                'Automotor': Car,
+                'Digital y Diseño': Megaphone,
+                'Otros': Sparkles
+              };
+              const CategoryIcon = categoryIcons[category] || Sparkles;
+
+              return (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedRubro(category === selectedRubro ? 'Todos' : category);
+                    setSearchTerm('');
+                  }}
+                  className={`group flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
+                    selectedRubro === category
+                      ? 'bg-indigo-50 border-indigo-200 shadow-sm ring-1 ring-indigo-200'
+                      : 'bg-white border-gray-200 hover:border-indigo-200 hover:shadow-sm'
+                  }`}
+                >
+                  <div className={`p-3 rounded-full mb-3 transition-colors ${
+                    selectedRubro === category ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-50 text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'
+                  }`}>
+                    <CategoryIcon size={24} />
+                  </div>
+                  <span className={`text-sm font-medium text-center ${
+                    selectedRubro === category ? 'text-indigo-700' : 'text-gray-700'
+                  }`}>
+                    {category}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -395,6 +483,90 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
       </main>
+    </div>
+  );
+};
+
+const ClientQuoteRequests: React.FC = () => {
+  const { currentUser } = useAuth();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!currentUser) return;
+      try {
+        const q = query(
+          collection(db, 'quoteRequests'),
+          where('clienteId', '==', currentUser.uid)
+        );
+        const snapshot = await getDocs(q);
+        const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Sort client-side by fecha desc
+        reqs.sort((a: any, b: any) => {
+          const dateA = a.fecha?.toDate?.() || new Date(0);
+          const dateB = b.fecha?.toDate?.() || new Date(0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRequests(reqs);
+      } catch (error) {
+        console.error("Error fetching client quote requests:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRequests();
+  }, [currentUser]);
+
+  if (loading) return null;
+  if (requests.length === 0) return null;
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus Solicitudes de Presupuesto</h2>
+      <div className="space-y-4">
+        {requests.map(req => (
+          <div key={req.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="font-bold text-lg text-gray-900 dark:text-white">Solicitud de {req.rubro}</h3>
+                <p className="text-sm text-gray-500">{req.zona} • {new Date(req.fecha?.toDate()).toLocaleDateString()}</p>
+              </div>
+              <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full font-medium">
+                {req.respuestas?.length || 0}/3 Respuestas
+              </span>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">{req.descripcion}</p>
+            
+            {req.respuestas && req.respuestas.length > 0 && (
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Respuestas de Profesionales:</h4>
+                <div className="space-y-3">
+                  {req.respuestas.map((resp: any, idx: number) => (
+                    <div key={idx} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl">
+                      <div className="flex justify-between items-center mb-2">
+                        <Link to={`/profesional/${resp.profesionalId}`} className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                          {resp.profesionalNombre}
+                        </Link>
+                        <span className="font-bold text-green-600 dark:text-green-400">${resp.precio}</span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{resp.mensaje}</p>
+                      <div className="mt-3 flex justify-end">
+                        <Link 
+                          to={`/profesional/${resp.profesionalId}`}
+                          className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-200 transition-colors flex items-center gap-1"
+                        >
+                          <MessageSquare size={14} /> Contactar
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

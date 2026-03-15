@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
 import { Upload, User, Briefcase } from 'lucide-react';
 
+import { uploadToImgur } from '../services/imgurService';
+
 export const CompleteProfile: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -54,9 +56,22 @@ export const CompleteProfile: React.FC = () => {
       let fotoUrl = currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`;
 
       if (imageFile) {
-        const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
-        await uploadBytes(storageRef, imageFile);
-        fotoUrl = await getDownloadURL(storageRef);
+        try {
+           // Try Imgur upload first
+           fotoUrl = await uploadToImgur(imageFile);
+        } catch (uploadError) {
+           console.error("Error uploading image to Imgur:", uploadError);
+           
+           // Fallback to Firebase Storage
+           try {
+              console.log("Falling back to Firebase Storage...");
+              const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
+              await uploadBytes(storageRef, imageFile);
+              fotoUrl = await getDownloadURL(storageRef);
+           } catch (firebaseError) {
+              console.error("Error uploading image to Firebase:", firebaseError);
+           }
+        }
       }
 
       const userData: any = {

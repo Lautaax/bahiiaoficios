@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 
 export const PublicProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [professional, setProfessional] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,17 @@ export const PublicProfile: React.FC = () => {
           const userData = docSnap.data() as User;
           if (userData.rol === 'profesional') {
             setProfessional({ ...userData, uid: docSnap.id });
+            
+            // Increment profile views if not the owner
+            if (currentUser?.uid !== docSnap.id) {
+              try {
+                await updateDoc(docRef, {
+                  'profesionalInfo.profileViews': (userData.profesionalInfo?.profileViews || 0) + 1
+                });
+              } catch (e) {
+                console.error("Error updating profile views", e);
+              }
+            }
           } else {
             setError('El usuario no es un perfil profesional.');
           }
@@ -94,6 +106,58 @@ export const PublicProfile: React.FC = () => {
     }
   }, [professional]);
 
+  const handleWhatsAppClick = async () => {
+    if (!id || !professional?.profesionalInfo) return;
+    try {
+      const userRef = doc(db, 'usuarios', id);
+      await updateDoc(userRef, {
+        'profesionalInfo.whatsappClicks': (professional.profesionalInfo.whatsappClicks || 0) + 1
+      });
+    } catch (error) {
+      console.error("Error updating whatsapp clicks:", error);
+    }
+  };
+
+  const handleContactClick = async () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    if (currentUser.uid === id) return; // Can't chat with yourself
+
+    try {
+      // Check if chat already exists
+      const q = query(
+        collection(db, 'chats'),
+        where('clientId', '==', currentUser.uid),
+        where('workerId', '==', id)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Chat exists, navigate to it
+        const existingChatId = querySnapshot.docs[0].id;
+        navigate(`/chat/${existingChatId}`);
+      } else {
+        // Create new chat
+        const newChatRef = await addDoc(collection(db, 'chats'), {
+          clientId: currentUser.uid,
+          workerId: id,
+          clientName: currentUser.nombre,
+          workerName: professional?.nombre,
+          lastMessage: '',
+          lastMessageTime: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        navigate(`/chat/${newChatRef.id}`);
+      }
+    } catch (error) {
+      console.error("Error creating/navigating to chat:", error);
+      alert("Hubo un error al intentar iniciar el chat. Por favor, intenta de nuevo.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
@@ -117,7 +181,7 @@ export const PublicProfile: React.FC = () => {
   }
 
   const { nombre, zona, fotoUrl } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified } = professional.profesionalInfo;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -147,7 +211,14 @@ export const PublicProfile: React.FC = () => {
               </div>
 
               <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{nombre}</h1>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nombre}</h1>
+                  {isVerified && (
+                    <div className="flex items-center text-blue-600" title="Perfil Verificado">
+                      <ShieldCheck size={24} className="fill-blue-100" />
+                    </div>
+                  )}
+                </div>
                 
                 {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 0 ? (
                   <div className="flex flex-wrap justify-center gap-2 mb-3">
@@ -161,9 +232,24 @@ export const PublicProfile: React.FC = () => {
                   <p className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide text-sm mb-2">{rubro}</p>
                 )}
 
-                <div className="flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm gap-1">
+                <div className="flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm gap-1 mb-3">
                   <MapPin size={14} />
                   <span>{zona}, Bahía Blanca</span>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-2">
+                  {haceUrgencias && (
+                    <div className="inline-flex items-center gap-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs px-3 py-1 rounded-full font-bold border border-red-100 dark:border-red-800">
+                      <AlertCircle size={14} />
+                      <span>ATENCIÓN URGENCIAS 24/7</span>
+                    </div>
+                  )}
+                  {disponibilidadInmediata && (
+                    <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs px-3 py-1 rounded-full font-bold border border-green-100 dark:border-green-800">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      <span>DISPONIBLE AHORA</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -247,6 +333,28 @@ export const PublicProfile: React.FC = () => {
                   )}
                 </div>
               )}
+
+              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                {telefono && (
+                  <a
+                    href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi tu perfil en Bahía Oficios y necesito presupuesto para...`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleWhatsAppClick}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <MessageSquare size={18} />
+                    Contactar por WhatsApp
+                  </a>
+                )}
+                <button
+                  onClick={handleContactClick}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <MessageSquare size={18} />
+                  Contactar por Chat
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -345,6 +453,19 @@ export const PublicProfile: React.FC = () => {
                     <p className="text-gray-600 dark:text-gray-300 text-sm mt-2 pl-11 italic">
                       "{review.comentario}"
                     </p>
+                    {review.fotos && review.fotos.length > 0 && (
+                      <div className="flex gap-2 mt-3 pl-11 overflow-x-auto">
+                        {review.fotos.map((foto, idx) => (
+                          <img 
+                            key={idx} 
+                            src={foto} 
+                            alt={`Foto de reseña ${idx + 1}`} 
+                            className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(foto, '_blank')}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
