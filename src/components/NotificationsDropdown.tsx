@@ -17,15 +17,29 @@ export const NotificationsDropdown: React.FC = () => {
 
     const q = query(
       collection(db, 'notificaciones'),
-      where('userId', '==', currentUser.uid),
-      orderBy('fecha', 'desc'),
-      limit(10)
+      where('userId', '==', currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      let notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      
+      // Sort client-side to avoid composite index requirement
+      notifs.sort((a, b) => {
+        const timeA = a.fecha?.toMillis ? a.fecha.toMillis() : 0;
+        const timeB = b.fecha?.toMillis ? b.fecha.toMillis() : 0;
+        return timeB - timeA;
+      });
+      
+      // Limit to 10 most recent
+      notifs = notifs.slice(0, 10);
+      
       setNotifications(notifs);
       setUnreadCount(notifs.filter((n: any) => !n.leida).length);
+    }, (error) => {
+      console.error("Error fetching notifications:", error);
+      if (error.message.includes('requires an index')) {
+        console.warn("Please create the required Firestore index for notifications.");
+      }
     });
 
     return () => unsubscribe();

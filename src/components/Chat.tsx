@@ -57,6 +57,17 @@ export const Chat: React.FC = () => {
         msgs.push({ id: doc.id, ...doc.data() } as Message);
       });
       setMessages(msgs);
+      
+      // Mark as read if the last message was not sent by the current user
+      if (msgs.length > 0) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.senderId !== currentUser.uid) {
+          updateDoc(doc(db, 'chats', chatId), {
+            hasUnread: false
+          }).catch(err => console.error("Error marking as read:", err));
+        }
+      }
+
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -82,7 +93,9 @@ export const Chat: React.FC = () => {
       await updateDoc(doc(db, 'chats', chatId), {
         lastMessage: text,
         lastMessageTime: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        lastMessageSenderId: currentUser.uid,
+        hasUnread: true
       });
     } catch (error) {
       console.error("Error sending message:", error);

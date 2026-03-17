@@ -1,4 +1,4 @@
-import { Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car } from 'lucide-react';
+import { Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car, Monitor, Wind, Scissors, Cpu, Anvil } from 'lucide-react';
 
 export const PROFESSIONS = [
   { name: 'Electricista', icon: Lightbulb, category: 'Hogar y Construcción' },
@@ -9,11 +9,17 @@ export const PROFESSIONS = [
   { name: 'Carpintero', icon: Hammer, category: 'Hogar y Construcción' },
   { name: 'Jardinero', icon: Sprout, category: 'Hogar y Construcción' },
   { name: 'Techista', icon: House, category: 'Hogar y Construcción' },
+  { name: 'Herrería', icon: Anvil, category: 'Hogar y Construcción' },
+  { name: 'Aire Acondicionado', icon: Wind, category: 'Hogar y Construcción' },
   { name: 'Cerrajero', icon: Key, category: 'Servicios Generales' },
   { name: 'Flete', icon: Truck, category: 'Servicios Generales' },
   { name: 'Limpieza', icon: Sparkles, category: 'Servicios Generales' },
+  { name: 'Modista', icon: Scissors, category: 'Servicios Generales' },
+  { name: 'Informática', icon: Monitor, category: 'Servicios Generales' },
+  { name: 'Electrónico', icon: Cpu, category: 'Servicios Generales' },
   { name: 'Mecánico', icon: Wrench, category: 'Automotor' },
   { name: 'Pintor Autos', icon: SprayCan, category: 'Automotor' },
+  { name: 'Chapa y Pintura', icon: Car, category: 'Automotor' },
   { name: 'Mecánico Motos', icon: Bike, category: 'Automotor' },
   { name: 'Mecánico Autos', icon: Car, category: 'Automotor' },
   { name: 'Mecánico Camiones', icon: Truck, category: 'Automotor' },

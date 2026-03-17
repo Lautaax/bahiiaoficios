@@ -4,8 +4,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Category } from '../types';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export function Home() {
+  const { currentUser } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -125,19 +127,39 @@ export function Home() {
           <div className="bg-indigo-600 rounded-2xl shadow-xl overflow-hidden lg:grid lg:grid-cols-2 lg:gap-4">
             <div className="pt-10 pb-12 px-6 sm:pt-16 sm:px-16 lg:py-16 lg:pr-0 xl:py-20 xl:px-20">
               <div className="lg:self-center">
-                <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-                  <span className="block">¿Ofrecés un servicio?</span>
-                  <span className="block text-indigo-200">Sumate a la guía.</span>
-                </h2>
-                <p className="mt-4 text-lg leading-6 text-indigo-100">
-                  Registrate gratis, verificá tu identidad y llegá a más clientes en Bahía Blanca. Tu perfil aparecerá en las búsquedas de miles de vecinos.
-                </p>
-                <Link 
-                  to="/signup" 
-                  className="mt-8 bg-white border border-transparent rounded-md shadow px-5 py-3 inline-flex items-center text-base font-medium text-indigo-600 hover:bg-indigo-50"
-                >
-                  Registrarme Ahora
-                </Link>
+                {currentUser ? (
+                  <>
+                    <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+                      <span className="block">¿Necesitas un servicio?</span>
+                      <span className="block text-indigo-200">Encuentra al experto ideal.</span>
+                    </h2>
+                    <p className="mt-4 text-lg leading-6 text-indigo-100">
+                      Explora nuestra guía de profesionales verificados en Bahía Blanca y contacta al que mejor se adapte a tus necesidades.
+                    </p>
+                    <Link 
+                      to="/dashboard" 
+                      className="mt-8 bg-white border border-transparent rounded-md shadow px-5 py-3 inline-flex items-center text-base font-medium text-indigo-600 hover:bg-indigo-50"
+                    >
+                      ¡Busca a los profesionales!
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+                      <span className="block">¿Ofrecés un servicio?</span>
+                      <span className="block text-indigo-200">Sumate a la guía.</span>
+                    </h2>
+                    <p className="mt-4 text-lg leading-6 text-indigo-100">
+                      Registrate gratis, verificá tu identidad y llegá a más clientes en Bahía Blanca. Tu perfil aparecerá en las búsquedas de miles de vecinos.
+                    </p>
+                    <Link 
+                      to="/signup" 
+                      className="mt-8 bg-white border border-transparent rounded-md shadow px-5 py-3 inline-flex items-center text-base font-medium text-indigo-600 hover:bg-indigo-50"
+                    >
+                      Registrarme Ahora
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
             <div className="relative -mt-6 aspect-w-5 aspect-h-3 md:aspect-w-2 md:aspect-h-1">

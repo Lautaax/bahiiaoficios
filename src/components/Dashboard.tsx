@@ -354,6 +354,52 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Quick Filters */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setDisponibilidadInmediata(!disponibilidadInmediata)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+                disponibilidadInmediata
+                  ? 'bg-green-100 text-green-800 border border-green-200'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${disponibilidadInmediata ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+              Disponible Ahora
+            </button>
+            <button
+              onClick={() => setHaceUrgencias(!haceUrgencias)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+                haceUrgencias
+                  ? 'bg-red-100 text-red-800 border border-red-200'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${haceUrgencias ? 'bg-red-500' : 'bg-gray-400'}`}></div>
+              Urgencias 24h
+            </button>
+            
+            {selectedRubro !== 'Todos' && (
+              <button
+                onClick={() => setSelectedRubro('Todos')}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-2 hover:bg-indigo-200 transition-colors"
+              >
+                {selectedRubro}
+                <X size={14} />
+              </button>
+            )}
+            
+            {selectedZona !== 'Todas' && (
+              <button
+                onClick={() => setSelectedZona('Todas')}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-2 hover:bg-indigo-200 transition-colors"
+              >
+                {selectedZona}
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
           {/* Advanced Filters Panel */}
           {showAdvancedFilters && (
             <div className="mt-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2">

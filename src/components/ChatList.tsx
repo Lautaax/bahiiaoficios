@@ -15,6 +15,8 @@ interface ChatPreview {
   lastMessageTime: any;
   updatedAt: any;
   otherUserFotoUrl?: string;
+  hasUnread?: boolean;
+  lastMessageSenderId?: string;
 }
 
 export const ChatList: React.FC = () => {
@@ -30,8 +32,7 @@ export const ChatList: React.FC = () => {
 
     const q = query(
       collection(db, 'chats'),
-      where(field, '==', currentUser.uid),
-      orderBy('updatedAt', 'desc')
+      where(field, '==', currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -53,6 +54,14 @@ export const ChatList: React.FC = () => {
 
         chatData.push(data);
       }
+      
+      // Sort client-side to avoid composite index requirement
+      chatData.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+
       setChats(chatData);
       setLoading(false);
     }, (error) => {
@@ -93,12 +102,13 @@ export const ChatList: React.FC = () => {
           {chats.map((chat) => {
             const isClient = currentUser.rol === 'cliente';
             const otherName = isClient ? chat.workerName : chat.clientName;
+            const isUnread = chat.hasUnread && chat.lastMessageSenderId !== currentUser.uid;
             
             return (
               <Link 
                 key={chat.id} 
                 to={`/chat/${chat.id}`}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${isUnread ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
               >
                 <div className="relative">
                   {chat.otherUserFotoUrl ? (
@@ -108,17 +118,22 @@ export const ChatList: React.FC = () => {
                       <UserIcon size={24} />
                     </div>
                   )}
+                  {isUnread && (
+                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                  )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
-                    <h3 className="font-bold text-gray-900 dark:text-white truncate">{otherName}</h3>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2 flex items-center gap-1">
+                    <h3 className={`truncate ${isUnread ? 'font-bold text-gray-900 dark:text-white' : 'font-medium text-gray-800 dark:text-gray-200'}`}>
+                      {otherName}
+                    </h3>
+                    <span className={`text-xs whitespace-nowrap ml-2 flex items-center gap-1 ${isUnread ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                       <Clock size={10} />
                       {chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  <p className={`text-sm truncate ${isUnread ? 'font-medium text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
                     {chat.lastMessage || 'Nuevo chat'}
                   </p>
                 </div>

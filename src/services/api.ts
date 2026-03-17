@@ -15,7 +15,13 @@ export const api = {
       { id: '9', name: 'Cerrajero', slug: 'cerrajero' },
       { id: '10', name: 'Flete', slug: 'flete' },
       { id: '11', name: 'Limpieza', slug: 'limpieza' },
-      { id: '12', name: 'Techista', slug: 'techista' }
+      { id: '12', name: 'Techista', slug: 'techista' },
+      { id: '13', name: 'Informática', slug: 'informatica' },
+      { id: '14', name: 'Chapa y Pintura', slug: 'chapa-y-pintura' },
+      { id: '15', name: 'Herrería', slug: 'herreria' },
+      { id: '16', name: 'Aire Acondicionado', slug: 'aire-acondicionado' },
+      { id: '17', name: 'Modista', slug: 'modista' },
+      { id: '18', name: 'Electrónico', slug: 'electronico' }
     ];
   }
 };

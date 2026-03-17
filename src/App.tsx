@@ -25,6 +25,9 @@ import { BlogPost } from './components/BlogPost';
 import { Terms } from './components/Terms';
 import { Privacy } from './components/Privacy';
 import { Help } from './components/Help';
+import { NotificationListener } from './components/NotificationListener';
+
+import { ChatBadge } from './components/ChatBadge';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -90,9 +93,7 @@ function Navbar() {
               
               <NotificationsDropdown />
               
-              <Link to="/chats" className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Mis Mensajes">
-                <MessageSquare size={20} />
-              </Link>
+              <ChatBadge />
 
               <Link to="/profile" className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Editar Perfil">
                 <Settings size={20} />
@@ -193,12 +194,16 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function App() {
+import { useAnalytics } from './hooks/useAnalytics';
+
+function AppContent() {
+  useAnalytics();
+  
   return (
-    <Router>
-      <AuthProvider>
-        <ThemeProvider>
-          <Routes>
+    <AuthProvider>
+      <ThemeProvider>
+        <NotificationListener />
+        <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             
@@ -307,6 +312,13 @@ function App() {
           </Routes>
         </ThemeProvider>
       </AuthProvider>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
