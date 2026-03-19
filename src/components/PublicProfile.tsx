@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
 import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle } from 'lucide-react';
@@ -8,7 +8,7 @@ import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 
 export const PublicProfile: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [professional, setProfessional] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -20,21 +20,37 @@ export const PublicProfile: React.FC = () => {
 
   useEffect(() => {
     const fetchProfessional = async () => {
-      if (!id) return;
+      if (!slug) return;
       
       try {
-        const docRef = doc(db, 'usuarios', id);
-        const docSnap = await getDoc(docRef);
+        let userData: User | null = null;
+        let docId = '';
+
+        // First try to find by slug
+        const q = query(collection(db, 'usuarios'), where('slug', '==', slug), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          userData = querySnapshot.docs[0].data() as User;
+          docId = querySnapshot.docs[0].id;
+        } else {
+          // Fallback to ID
+          const docRef = doc(db, 'usuarios', slug);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            userData = docSnap.data() as User;
+            docId = docSnap.id;
+          }
+        }
         
-        if (docSnap.exists()) {
-          const userData = docSnap.data() as User;
+        if (userData) {
           if (userData.rol === 'profesional') {
-            setProfessional({ ...userData, uid: docSnap.id });
+            setProfessional({ ...userData, uid: docId });
             
             // Increment profile views if not the owner
-            if (currentUser?.uid !== docSnap.id) {
+            if (currentUser?.uid !== docId) {
               try {
-                await updateDoc(docRef, {
+                await updateDoc(doc(db, 'usuarios', docId), {
                   'profesionalInfo.profileViews': (userData.profesionalInfo?.profileViews || 0) + 1
                 });
               } catch (e) {
@@ -56,15 +72,15 @@ export const PublicProfile: React.FC = () => {
     };
 
     fetchProfessional();
-  }, [id]);
+  }, [slug]);
 
   const fetchReviews = async () => {
-    if (!id) return;
+    if (!professional?.uid) return;
     try {
       // Try optimal query first
       const q = query(
         collection(db, 'resenas'),
-        where('profesionalId', '==', id),
+        where('profesionalId', '==', professional.uid),
         orderBy('fecha', 'desc')
       );
       const querySnapshot = await getDocs(q);
@@ -82,7 +98,7 @@ export const PublicProfile: React.FC = () => {
           try {
               const simpleQ = query(
                   collection(db, 'resenas'),
-                  where('profesionalId', '==', id),
+                  where('profesionalId', '==', professional.uid),
                   limit(50) // Fetch reasonable amount
               );
               const querySnapshot = await getDocs(simpleQ);
@@ -149,9 +165,9 @@ export const PublicProfile: React.FC = () => {
   }, [reviews, professional, reviewsLoaded]);
 
   const handleWhatsAppClick = async () => {
-    if (!id || !professional?.profesionalInfo) return;
+    if (!professional?.uid || !professional?.profesionalInfo) return;
     try {
-      const userRef = doc(db, 'usuarios', id);
+      const userRef = doc(db, 'usuarios', professional.uid);
       await updateDoc(userRef, {
         'profesionalInfo.whatsappClicks': (professional.profesionalInfo.whatsappClicks || 0) + 1
       });
@@ -166,14 +182,14 @@ export const PublicProfile: React.FC = () => {
       return;
     }
 
-    if (currentUser.uid === id) return; // Can't chat with yourself
+    if (!professional?.uid || currentUser.uid === professional.uid) return; // Can't chat with yourself
 
     try {
       // Check if chat already exists
       const q = query(
         collection(db, 'chats'),
         where('clientId', '==', currentUser.uid),
-        where('workerId', '==', id)
+        where('workerId', '==', professional.uid)
       );
       const querySnapshot = await getDocs(q);
 
@@ -185,7 +201,7 @@ export const PublicProfile: React.FC = () => {
         // Create new chat
         const newChatRef = await addDoc(collection(db, 'chats'), {
           clientId: currentUser.uid,
-          workerId: id,
+          workerId: professional.uid,
           clientName: currentUser.nombre,
           workerName: professional?.nombre,
           lastMessage: '',
@@ -197,6 +213,43 @@ export const PublicProfile: React.FC = () => {
     } catch (error) {
       console.error("Error creating/navigating to chat:", error);
       alert("Hubo un error al intentar iniciar el chat. Por favor, intenta de nuevo.");
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta reseña?")) return;
+    
+    try {
+      await deleteDoc(doc(db, 'resenas', reviewId));
+      setReviews(reviews.filter(r => r.id !== reviewId));
+      
+      // Recalculate rating
+      if (professional && professional.uid) {
+        const remainingReviews = reviews.filter(r => r.id !== reviewId);
+        const newCount = remainingReviews.length;
+        const totalRating = remainingReviews.reduce((acc, rev) => acc + rev.rating, 0);
+        const newAvg = newCount > 0 ? totalRating / newCount : 0;
+        
+        await updateDoc(doc(db, 'usuarios', professional.uid), {
+          'profesionalInfo.ratingAvg': newAvg,
+          'profesionalInfo.reviewCount': newCount
+        });
+        
+        setProfessional(prev => {
+          if (!prev || !prev.profesionalInfo) return prev;
+          return {
+            ...prev,
+            profesionalInfo: {
+              ...prev.profesionalInfo,
+              ratingAvg: newAvg,
+              reviewCount: newCount
+            }
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      alert("Error al eliminar la reseña.");
     }
   };
 
@@ -223,7 +276,7 @@ export const PublicProfile: React.FC = () => {
   }
 
   const { nombre, zona, fotoUrl } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado } = professional.profesionalInfo;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -258,6 +311,11 @@ export const PublicProfile: React.FC = () => {
                   {isVerified && (
                     <div className="flex items-center text-blue-600" title="Perfil Verificado">
                       <ShieldCheck size={24} className="fill-blue-100" />
+                    </div>
+                  )}
+                  {matriculado && (
+                    <div className="flex items-center text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200" title="Profesional Matriculado">
+                      <span className="text-xs font-bold uppercase tracking-wider">Matriculado</span>
                     </div>
                   )}
                 </div>
@@ -458,7 +516,7 @@ export const PublicProfile: React.FC = () => {
             {showReviewForm && (
               <div className="mb-8 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
                 <ReviewForm 
-                  profesionalId={id!} 
+                  profesionalId={professional.uid} 
                   profesionalNombre={nombre}
                   onReviewSubmitted={() => {
                     setShowReviewForm(false);
@@ -469,7 +527,32 @@ export const PublicProfile: React.FC = () => {
             )}
 
             <div className="space-y-6">
-              {reviews.length > 0 ? (
+              {!reviewsLoaded ? (
+                <div className="space-y-6">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="border-b border-gray-100 dark:border-gray-700 pb-6 animate-pulse">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                          <div className="space-y-2">
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, j) => (
+                            <div key={j} className="w-3.5 h-3.5 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2 mt-4 pl-12">
+                        <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                        <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : reviews.length > 0 ? (
                 reviews.map((review) => (
                   <div key={review.id} className="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-6 last:pb-0">
                     <div className="flex justify-between items-start mb-2">
@@ -487,19 +570,38 @@ export const PublicProfile: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            size={14} 
-                            className={`${i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'}`} 
-                          />
-                        ))}
+                      <div className="flex items-center gap-4">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star 
+                              key={i} 
+                              size={14} 
+                              className={`${i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'}`} 
+                            />
+                          ))}
+                        </div>
+                        {currentUser?.isAdmin && (
+                          <button 
+                            onClick={() => handleDeleteReview(review.id)}
+                            className="text-red-500 hover:text-red-700 text-xs font-medium"
+                          >
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                     </div>
                     <p className="text-gray-600 dark:text-gray-300 text-sm mt-2 pl-11 italic">
                       "{review.comentario}"
                     </p>
+                    {review.badges && review.badges.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2 pl-11">
+                        {review.badges.map((badge, idx) => (
+                          <span key={idx} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">
+                            {badge}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {review.fotos && review.fotos.length > 0 && (
                       <div className="flex gap-2 mt-3 pl-11 overflow-x-auto">
                         {review.fotos.map((foto, idx) => (

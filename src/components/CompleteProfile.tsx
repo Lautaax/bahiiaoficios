@@ -84,6 +84,9 @@ export const CompleteProfile: React.FC = () => {
         }
       }
 
+      const baseSlug = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      const slug = `${baseSlug}-${currentUser.uid.substring(0, 4)}`;
+
       const userData: any = {
         uid: currentUser.uid,
         nombre,
@@ -94,6 +97,8 @@ export const CompleteProfile: React.FC = () => {
         zona,
         createdAt: serverTimestamp(),
         fotoUrl,
+        slug,
+        isAdmin: currentUser.email === 'lautaroj.aguilera@gmail.com'
       };
 
       if (role === 'profesional') {
@@ -104,7 +109,8 @@ export const CompleteProfile: React.FC = () => {
           ratingAvg: 0,
           reviewCount: 0,
           fotosTrabajos: [],
-          telefono: telefono.replace(/\D/g, '')
+          telefono: telefono.replace(/\D/g, ''),
+          matriculado: false
         };
       }
 

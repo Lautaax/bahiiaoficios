@@ -26,6 +26,7 @@ export interface ProfesionalInfo {
   haceUrgencias?: boolean;
   disponibilidadInmediata?: boolean;
   isVerified?: boolean;
+  matriculado?: boolean; // Added for matriculado status
   profileViews?: number;
   whatsappClicks?: number;
 }
@@ -41,6 +42,15 @@ export interface User {
   profesionalInfo?: ProfesionalInfo; // Only if rol === 'profesional'
   createdAt?: any;
   isNewUser?: boolean;
+  isAdmin?: boolean;
+  slug?: string;
+  mpConnect?: {
+    access_token: string;
+    refresh_token: string;
+    public_key: string;
+    user_id: number;
+    linkedAt?: any;
+  };
 }
 
 export interface Review {
@@ -52,6 +62,7 @@ export interface Review {
   fecha: Date;
   clienteNombre: string;
   fotos?: string[];
+  badges?: string[]; // e.g., 'Puntualidad', 'Precio justo', 'Limpieza'
 }
 
 export interface QuoteRequest {

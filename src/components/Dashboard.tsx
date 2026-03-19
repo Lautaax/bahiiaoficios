@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 
 // Helper to normalize strings (remove accents)
@@ -154,6 +154,41 @@ export const Dashboard: React.FC = () => {
       return matchesRubro && matchesZona && matchesSearch && matchesDisponibilidad && matchesUrgencias;
     });
   }, [professionals, selectedRubro, selectedZona, searchTerm, disponibilidadInmediata, haceUrgencias]);
+
+  // Sort professionals by gamification score
+  const sortedProfessionals = useMemo(() => {
+    return [...filteredProfessionals].sort((a, b) => {
+      // VIP always first
+      if (a.profesionalInfo?.isVip && !b.profesionalInfo?.isVip) return -1;
+      if (!a.profesionalInfo?.isVip && b.profesionalInfo?.isVip) return 1;
+
+      // Calculate score for A
+      let scoreA = 0;
+      if (a.profesionalInfo) {
+        scoreA += (a.profesionalInfo.ratingAvg || 0) * 10;
+        scoreA += (a.profesionalInfo.reviewCount || 0) * 2;
+        scoreA += (a.profesionalInfo.fotosTrabajos?.length || 0) * 1;
+        if (a.profesionalInfo.matriculado) scoreA += 15;
+        if (a.profesionalInfo.isVerified) scoreA += 10;
+        if (a.fotoUrl) scoreA += 5;
+        if (a.profesionalInfo.descripcion && a.profesionalInfo.descripcion.length > 50) scoreA += 5;
+      }
+
+      // Calculate score for B
+      let scoreB = 0;
+      if (b.profesionalInfo) {
+        scoreB += (b.profesionalInfo.ratingAvg || 0) * 10;
+        scoreB += (b.profesionalInfo.reviewCount || 0) * 2;
+        scoreB += (b.profesionalInfo.fotosTrabajos?.length || 0) * 1;
+        if (b.profesionalInfo.matriculado) scoreB += 15;
+        if (b.profesionalInfo.isVerified) scoreB += 10;
+        if (b.fotoUrl) scoreB += 5;
+        if (b.profesionalInfo.descripcion && b.profesionalInfo.descripcion.length > 50) scoreB += 5;
+      }
+
+      return scoreB - scoreA;
+    });
+  }, [filteredProfessionals]);
 
   // Calculate Popular Categories based on supply (count of professionals in each category)
   // This makes the list dynamic based on the actual data
@@ -428,6 +463,17 @@ export const Dashboard: React.FC = () => {
           )}
         </div>
 
+        {/* Security Banner */}
+        <div className="mb-8 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+          <ShieldCheck className="text-indigo-600 shrink-0 mt-0.5" size={20} />
+          <div>
+            <h4 className="text-sm font-bold text-indigo-900 mb-1">Tips para una contratación segura</h4>
+            <p className="text-xs text-indigo-700 leading-relaxed">
+              Pide siempre un presupuesto detallado por escrito. Revisa las reseñas de otros bahienses en el perfil del profesional. Para trabajos de gas o electricidad, verifica que el profesional esté matriculado (busca la insignia verde).
+            </p>
+          </div>
+        </div>
+
         {/* Categories Grid */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-4">
@@ -506,7 +552,7 @@ export const Dashboard: React.FC = () => {
         {/* Results Grid */}
         <div className="mb-6 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
-            {filteredProfessionals.length} Profesionales encontrados
+            {sortedProfessionals.length} Profesionales encontrados
           </h3>
           <span className="text-sm text-gray-500">Ordenado por: Destacados y Calificación</span>
         </div>
@@ -517,13 +563,13 @@ export const Dashboard: React.FC = () => {
              </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProfessionals.map(prof => (
+            {sortedProfessionals.map(prof => (
                 <ProfessionalCard key={prof.uid} professional={prof} />
             ))}
             </div>
         )}
 
-        {!loading && filteredProfessionals.length === 0 && (
+        {!loading && sortedProfessionals.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No se encontraron profesionales con esos criterios.</p>
           </div>
@@ -537,6 +583,44 @@ const ClientQuoteRequests: React.FC = () => {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState<string | null>(null);
+
+  const handleDepositPayment = async (requestId: string, profesionalId: string) => {
+    if (!currentUser) return;
+    setPaying(requestId);
+    try {
+      const response = await fetch('/api/create_preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: 'Seña de Servicio',
+          price: 10000,
+          userEmail: currentUser.email,
+          type: 'deposit',
+          metadata: {
+            user_id: currentUser.uid,
+            profesional_id: profesionalId,
+            request_id: requestId,
+            type: 'deposit'
+          }
+        }),
+      });
+
+      const data = await response.json();
+      if (data.id) {
+        window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${data.id}`;
+      } else {
+        alert('Error al crear la preferencia de pago.');
+      }
+    } catch (error) {
+      console.error('Error initiating payment:', error);
+      alert('Hubo un error al iniciar el pago.');
+    } finally {
+      setPaying(null);
+    }
+  };
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -597,7 +681,21 @@ const ClientQuoteRequests: React.FC = () => {
                         <span className="font-bold text-green-600 dark:text-green-400">${resp.precio}</span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-300">{resp.mensaje}</p>
-                      <div className="mt-3 flex justify-end">
+                      <div className="mt-3 flex justify-end gap-2">
+                        {resp.requiresDeposit && !resp.depositPaid && (
+                          <button
+                            onClick={() => handleDepositPayment(req.id, resp.profesionalId)}
+                            disabled={paying === req.id}
+                            className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                          >
+                            {paying === req.id ? 'Procesando...' : 'Pagar Seña ($10.000)'}
+                          </button>
+                        )}
+                        {resp.requiresDeposit && resp.depositPaid && (
+                          <span className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                            <CheckCircle size={14} /> Seña Pagada
+                          </span>
+                        )}
                         <Link 
                           to={`/profesional/${resp.profesionalId}`}
                           className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-200 transition-colors flex items-center gap-1"

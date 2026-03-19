@@ -109,7 +109,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado } = professional.profesionalInfo;
 
   const isClient = currentUser?.rol === 'cliente';
 
@@ -269,6 +269,11 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                     <ShieldCheck size={18} className="fill-blue-100" />
                   </div>
                 )}
+                {matriculado && (
+                  <div className="flex items-center text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="Profesional Matriculado">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Matriculado</span>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-1.5 mb-2">
@@ -342,7 +347,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             
             <div className="flex gap-2">
               <Link 
-                to={`/profesional/${uid}`}
+                to={`/profesional/${professional.slug || uid}`}
                 className="px-4 py-2.5 rounded-lg text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200"
               >
                 Ver Perfil
@@ -424,7 +429,24 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                 Últimas Reseñas
               </h4>
               {loadingReviews ? (
-                <div className="text-center py-6 text-gray-500 text-xs animate-pulse">Cargando reseñas...</div>
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="bg-gray-50 p-3 rounded-lg border border-gray-100 animate-pulse">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, j) => (
+                            <div key={j} className="w-2.5 h-2.5 bg-gray-200 rounded-full"></div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="h-2.5 bg-gray-200 rounded w-full"></div>
+                        <div className="h-2.5 bg-gray-200 rounded w-5/6"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : reviews.length > 0 ? (
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                   {reviews.map((review) => (
@@ -442,6 +464,15 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                         </div>
                       </div>
                       <p className="text-gray-600 text-xs italic leading-relaxed">"{review.comentario}"</p>
+                      {review.badges && review.badges.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {review.badges.map((badge, idx) => (
+                            <span key={idx} className="bg-indigo-50 text-indigo-600 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-indigo-100">
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="text-right mt-1.5">
                         <span className="text-[10px] text-gray-400 font-medium">
                           {review.fecha ? new Date(review.fecha).toLocaleDateString() : ''}

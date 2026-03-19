@@ -43,7 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unsubscribeFirestore = onSnapshot(userDocRef, (docSnapshot) => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data() as Omit<User, 'uid'>;
-            setCurrentUser({ uid: firebaseUser.uid, ...userData, isNewUser: false });
+            const isSuperAdmin = firebaseUser.email === 'lautaroj.aguilera@gmail.com';
+            setCurrentUser({ uid: firebaseUser.uid, ...userData, isNewUser: false, isAdmin: userData.isAdmin || isSuperAdmin });
           } else {
             // User exists in Auth but not in Firestore (New User)
             console.log('User document not found in Firestore, treating as new user');

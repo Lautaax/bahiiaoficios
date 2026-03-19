@@ -1,4 +1,4 @@
-import { Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car, Monitor, Wind, Scissors, Cpu, Anvil } from 'lucide-react';
+import { Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car, Monitor, Wind, Scissors, Cpu, Anvil, Calculator, FileSignature } from 'lucide-react';
 
 export const PROFESSIONS = [
   { name: 'Electricista', icon: Lightbulb, category: 'Hogar y Construcción' },
@@ -17,6 +17,8 @@ export const PROFESSIONS = [
   { name: 'Modista', icon: Scissors, category: 'Servicios Generales' },
   { name: 'Informática', icon: Monitor, category: 'Servicios Generales' },
   { name: 'Electrónico', icon: Cpu, category: 'Servicios Generales' },
+  { name: 'Contador', icon: Calculator, category: 'Servicios Profesionales' },
+  { name: 'Mandatario/Gestor', icon: FileSignature, category: 'Servicios Profesionales' },
   { name: 'Mecánico', icon: Wrench, category: 'Automotor' },
   { name: 'Pintor Autos', icon: SprayCan, category: 'Automotor' },
   { name: 'Chapa y Pintura', icon: Car, category: 'Automotor' },

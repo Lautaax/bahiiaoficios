@@ -80,6 +80,11 @@ function Navbar() {
                   Mi Panel
                 </Link>
               )}
+              {currentUser.isAdmin && (
+                <Link to="/admin" className="hidden sm:block text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
+                  Admin
+                </Link>
+              )}
               <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 <div className="relative">
                   {currentUser.fotoUrl ? (
@@ -120,6 +125,8 @@ function Navbar() {
     </header>
   );
 }
+
+import { AdminDashboard } from './components/AdminDashboard';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState({ users: 0, visits: 0 });
@@ -225,7 +232,7 @@ function AppContent() {
               </Layout>
             } />
 
-            <Route path="/profesional/:id" element={
+            <Route path="/profesional/:slug" element={
               <Layout>
                 <PublicProfile />
               </Layout>
@@ -286,6 +293,14 @@ function AppContent() {
               <PrivateRoute>
                 <Layout>
                   <ProfessionalDashboard />
+                </Layout>
+              </PrivateRoute>
+            } />
+            
+            <Route path="/admin" element={
+              <PrivateRoute>
+                <Layout>
+                  <AdminDashboard />
                 </Layout>
               </PrivateRoute>
             } />

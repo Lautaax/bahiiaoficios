@@ -137,6 +137,7 @@ const QuoteRequestsList: React.FC = () => {
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [price, setPrice] = useState('');
   const [message, setMessage] = useState('');
+  const [requiresDeposit, setRequiresDeposit] = useState(false);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -174,6 +175,7 @@ const QuoteRequestsList: React.FC = () => {
           profesionalNombre: currentUser.nombre,
           precio: price,
           mensaje: message,
+          requiresDeposit: requiresDeposit,
           fecha: new Date().toISOString()
         })
       });
@@ -192,6 +194,7 @@ const QuoteRequestsList: React.FC = () => {
       setRespondingTo(null);
       setPrice('');
       setMessage('');
+      setRequiresDeposit(false);
       alert("Respuesta enviada correctamente.");
     } catch (error) {
       console.error("Error responding to quote request:", error);
@@ -252,6 +255,18 @@ const QuoteRequestsList: React.FC = () => {
                     rows={2}
                     placeholder="Hola, puedo hacer este trabajo..."
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="requiresDeposit"
+                    checked={requiresDeposit}
+                    onChange={(e) => setRequiresDeposit(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label htmlFor="requiresDeposit" className="text-sm text-gray-700 dark:text-gray-300">
+                    Pedir seña de $10.000 (abonable por Mercado Pago)
+                  </label>
                 </div>
                 <div className="flex gap-2">
                   <button 

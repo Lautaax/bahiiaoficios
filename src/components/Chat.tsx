@@ -3,13 +3,16 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { Send, ArrowLeft, User as UserIcon } from 'lucide-react';
+import { Send, ArrowLeft, User as UserIcon, FileText, X } from 'lucide-react';
 
 interface Message {
   id: string;
   senderId: string;
   text: string;
   timestamp: any;
+  isQuote?: boolean;
+  quoteAmount?: number;
+  quoteDescription?: string;
 }
 
 export const Chat: React.FC = () => {
@@ -19,6 +22,10 @@ export const Chat: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ nombre: string, fotoUrl: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [quoteAmount, setQuoteAmount] = useState('');
+  const [quoteDescription, setQuoteDescription] = useState('');
 
   useEffect(() => {
     if (!currentUser || !chatId) return;
@@ -102,25 +109,71 @@ export const Chat: React.FC = () => {
     }
   };
 
+  const handleSendQuote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quoteAmount || !quoteDescription.trim() || !currentUser || !chatId) return;
+
+    try {
+      const amount = parseFloat(quoteAmount);
+      const desc = quoteDescription.trim();
+      
+      setShowQuoteModal(false);
+      setQuoteAmount('');
+      setQuoteDescription('');
+
+      const text = `Presupuesto enviado: $${amount}`;
+
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        senderId: currentUser.uid,
+        text,
+        timestamp: serverTimestamp(),
+        isQuote: true,
+        quoteAmount: amount,
+        quoteDescription: desc
+      });
+
+      await updateDoc(doc(db, 'chats', chatId), {
+        lastMessage: text,
+        lastMessageTime: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastMessageSenderId: currentUser.uid,
+        hasUnread: true
+      });
+    } catch (error) {
+      console.error("Error sending quote:", error);
+    }
+  };
+
   if (!currentUser) return <div>Por favor, inicia sesión para ver tus mensajes.</div>;
 
   return (
     <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 h-[80vh] flex flex-col mt-8">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 bg-gray-50 dark:bg-gray-900/50 rounded-t-xl">
-        <Link to="/chats" className="text-gray-500 hover:text-indigo-600 transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="flex items-center gap-3">
-          {otherUser?.fotoUrl ? (
-            <img src={otherUser.fotoUrl} alt={otherUser.nombre} className="w-10 h-10 rounded-full object-cover" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-              <UserIcon size={20} className="text-gray-500 dark:text-gray-400" />
-            </div>
-          )}
-          <h2 className="font-bold text-gray-900 dark:text-white">{otherUser?.nombre || 'Cargando...'}</h2>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 rounded-t-xl">
+        <div className="flex items-center gap-4">
+          <Link to="/chats" className="text-gray-500 hover:text-indigo-600 transition-colors">
+            <ArrowLeft size={20} />
+          </Link>
+          <div className="flex items-center gap-3">
+            {otherUser?.fotoUrl ? (
+              <img src={otherUser.fotoUrl} alt={otherUser.nombre} className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <UserIcon size={20} className="text-gray-500 dark:text-gray-400" />
+              </div>
+            )}
+            <h2 className="font-bold text-gray-900 dark:text-white">{otherUser?.nombre || 'Cargando...'}</h2>
+          </div>
         </div>
+        {currentUser.rol === 'profesional' && (
+          <button
+            onClick={() => setShowQuoteModal(true)}
+            className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200 text-sm font-medium"
+          >
+            <FileText size={16} />
+            Enviar Presupuesto
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -134,10 +187,23 @@ export const Chat: React.FC = () => {
                   isMine 
                     ? 'bg-indigo-600 text-white rounded-tr-none' 
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-tl-none'
-                }`}
+                } ${msg.isQuote ? 'border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-900 dark:text-indigo-100' : ''}`}
               >
-                <p>{msg.text}</p>
-                <span className={`text-[10px] block mt-1 ${isMine ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                {msg.isQuote ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 font-bold border-b border-indigo-200 dark:border-indigo-700 pb-2 mb-1">
+                      <FileText size={18} />
+                      Presupuesto Formal
+                    </div>
+                    <p className="text-sm">{msg.quoteDescription}</p>
+                    <div className="text-lg font-bold mt-2">
+                      Total: ${msg.quoteAmount?.toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                ) : (
+                  <p>{msg.text}</p>
+                )}
+                <span className={`text-[10px] block mt-1 ${isMine && !msg.isQuote ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>
                   {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
               </div>
@@ -166,6 +232,71 @@ export const Chat: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {/* Quote Modal */}
+      {showQuoteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <FileText className="text-indigo-600" />
+                Enviar Presupuesto
+              </h3>
+              <button onClick={() => setShowQuoteModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSendQuote} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Monto Estimado ($)
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={quoteAmount}
+                  onChange={(e) => setQuoteAmount(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Ej: 15000"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Descripción del Trabajo
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={quoteDescription}
+                  onChange={(e) => setQuoteDescription(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white resize-none"
+                  placeholder="Detalla los materiales, mano de obra y tiempo estimado..."
+                />
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuoteModal(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!quoteAmount || !quoteDescription.trim()}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  Enviar Presupuesto
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

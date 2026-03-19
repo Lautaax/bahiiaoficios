@@ -18,9 +18,18 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  const AVAILABLE_BADGES = [
+    'Puntualidad extrema',
+    'Precio justo',
+    'Dejó todo limpio',
+    'Muy amable',
+    'Trabajo impecable'
+  ];
 
   // Solo mostrar si el usuario es cliente
   if (!currentUser || currentUser.rol !== 'cliente') {
@@ -59,6 +68,11 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
       return;
     }
     
+    if (images.length === 0) {
+      setError('Debes subir al menos una foto del trabajo realizado para que la reseña sea válida.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
@@ -76,6 +90,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
         rating,
         comentario: comment,
         fotos: uploadedUrls,
+        badges: selectedBadges,
         fecha: serverTimestamp(),
       });
 
@@ -151,13 +166,39 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
           </div>
 
           <textarea
-            className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+            className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none mb-3"
             rows={3}
             placeholder="Escribe tu experiencia con este profesional..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             required
           />
+
+          <div className="mb-3">
+            <p className="text-sm font-medium text-gray-700 mb-2">Destaca lo mejor del profesional (opcional):</p>
+            <div className="flex flex-wrap gap-2">
+              {AVAILABLE_BADGES.map(badge => (
+                <button
+                  key={badge}
+                  type="button"
+                  onClick={() => {
+                    if (selectedBadges.includes(badge)) {
+                      setSelectedBadges(selectedBadges.filter(b => b !== badge));
+                    } else {
+                      setSelectedBadges([...selectedBadges, badge]);
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    selectedBadges.includes(badge)
+                      ? 'bg-indigo-100 border-indigo-300 text-indigo-800'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {badge}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {imagePreviews.length > 0 && (
             <div className="flex gap-2 mt-2 mb-2 overflow-x-auto py-1">
@@ -179,7 +220,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
           <div className="flex items-center justify-between mt-2">
             <label className="cursor-pointer flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
               <ImageIcon size={16} />
-              <span>Añadir fotos (Max 3)</span>
+              <span>Añadir foto del trabajo (Obligatorio, Max 3)</span>
               <input 
                 type="file" 
                 accept="image/*" 

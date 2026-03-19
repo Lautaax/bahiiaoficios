@@ -32,7 +32,8 @@ export const Profile: React.FC = () => {
     haceFactura: false,
     tipoFactura: '' as 'A' | 'C' | '',
     haceUrgencias: false,
-    disponibilidadInmediata: false
+    disponibilidadInmediata: false,
+    matriculado: false
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -78,7 +79,8 @@ export const Profile: React.FC = () => {
         haceFactura: currentUser.profesionalInfo?.haceFactura || false,
         tipoFactura: currentUser.profesionalInfo?.tipoFactura || '',
         haceUrgencias: currentUser.profesionalInfo?.haceUrgencias || false,
-        disponibilidadInmediata: currentUser.profesionalInfo?.disponibilidadInmediata || false
+        disponibilidadInmediata: currentUser.profesionalInfo?.disponibilidadInmediata || false,
+        matriculado: currentUser.profesionalInfo?.matriculado || false
       });
       setImagePreview(currentUser.fotoUrl || null);
       setDniPreview(currentUser.profesionalInfo?.fotoDni || null);
@@ -271,7 +273,8 @@ export const Profile: React.FC = () => {
           haceFactura: formData.haceFactura,
           tipoFactura: formData.haceFactura ? formData.tipoFactura : null,
           haceUrgencias: formData.haceUrgencias,
-          disponibilidadInmediata: formData.disponibilidadInmediata
+          disponibilidadInmediata: formData.disponibilidadInmediata,
+          matriculado: formData.matriculado
         };
       }
 
@@ -633,6 +636,50 @@ export const Profile: React.FC = () => {
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* Mercado Pago Connect */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg>
+                </span>
+                Cobros con Mercado Pago
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Vincula tu cuenta de Mercado Pago para poder cobrar señas directamente a tus clientes. El dinero ingresará a tu cuenta.
+              </p>
+              
+              {currentUser?.mpConnect?.access_token ? (
+                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
+                    <div>
+                      <p className="font-medium text-green-800 dark:text-green-300">Cuenta Vinculada</p>
+                      <p className="text-xs text-green-600 dark:text-green-400">Ya puedes recibir pagos de señas.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/mp/auth-url?userId=${currentUser.uid}&redirectUrl=${encodeURIComponent(window.location.origin)}`);
+                      const data = await res.json();
+                      if (data.url) {
+                        window.location.href = data.url;
+                      }
+                    } catch (error) {
+                      console.error("Error fetching MP auth URL:", error);
+                      alert("Error al conectar con Mercado Pago.");
+                    }
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 bg-[#009EE3] hover:bg-[#0088C4] text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  Vincular Mercado Pago
+                </button>
+              )}
             </div>
 
             {/* DNI Photo Upload */}

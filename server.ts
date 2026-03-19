@@ -98,15 +98,106 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.get("/api/mp/auth-url", (req, res) => {
+    const { userId, redirectUrl } = req.query;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+    
+    let baseUrl = redirectUrl as string || process.env.APP_URL || 'http://localhost:3000';
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    
+    // The redirect URI must match exactly what is configured in the MP Developer Dashboard
+    const callbackUri = `${process.env.SHARED_APP_URL || baseUrl}/api/mp/callback`;
+    const clientId = process.env.MP_CLIENT_ID;
+    
+    if (!clientId) {
+      return res.status(500).json({ error: "MP_CLIENT_ID not configured" });
+    }
+
+    const authUrl = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&state=${userId}&redirect_uri=${callbackUri}`;
+    res.json({ url: authUrl });
+  });
+
+  app.get("/api/mp/callback", async (req, res) => {
+    const { code, state } = req.query;
+    const userId = state as string;
+    
+    if (!code || !userId) {
+      return res.status(400).send("Missing code or state");
+    }
+
+    try {
+      const clientId = process.env.MP_CLIENT_ID;
+      const clientSecret = process.env.MP_CLIENT_SECRET;
+      
+      // We need to reconstruct the exact same redirect_uri used in the authorization step
+      // Since this is a GET request, we don't have the original redirectUrl from the client,
+      // so we rely on SHARED_APP_URL or APP_URL.
+      let baseUrl = process.env.SHARED_APP_URL || process.env.APP_URL || 'http://localhost:3000';
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+      const callbackUri = `${baseUrl}/api/mp/callback`;
+
+      const response = await axios.post("https://api.mercadopago.com/oauth/token", 
+        new URLSearchParams({
+          client_id: clientId || '',
+          client_secret: clientSecret || '',
+          grant_type: "authorization_code",
+          code: code as string,
+          redirect_uri: callbackUri
+        }), {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
+        }
+      });
+
+      if (response.data && response.data.access_token) {
+        const db = admin.firestore();
+        await db.collection('usuarios').doc(userId).update({
+          mpConnect: {
+            access_token: response.data.access_token,
+            refresh_token: response.data.refresh_token,
+            public_key: response.data.public_key,
+            user_id: response.data.user_id,
+            linkedAt: admin.firestore.FieldValue.serverTimestamp()
+          }
+        });
+        
+        // Redirect back to profile with success
+        res.redirect(`${baseUrl}/profile?mp_connected=true`);
+      } else {
+        console.error("Failed to exchange code for token:", response.data);
+        res.redirect(`${baseUrl}/profile?mp_connected=false`);
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Error exchanging MP code:", error.response?.data || error.message);
+      } else {
+        console.error("Error exchanging MP code:", error);
+      }
+      
+      let baseUrl = process.env.SHARED_APP_URL || process.env.APP_URL || 'http://localhost:3000';
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+      res.redirect(`${baseUrl}/profile?mp_connected=false`);
+    }
+  });
+
   app.post("/api/create_preference", async (req, res) => {
-    const client = await getMpClient();
+    let client = await getMpClient();
 
     if (!client) {
       return res.status(500).json({ error: "Mercado Pago not configured" });
     }
 
     try {
-      const { title, price, quantity, userEmail, redirectUrl, metadata } = req.body;
+      const { title, price, quantity, userEmail, redirectUrl, metadata, type } = req.body;
       
       // Clean up baseUrl
       let baseUrl = redirectUrl || process.env.APP_URL || 'http://localhost:3000';
@@ -115,17 +206,34 @@ async function startServer() {
       }
       
       // Ensure notification URL is absolute and accessible
-      // In local dev, webhooks won't work without a tunnel (ngrok), but we set it anyway
       const notificationUrl = `${process.env.SHARED_APP_URL || baseUrl}/api/webhook`;
       
+      const isDeposit = type === 'deposit';
+      const unitPrice = Number(price) || (isDeposit ? 10000 : 5000);
+      
+      // If it's a deposit, we need to use the professional's access token
+      if (isDeposit && metadata?.profesional_id) {
+        const db = admin.firestore();
+        const profDoc = await db.collection('usuarios').doc(metadata.profesional_id).get();
+        if (profDoc.exists) {
+          const profData = profDoc.data();
+          if (profData?.mpConnect?.access_token) {
+            client = new MercadoPagoConfig({ accessToken: profData.mpConnect.access_token });
+          } else {
+            console.warn(`Professional ${metadata.profesional_id} does not have MP Connect linked. Using platform token.`);
+          }
+        }
+      }
+
       const preference = new Preference(client);
-      const result = await preference.create({
+      
+      const preferenceData: any = {
         body: {
           items: [
             {
-              id: "vip-subscription",
-              title: title || "Membresía VIP",
-              unit_price: Number(price) || 5000,
+              id: isDeposit ? "deposit-payment" : "vip-subscription",
+              title: title || (isDeposit ? "Seña de Reparación" : "Membresía VIP"),
+              unit_price: unitPrice,
               quantity: Number(quantity) || 1,
               currency_id: "ARS",
             },
@@ -134,15 +242,22 @@ async function startServer() {
             email: userEmail || "test_user@test.com"
           },
           back_urls: {
-            success: `${baseUrl}/profile?status=success`,
-            failure: `${baseUrl}/profile?status=failure`,
-            pending: `${baseUrl}/profile?status=pending`,
+            success: isDeposit ? `${baseUrl}/dashboard?payment=success` : `${baseUrl}/profile?status=success`,
+            failure: isDeposit ? `${baseUrl}/dashboard?payment=failure` : `${baseUrl}/profile?status=failure`,
+            pending: isDeposit ? `${baseUrl}/dashboard?payment=pending` : `${baseUrl}/profile?status=pending`,
           },
           auto_return: "approved",
           notification_url: notificationUrl,
           metadata: metadata || {},
         }
-      });
+      };
+
+      // If it's a deposit, we charge a 10% fee for the integrator
+      if (isDeposit) {
+        preferenceData.body.marketplace_fee = unitPrice * 0.10; // 10% fee
+      }
+
+      const result = await preference.create(preferenceData);
 
       res.json({ id: result.id, init_point: result.init_point });
     } catch (error) {
@@ -171,9 +286,39 @@ async function startServer() {
         if (payment.status === 'approved') {
           console.log(`Payment ${id} approved. Metadata:`, payment.metadata);
           
-          const { user_id, months } = payment.metadata;
+          const { user_id, months, type, request_id, profesional_id } = payment.metadata;
           
-          if (user_id && months) {
+          if (type === 'deposit' && request_id && profesional_id) {
+            try {
+              const db = admin.firestore();
+              const requestRef = db.collection('quoteRequests').doc(request_id);
+              
+              // We need to update the specific response inside the array
+              // Since we can't easily update a specific array element in Firestore without reading it first,
+              // we read, modify, and write back.
+              const docSnap = await requestRef.get();
+              if (docSnap.exists) {
+                const data = docSnap.data();
+                if (data && data.respuestas) {
+                  const updatedRespuestas = data.respuestas.map((resp: any) => {
+                    if (resp.profesionalId === profesional_id) {
+                      return { ...resp, depositPaid: true, paymentId: id };
+                    }
+                    return resp;
+                  });
+                  
+                  await requestRef.update({
+                    respuestas: updatedRespuestas,
+                    estado: 'seña_pagada',
+                    profesionalSeleccionado: profesional_id
+                  });
+                  console.log(`Deposit paid for request ${request_id} to professional ${profesional_id}`);
+                }
+              }
+            } catch (dbError) {
+              console.error("Error updating Firestore for deposit:", dbError);
+            }
+          } else if (user_id && months) {
             try {
               const db = admin.firestore();
               const userRef = db.collection('usuarios').doc(user_id);
@@ -195,7 +340,7 @@ async function startServer() {
               // even if our internal DB update failed (we should log it for manual fix)
             }
           } else {
-            console.warn("Missing userId or months in payment metadata");
+            console.warn("Missing required metadata for payment processing");
           }
         } else {
             console.log(`Payment ${id} status: ${payment.status}`);
