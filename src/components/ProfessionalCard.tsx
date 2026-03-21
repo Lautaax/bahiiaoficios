@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, MessageSquare, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart, AlertCircle } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, MessageSquare, MessageCircle, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart, AlertCircle } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
@@ -359,6 +359,15 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   title="Dejar reseña"
                 >
                   <MessageSquare size={20} />
+                </button>
+              )}
+              {isClient && (
+                <button 
+                  onClick={handleContactClick}
+                  className="p-2.5 rounded-lg transition-colors border text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 border-transparent"
+                  title="Iniciar Chat"
+                >
+                  <MessageCircle size={20} />
                 </button>
               )}
               {telefono ? (

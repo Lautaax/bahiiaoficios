@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, User, ArrowRight } from 'lucide-react';
 import { BlogQA } from './BlogQA';
+import { FAQ } from './FAQ';
 
 const BLOG_POSTS = [
   {
@@ -75,6 +76,7 @@ export const Blog: React.FC = () => {
         ))}
       </div>
 
+      <FAQ />
       <BlogQA />
     </div>
   );

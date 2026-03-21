@@ -1,6 +1,7 @@
 import React from 'react';
 import { HelpCircle, ArrowLeft, Mail, MessageCircle, FileQuestion } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { FAQ } from './FAQ';
 
 export const Help: React.FC = () => {
   return (
@@ -19,50 +20,6 @@ export const Help: React.FC = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">
-          <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <FileQuestion size={20} className="text-indigo-500" />
-              Preguntas Frecuentes
-            </h3>
-            <div className="space-y-4">
-              <details className="group">
-                <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-700 dark:text-gray-200">
-                  <span>¿Cómo contacto a un profesional?</span>
-                  <span className="transition group-open:rotate-180">
-                    <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                  </span>
-                </summary>
-                <p className="text-gray-600 dark:text-gray-400 mt-3 group-open:animate-fadeIn text-sm">
-                  Puedes contactar a un profesional haciendo clic en el botón "Contactar" en su tarjeta o perfil. Verás opciones para llamar o enviar un email.
-                </p>
-              </details>
-              
-              <details className="group">
-                <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-700 dark:text-gray-200">
-                  <span>¿Es gratis registrarse?</span>
-                  <span className="transition group-open:rotate-180">
-                    <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                  </span>
-                </summary>
-                <p className="text-gray-600 dark:text-gray-400 mt-3 group-open:animate-fadeIn text-sm">
-                  Sí, el registro es completamente gratuito tanto para clientes como para profesionales. Los profesionales pueden optar por planes VIP para mayor visibilidad.
-                </p>
-              </details>
-
-              <details className="group">
-                <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-700 dark:text-gray-200">
-                  <span>¿Cómo dejo una reseña?</span>
-                  <span className="transition group-open:rotate-180">
-                    <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                  </span>
-                </summary>
-                <p className="text-gray-600 dark:text-gray-400 mt-3 group-open:animate-fadeIn text-sm">
-                  Debes estar registrado como cliente. Ve al perfil del profesional y busca la sección de reseñas para dejar tu calificación y comentario.
-                </p>
-              </details>
-            </div>
-          </div>
-
           <div className="space-y-6">
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-xl border border-indigo-100 dark:border-indigo-800">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
@@ -92,6 +49,8 @@ export const Help: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <FAQ />
     </div>
   );
 };
