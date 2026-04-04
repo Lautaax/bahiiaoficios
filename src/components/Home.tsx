@@ -14,7 +14,20 @@ export function Home() {
   const { currentUser } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredPros, setFeaturedPros] = useState<User[]>([]);
+  const [currentProIndex, setCurrentProIndex] = useState(0);
+  const [cardsPerPage, setCardsPerPage] = useState(4);
   const [ads, setAds] = useState<Ad[]>([]);
+
+  useEffect(() => {
+    const updateCardsPerPage = () => {
+      if (window.innerWidth < 640) setCardsPerPage(1);
+      else if (window.innerWidth < 1024) setCardsPerPage(2);
+      else setCardsPerPage(4);
+    };
+    updateCardsPerPage();
+    window.addEventListener('resize', updateCardsPerPage);
+    return () => window.removeEventListener('resize', updateCardsPerPage);
+  }, []);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -58,7 +71,7 @@ export function Home() {
           return bReviews - aReviews;
         });
 
-        setFeaturedPros(sortedPros.slice(0, 6));
+        setFeaturedPros(sortedPros.slice(0, 8));
       } catch (error) {
         console.error("Error fetching featured pros:", error);
       }
@@ -263,17 +276,45 @@ export function Home() {
 
       {/* Featured Professionals Section */}
       {featuredPros.length > 0 && (
-        <div className="bg-slate-50 py-12">
+        <div className="bg-slate-50 py-12 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900">Profesionales Destacados</h2>
-              <p className="mt-2 text-gray-600">Conocé a los expertos más recomendados de la ciudad</p>
+            <div className="flex items-center justify-between mb-8">
+              <div className="text-left">
+                <h2 className="text-3xl font-bold text-gray-900">Profesionales Destacados</h2>
+                <p className="mt-2 text-gray-600">Conocé a los expertos más recomendados de la ciudad</p>
+              </div>
+              {featuredPros.length > cardsPerPage && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCurrentProIndex((prev) => Math.max(0, prev - 1))}
+                    disabled={currentProIndex === 0}
+                    className={`p-2 bg-white border border-gray-200 rounded-full shadow-sm transition-colors ${currentProIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentProIndex((prev) => Math.min(Math.ceil(featuredPros.length / cardsPerPage) - 1, prev + 1))}
+                    disabled={currentProIndex >= Math.ceil(featuredPros.length / cardsPerPage) - 1}
+                    className={`p-2 bg-white border border-gray-200 rounded-full shadow-sm transition-colors ${currentProIndex >= Math.ceil(featuredPros.length / cardsPerPage) - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              )}
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {featuredPros.map((pro) => (
-                <ProfessionalCard key={pro.uid} professional={pro} />
-              ))}
+            <div className="relative">
+              <motion.div 
+                className="flex gap-5"
+                animate={{ x: `-${currentProIndex * 100}%` }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              >
+                {featuredPros.map((pro) => (
+                  <div key={pro.uid} className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)] flex-shrink-0">
+                    <ProfessionalCard professional={pro} />
+                  </div>
+                ))}
+              </motion.div>
             </div>
             
             <div className="mt-12 text-center">
