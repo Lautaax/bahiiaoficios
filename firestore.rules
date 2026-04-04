@@ -18,16 +18,33 @@ service cloud.firestore {
               get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'cliente';
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+             (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true ||
+              request.auth.token.email == "lautaroj.aguilera@gmail.com");
+    }
+
     match /usuarios/{userId} {
       allow read: if true; // Cualquiera puede ver perfiles
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || 
+                    isAdmin() ||
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profesionalInfo']) && 
                      'profesionalInfo' in resource.data &&
                      (request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['profileViews']) ||
                       request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['whatsappClicks']) ||
                       request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['ratingAvg', 'reviewCount'])));
-      allow delete: if isOwner(userId);
+      allow delete: if isAdmin();
+    }
+
+    match /ads/{adId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /tradeDiscounts/{discountId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     
     // Reglas refinadas para usuarios (reemplazando el bloque anterior para mayor claridad y seguridad)

@@ -109,7 +109,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, preciosReferencia, fotoPortada } = professional.profesionalInfo;
 
   const isClient = currentUser?.rol === 'cliente';
 
@@ -223,6 +223,23 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           ${isVip ? 'border-2 border-amber-400 shadow-lg shadow-amber-100/50' : 'border border-gray-200 shadow-sm'}
         `}
       >
+        {/* Cover Image */}
+        <div className="relative h-24 overflow-hidden bg-gray-200">
+          {fotoPortada ? (
+            <img 
+              src={fotoPortada} 
+              alt={`Portada de ${nombre}`} 
+              className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center opacity-80">
+              <ProfessionIcon size={40} className="text-white/30" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        </div>
+
         {/* VIP Badge - Enhanced Style */}
         {isVip && (
           <div className="absolute top-0 right-0 z-10">
@@ -245,14 +262,15 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           />
         </button>
 
-        <div className="p-5 flex flex-col h-full">
+        <div className="p-4 pt-0 flex flex-col h-full relative">
           {/* Header */}
-          <div className="flex items-start gap-4 mb-4">
+          <div className="flex items-start gap-3 mb-3 -mt-6">
             <div className="relative">
               <img 
                 src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                 alt={nombre} 
-                className={`w-16 h-16 rounded-full object-cover ${isVip ? 'ring-4 ring-amber-100 ring-offset-2' : ''}`}
+                className={`w-16 h-16 rounded-full object-cover border-4 border-white shadow-md ${isVip ? 'ring-4 ring-amber-100' : ''}`}
+                loading="lazy"
               />
               {isVip && (
                 <div className="absolute -bottom-1 -right-1 bg-amber-400 rounded-full p-1 border-2 border-white shadow-sm">
@@ -262,8 +280,8 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             </div>
             
             <div className="flex-1 min-w-0 pt-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-lg text-gray-900 truncate">{nombre}</h3>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <h3 className="font-bold text-base text-gray-900 truncate">{nombre}</h3>
                 {isVerified && (
                   <div className="flex items-center text-blue-600" title="Perfil Verificado">
                     <ShieldCheck size={18} className="fill-blue-100" />
@@ -276,49 +294,71 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                 )}
               </div>
               
-              <div className="flex flex-wrap gap-1.5 mb-2">
+              <div className="flex flex-wrap gap-1 mb-1.5">
                 {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 0 ? (
-                  professional.profesionalInfo.rubros.slice(0, 3).map((r, idx) => {
+                  professional.profesionalInfo.rubros.slice(0, 2).map((r, idx) => {
                     const pData = PROFESSIONS.find(p => p.name === r);
                     const Icon = pData?.icon || Briefcase;
                     return (
-                      <span key={idx} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-medium border border-indigo-100">
-                        <Icon size={12} />
+                      <span key={idx} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-indigo-100">
+                        <Icon size={10} />
                         {r}
                       </span>
                     );
                   })
                 ) : (
-                  <div className="flex items-center gap-1.5 text-indigo-600 font-bold text-sm uppercase tracking-wide">
-                    <ProfessionIcon size={16} />
+                  <div className="flex items-center gap-1 text-indigo-600 font-bold text-xs uppercase tracking-wide">
+                    <ProfessionIcon size={14} />
                     <span>{rubro}</span>
                   </div>
                 )}
-                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 3 && (
-                  <span className="text-xs text-gray-500 flex items-center">+{professional.profesionalInfo.rubros.length - 3}</span>
+                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 2 && (
+                  <span className="text-[10px] text-gray-500 flex items-center">+{professional.profesionalInfo.rubros.length - 2}</span>
                 )}
               </div>
 
-              <div className="flex items-center text-gray-500 text-xs gap-1">
-                <MapPin size={12} />
+              {/* Badges Row */}
+              <div className="flex flex-wrap gap-1 mb-2">
+                {(isVerified || matriculado) && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100" title="Perfil Verificado">
+                    <ShieldCheck size={10} className="fill-blue-100" />
+                    <span className="text-[9px] font-bold uppercase tracking-tight">Verificado</span>
+                  </div>
+                )}
+                {(ratingAvg || 0) >= 4.5 && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100" title="Puntualidad">
+                    <Star size={10} className="fill-amber-100" />
+                    <span className="text-[9px] font-bold uppercase tracking-tight">Puntual</span>
+                  </div>
+                )}
+                {(reviewCount || 0) >= 10 && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-100" title="Experiencia">
+                    <Briefcase size={10} />
+                    <span className="text-[9px] font-bold uppercase tracking-tight">Experto</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center text-gray-500 text-[10px] gap-1">
+                <MapPin size={10} />
                 <span>{zona}, Bahía Blanca</span>
               </div>
               
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {haceUrgencias && (
-                  <div className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full font-medium border border-red-100">
-                    <AlertCircle size={12} />
-                    <span>Urgencias 24/7</span>
+                  <div className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-red-100">
+                    <AlertCircle size={10} />
+                    <span>Urgencias</span>
                   </div>
                 )}
                 {disponibilidadInmediata ? (
-                  <div className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium border border-green-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    <span>Disponible ahora</span>
+                  <div className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-green-100">
+                    <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>Disponible</span>
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium border border-gray-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                  <div className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-gray-200">
+                    <span className="w-1 h-1 rounded-full bg-gray-400"></span>
                     <span>Ocupado</span>
                   </div>
                 )}
@@ -327,47 +367,57 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           </div>
 
           {/* Description */}
-          <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow leading-relaxed">
+          <p className="text-gray-600 text-xs mb-2 line-clamp-2 flex-grow leading-relaxed">
             {descripcion}
           </p>
 
+          {/* Starting Price Highlight */}
+          {preciosReferencia && preciosReferencia.length > 0 && (
+            <div className="mb-3 flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Desde</span>
+              <span className="text-xs font-bold text-indigo-600">
+                {preciosReferencia.reduce((min, p) => {
+                  const price = parseInt(p.precio.replace(/\D/g, '')) || 0;
+                  return (min === 0 || (price > 0 && price < min)) ? price : min;
+                }, 0) > 0 
+                  ? `$${preciosReferencia.reduce((min, p) => {
+                      const price = parseInt(p.precio.replace(/\D/g, '')) || 0;
+                      return (min === 0 || (price > 0 && price < min)) ? price : min;
+                    }, 0)}`
+                  : preciosReferencia[0].precio}
+              </span>
+              <span className="text-[10px] text-gray-400 font-medium ml-auto">{preciosReferencia[0].servicio}</span>
+            </div>
+          )}
+
           {/* Stats & Footer */}
-          <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
+          <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
               <button 
                 onClick={handleShowReviews}
-                className="flex items-center bg-gray-50 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
+                className="flex items-center bg-gray-50 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
               >
-                <Star size={16} className="text-amber-400 fill-amber-400 mr-1.5" />
-                <span className="font-bold text-gray-900 text-sm">{ratingAvg ? ratingAvg.toFixed(1) : 'N/A'}</span>
-                <span className="text-gray-500 text-xs ml-1 font-medium">({reviewCount || 0} reseñas)</span>
-                {showReviews ? <ChevronUp size={14} className="ml-2 text-gray-400" /> : <ChevronDown size={14} className="ml-2 text-gray-400" />}
+                <Star size={14} className="text-amber-400 fill-amber-400 mr-1" />
+                <span className="font-bold text-gray-900 text-xs">{ratingAvg ? ratingAvg.toFixed(1) : 'N/A'}</span>
+                <span className="text-gray-500 text-[10px] ml-1 font-medium">({reviewCount || 0})</span>
+                {showReviews ? <ChevronUp size={12} className="ml-1 text-gray-400" /> : <ChevronDown size={12} className="ml-1 text-gray-400" />}
               </button>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <Link 
                 to={`/profesional/${professional.slug || uid}`}
-                className="px-4 py-2.5 rounded-lg text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200"
+                className="px-3 py-2 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200"
               >
-                Ver Perfil
+                Ver
               </Link>
               {isClient && (
                 <button 
                   onClick={() => setShowReviewForm(!showReviewForm)}
-                  className={`p-2.5 rounded-lg transition-colors border ${showReviewForm ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 border-transparent'}`}
+                  className={`p-2 rounded-lg transition-colors border ${showReviewForm ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 border-transparent'}`}
                   title="Dejar reseña"
                 >
-                  <MessageSquare size={20} />
-                </button>
-              )}
-              {isClient && (
-                <button 
-                  onClick={handleContactClick}
-                  className="p-2.5 rounded-lg transition-colors border text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 border-transparent"
-                  title="Iniciar Chat"
-                >
-                  <MessageCircle size={20} />
+                  <MessageSquare size={16} />
                 </button>
               )}
               {telefono ? (
@@ -376,21 +426,21 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`
-                    flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md active:scale-95
+                    flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-95
                     ${isVip 
                       ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
                       : 'bg-green-600 hover:bg-green-700 text-white'}
                   `}
                   onClick={handleWhatsAppClick}
                 >
-                  <MessageSquare size={16} />
+                  <MessageSquare size={14} />
                   WhatsApp
                 </a>
               ) : (
                 <button 
                   onClick={() => setShowContactModal(true)}
                   className={`
-                    px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md active:scale-95
+                    px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-95
                     ${isVip 
                       ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600' 
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white'}
@@ -542,6 +592,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                   alt={nombre} 
                   className="w-16 h-16 rounded-full object-cover border-4 border-white/20"
+                  loading="lazy"
                 />
                 <div>
                   <h3 className="font-bold text-xl">{nombre}</h3>

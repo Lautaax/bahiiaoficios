@@ -8,8 +8,6 @@ import { Role } from '../types';
 import { Upload, User, Briefcase, Phone } from 'lucide-react';
 import { ZONAS, PROFESSIONS } from '../constants';
 
-import { uploadToImgur } from '../services/imgurService';
-
 export const CompleteProfile: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -18,8 +16,17 @@ export const CompleteProfile: React.FC = () => {
   const [role, setRole] = useState<Role>('cliente');
   const [zona, setZona] = useState('Centro');
   const [rubro, setRubro] = useState('Electricista');
+  const [rubrosSeleccionados, setRubrosSeleccionados] = useState<string[]>([]);
   const [descripcion, setDescripcion] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [cuit, setCuit] = useState('');
+  const [haceFactura, setHaceFactura] = useState(false);
+  const [tipoFactura, setTipoFactura] = useState<'A' | 'C' | ''>('');
+  const [haceUrgencias, setHaceUrgencias] = useState(false);
+  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(false);
+  const [matriculado, setMatriculado] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,9 +54,27 @@ export const CompleteProfile: React.FC = () => {
     }
   };
 
+  const toggleRubro = (r: string) => {
+    if (rubrosSeleccionados.includes(r)) {
+      setRubrosSeleccionados(rubrosSeleccionados.filter(item => item !== r));
+    } else {
+      if (rubrosSeleccionados.length < 5) {
+        setRubrosSeleccionados([...rubrosSeleccionados, r]);
+      } else {
+        setError('Puedes seleccionar hasta 5 rubros.');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (role === 'profesional' && rubrosSeleccionados.length === 0) {
+      setError('Debes seleccionar al menos un rubro.');
+      return;
+    }
+
     setLoading(true);
 
     if (!currentUser) return;
@@ -62,25 +87,28 @@ export const CompleteProfile: React.FC = () => {
       return;
     }
 
+    // Validar foto de perfil obligatoria
+    if (!imageFile && !currentUser.fotoUrl) {
+      setError('La foto de perfil es obligatoria.');
+      setLoading(false);
+      return;
+    }
+
     try {
       let fotoUrl = currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`;
 
       if (imageFile) {
         try {
-           // Try Imgur upload first
-           fotoUrl = await uploadToImgur(imageFile);
-        } catch (uploadError) {
-           console.error("Error uploading image to Imgur:", uploadError);
-           
-           // Fallback to Firebase Storage
-           try {
-              console.log("Falling back to Firebase Storage...");
-              const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
-              await uploadBytes(storageRef, imageFile);
-              fotoUrl = await getDownloadURL(storageRef);
-           } catch (firebaseError) {
-              console.error("Error uploading image to Firebase:", firebaseError);
-           }
+          const imageCompression = (await import('browser-image-compression')).default;
+          const compressed = await imageCompression(imageFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
+          const webpFile = new File([compressed], 'profile.webp', { type: 'image/webp' });
+          const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
+          await uploadBytes(storageRef, webpFile);
+          fotoUrl = await getDownloadURL(storageRef);
+        } catch (uploadError: any) {
+          setError(uploadError.message || "Error al subir la imagen de perfil.");
+          setLoading(false);
+          return;
         }
       }
 
@@ -103,14 +131,25 @@ export const CompleteProfile: React.FC = () => {
 
       if (role === 'profesional') {
         userData.profesionalInfo = {
-          rubro,
+          rubro: rubrosSeleccionados[0],
+          rubros: rubrosSeleccionados,
           descripcion: descripcion || 'Profesional registrado en Oficios Bahía.',
           isVip: false,
           ratingAvg: 0,
           reviewCount: 0,
           fotosTrabajos: [],
+          fotosTrabajosDetalle: [],
           telefono: telefono.replace(/\D/g, ''),
-          matriculado: false
+          direccion,
+          contactEmail: contactEmail || currentUser.email,
+          cuit,
+          haceFactura,
+          tipoFactura,
+          haceUrgencias,
+          disponibilidadInmediata,
+          matriculado,
+          preciosReferencia: [],
+          badges: []
         };
       }
 
@@ -179,7 +218,7 @@ export const CompleteProfile: React.FC = () => {
                   onChange={handleImageChange}
                 />
               </div>
-              <span className="text-xs text-gray-500">Foto de perfil</span>
+              <span className="text-xs text-gray-500 font-medium">Foto de perfil (Obligatorio)</span>
             </div>
 
             <div>
@@ -249,17 +288,23 @@ export const CompleteProfile: React.FC = () => {
                 </div>
                 
                 <div>
-                  <label htmlFor="rubro" className="block text-sm font-medium text-gray-700">Rubro Principal</label>
-                  <select
-                    id="rubro"
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    value={rubro}
-                    onChange={(e) => setRubro(e.target.value)}
-                  >
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rubros (Selecciona hasta 5)</label>
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
                     {rubros.map((r) => (
-                      <option key={r} value={r}>{r}</option>
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => toggleRubro(r)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          rubrosSeleccionados.includes(r)
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {r}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
                 <div>
@@ -272,6 +317,99 @@ export const CompleteProfile: React.FC = () => {
                     value={descripcion}
                     onChange={(e) => setDescripcion(e.target.value)}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="direccion" className="block text-sm font-medium text-gray-700">Dirección (Opcional)</label>
+                    <input
+                      id="direccion"
+                      type="text"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700">Email de Contacto</label>
+                    <input
+                      id="contactEmail"
+                      type="email"
+                      placeholder={currentUser.email || ''}
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="cuit" className="block text-sm font-medium text-gray-700">CUIT/CUIL</label>
+                    <input
+                      id="cuit"
+                      type="text"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={cuit}
+                      onChange={(e) => setCuit(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tipoFactura" className="block text-sm font-medium text-gray-700">Tipo de Factura</label>
+                    <select
+                      id="tipoFactura"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={tipoFactura}
+                      onChange={(e) => setTipoFactura(e.target.value as any)}
+                    >
+                      <option value="">No emito factura</option>
+                      <option value="A">Factura A</option>
+                      <option value="C">Factura C</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="haceFactura"
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      checked={haceFactura}
+                      onChange={(e) => setHaceFactura(e.target.checked)}
+                    />
+                    <label htmlFor="haceFactura" className="text-sm text-gray-700">Emito factura</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="haceUrgencias"
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      checked={haceUrgencias}
+                      onChange={(e) => setHaceUrgencias(e.target.checked)}
+                    />
+                    <label htmlFor="haceUrgencias" className="text-sm text-gray-700">Atención de Urgencias 24/7</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="disponibilidadInmediata"
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      checked={disponibilidadInmediata}
+                      onChange={(e) => setDisponibilidadInmediata(e.target.checked)}
+                    />
+                    <label htmlFor="disponibilidadInmediata" className="text-sm text-gray-700">Disponibilidad Inmediata</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="matriculado"
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      checked={matriculado}
+                      onChange={(e) => setMatriculado(e.target.checked)}
+                    />
+                    <label htmlFor="matriculado" className="text-sm text-gray-700">Soy Profesional Matriculado</label>
+                  </div>
                 </div>
               </div>
             )}
