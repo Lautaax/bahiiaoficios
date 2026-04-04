@@ -109,7 +109,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, preciosReferencia, fotoPortada } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado } = professional.profesionalInfo;
 
   const isClient = currentUser?.rol === 'cliente';
 
@@ -223,23 +223,6 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           ${isVip ? 'border-2 border-amber-400 shadow-lg shadow-amber-100/50' : 'border border-gray-200 shadow-sm'}
         `}
       >
-        {/* Cover Image */}
-        <div className="relative h-32 overflow-hidden bg-gray-200">
-          {fotoPortada ? (
-            <img 
-              src={fotoPortada} 
-              alt={`Portada de ${nombre}`} 
-              className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center opacity-80">
-              <ProfessionIcon size={40} className="text-white/30" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-        </div>
-
         {/* VIP Badge - Enhanced Style */}
         {isVip && (
           <div className="absolute top-0 right-0 z-10">
@@ -262,15 +245,14 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           />
         </button>
 
-        <div className="p-5 pt-0 flex flex-col h-full relative">
+        <div className="p-5 flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-start gap-4 mb-4 -mt-8">
+          <div className="flex items-start gap-4 mb-4">
             <div className="relative">
               <img 
                 src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                 alt={nombre} 
-                className={`w-20 h-20 rounded-full object-cover border-4 border-white shadow-md ${isVip ? 'ring-4 ring-amber-100' : ''}`}
-                loading="lazy"
+                className={`w-16 h-16 rounded-full object-cover ${isVip ? 'ring-4 ring-amber-100 ring-offset-2' : ''}`}
               />
               {isVip && (
                 <div className="absolute -bottom-1 -right-1 bg-amber-400 rounded-full p-1 border-2 border-white shadow-sm">
@@ -317,28 +299,6 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                 )}
               </div>
 
-              {/* Badges Row */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                {(isVerified || matriculado) && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100" title="Perfil Verificado">
-                    <ShieldCheck size={10} className="fill-blue-100" />
-                    <span className="text-[9px] font-bold uppercase tracking-tight">Verificado</span>
-                  </div>
-                )}
-                {(ratingAvg || 0) >= 4.5 && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100" title="Puntualidad">
-                    <Star size={10} className="fill-amber-100" />
-                    <span className="text-[9px] font-bold uppercase tracking-tight">Puntual</span>
-                  </div>
-                )}
-                {(reviewCount || 0) >= 10 && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-100" title="Experiencia">
-                    <Briefcase size={10} />
-                    <span className="text-[9px] font-bold uppercase tracking-tight">Experto</span>
-                  </div>
-                )}
-              </div>
-
               <div className="flex items-center text-gray-500 text-xs gap-1">
                 <MapPin size={12} />
                 <span>{zona}, Bahía Blanca</span>
@@ -367,28 +327,9 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           </div>
 
           {/* Description */}
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-grow leading-relaxed">
+          <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow leading-relaxed">
             {descripcion}
           </p>
-
-          {/* Starting Price Highlight */}
-          {preciosReferencia && preciosReferencia.length > 0 && (
-            <div className="mb-4 flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Desde</span>
-              <span className="text-sm font-bold text-indigo-600">
-                {preciosReferencia.reduce((min, p) => {
-                  const price = parseInt(p.precio.replace(/\D/g, '')) || 0;
-                  return (min === 0 || (price > 0 && price < min)) ? price : min;
-                }, 0) > 0 
-                  ? `$${preciosReferencia.reduce((min, p) => {
-                      const price = parseInt(p.precio.replace(/\D/g, '')) || 0;
-                      return (min === 0 || (price > 0 && price < min)) ? price : min;
-                    }, 0)}`
-                  : preciosReferencia[0].precio}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium ml-auto">{preciosReferencia[0].servicio}</span>
-            </div>
-          )}
 
           {/* Stats & Footer */}
           <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
@@ -601,7 +542,6 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                   alt={nombre} 
                   className="w-16 h-16 rounded-full object-cover border-4 border-white/20"
-                  loading="lazy"
                 />
                 <div>
                   <h3 className="font-bold text-xl">{nombre}</h3>

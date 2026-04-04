@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 
@@ -50,18 +50,9 @@ export const PublicProfile: React.FC = () => {
             // Increment profile views if not the owner
             if (currentUser?.uid !== docId) {
               try {
-                // Total views
                 await updateDoc(doc(db, 'usuarios', docId), {
-                  'profesionalInfo.profileViews': increment(1)
+                  'profesionalInfo.profileViews': (userData.profesionalInfo?.profileViews || 0) + 1
                 });
-
-                // Daily views for stats
-                const today = new Date().toISOString().split('T')[0];
-                const statsRef = doc(db, 'usuarios', docId, 'stats', today);
-                await setDoc(statsRef, {
-                  views: increment(1),
-                  date: today
-                }, { merge: true });
               } catch (e) {
                 console.error("Error updating profile views", e);
               }
@@ -285,7 +276,7 @@ export const PublicProfile: React.FC = () => {
   }
 
   const { nombre, zona, fotoUrl } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado } = professional.profesionalInfo;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -297,22 +288,12 @@ export const PublicProfile: React.FC = () => {
         {/* Left Column: Info Card */}
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700 sticky top-24">
-            <div className="h-48 bg-gray-200 relative overflow-hidden">
-              {fotoPortada ? (
-                <img 
-                  src={fotoPortada} 
-                  alt={`Portada de ${nombre}`} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-              )}
+            <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
               {isVip && (
-                <div className="absolute top-4 right-4 bg-amber-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm z-10">
+                <div className="absolute top-4 right-4 bg-amber-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
                   <ShieldCheck size={12} /> VIP
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
             </div>
             
             <div className="px-6 pb-6 relative">
@@ -459,40 +440,6 @@ export const PublicProfile: React.FC = () => {
               )}
 
               <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-3">
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wider">Insignias</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Badge: Verificado */}
-                  {(isVerified || matriculado) && (
-                    <div className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-100 dark:border-indigo-800">
-                      <ShieldCheck size={16} className="text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase">Verificado</span>
-                    </div>
-                  )}
-                  {/* Badge: Puntualidad */}
-                  {(ratingAvg || 0) >= 4.5 && (
-                    <div className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-100 dark:border-indigo-800">
-                      <CheckCircle size={16} className="text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase">Puntual</span>
-                    </div>
-                  )}
-                  {/* Badge: Experiencia */}
-                  {(reviewCount || 0) >= 10 && (
-                    <div className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-100 dark:border-indigo-800">
-                      <Briefcase size={16} className="text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase">Experto</span>
-                    </div>
-                  )}
-                  {/* Badge: VIP */}
-                  {isVip && (
-                    <div className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-100 dark:border-yellow-800">
-                      <Star size={16} className="text-yellow-600 dark:text-yellow-400 fill-yellow-400" />
-                      <span className="text-[10px] font-bold text-yellow-700 dark:text-yellow-300 uppercase">VIP</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-3">
                 {telefono && (
                   <a
                     href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi tu perfil en Bahía Oficios y necesito presupuesto para...`)}`}
@@ -527,50 +474,22 @@ export const PublicProfile: React.FC = () => {
             </p>
           </div>
 
-          {/* Reference Prices Section */}
-          {preciosReferencia && preciosReferencia.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <FileText className="text-indigo-600" />
-                Precios de Referencia
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {preciosReferencia.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <span className="font-medium text-gray-700 dark:text-gray-200">{item.servicio}</span>
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400">{item.precio}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-gray-500 mt-4 italic">
-                * Los precios son orientativos y pueden variar según la complejidad del trabajo.
-              </p>
-            </div>
-          )}
-
           {/* Portfolio Section */}
-          {((fotosTrabajosDetalle && fotosTrabajosDetalle.length > 0) || (fotosTrabajos && fotosTrabajos.length > 0)) && (
+          {professional.profesionalInfo.fotosTrabajos && professional.profesionalInfo.fotosTrabajos.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <IconImage className="text-indigo-600" />
                 Trabajos Realizados
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {(fotosTrabajosDetalle || fotosTrabajos.map(url => ({ url, descripcion: '' }))).map((item, index) => (
-                  <div key={index} className="flex flex-col gap-3 group">
-                    <div className="aspect-video rounded-xl overflow-hidden cursor-pointer border border-gray-100 dark:border-gray-700 shadow-sm">
-                      <img 
-                        src={item.url} 
-                        alt={item.descripcion || `Trabajo ${index + 1}`} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        onClick={() => window.open(item.url, '_blank')}
-                      />
-                    </div>
-                    {item.descripcion && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic px-1">
-                        {item.descripcion}
-                      </p>
-                    )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {professional.profesionalInfo.fotosTrabajos.map((url, index) => (
+                  <div key={index} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <img 
+                      src={url} 
+                      alt={`Trabajo ${index + 1}`} 
+                      className="w-full h-full object-cover"
+                      onClick={() => window.open(url, '_blank')}
+                    />
                   </div>
                 ))}
               </div>

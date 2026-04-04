@@ -25,7 +25,6 @@ import { BlogPost } from './components/BlogPost';
 import { Terms } from './components/Terms';
 import { Privacy } from './components/Privacy';
 import { Help } from './components/Help';
-import { TradeDiscounts } from './components/TradeDiscounts';
 import { NotificationListener } from './components/NotificationListener';
 
 import { ChatBadge } from './components/ChatBadge';
@@ -77,14 +76,9 @@ function Navbar() {
                 Directorio
               </Link>
               {currentUser.rol === 'profesional' && (
-                <>
-                  <Link to="/dashboard-profesional" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    Mi Panel
-                  </Link>
-                  <Link to="/beneficios" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    Beneficios
-                  </Link>
-                </>
+                <Link to="/dashboard-profesional" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  Mi Panel
+                </Link>
               )}
               {currentUser.isAdmin && (
                 <Link to="/admin" className="hidden sm:block text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
@@ -200,7 +194,6 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/terms" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Términos</Link>
             <Link to="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</Link>
             <Link to="/help" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Ayuda</Link>
-            <Link to="/beneficios" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Beneficios</Link>
           </div>
         </div>
       </footer>
@@ -329,12 +322,6 @@ function AppContent() {
             <Route path="/blog/:id" element={
               <Layout>
                 <BlogPost />
-              </Layout>
-            } />
-            
-            <Route path="/beneficios" element={
-              <Layout>
-                <TradeDiscounts />
               </Layout>
             } />
           </Routes>

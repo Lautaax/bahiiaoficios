@@ -353,54 +353,6 @@ async function startServer() {
     }
   });
 
-  app.post("/api/upload-github", async (req, res) => {
-    const { image, filename } = req.body;
-    const token = process.env.GITHUB_TOKEN;
-    const repo = process.env.GITHUB_REPO;
-    const branch = process.env.GITHUB_BRANCH || 'main';
-
-    if (!token || !repo) {
-      return res.status(500).json({ error: "GitHub storage not configured (missing GITHUB_TOKEN or GITHUB_REPO)" });
-    }
-
-    if (!image || !filename) {
-      return res.status(400).json({ error: "Missing image or filename" });
-    }
-
-    try {
-      // Remove base64 prefix if present
-      const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-      
-      // GitHub API URL: https://api.github.com/repos/{owner}/{repo}/contents/{path}
-      const url = `https://api.github.com/repos/${repo}/contents/profile_images/${filename}`;
-      
-      const response = await axios.put(url, {
-        message: `Upload profile image: ${filename}`,
-        content: base64Data,
-        branch: branch
-      }, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/vnd.github.v3+json"
-        }
-      });
-
-      // Construct the raw URL (or jsdelivr for better CDN)
-      // Raw: https://raw.githubusercontent.com/{owner}/{repo}/{branch}/profile_images/{filename}
-      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/profile_images/${filename}`;
-      
-      res.json({ url: rawUrl });
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("GitHub upload error:", error.response?.data || error.message);
-        res.status(500).json({ error: error.response?.data?.message || "Failed to upload to GitHub" });
-      } else {
-        console.error("GitHub upload error:", error);
-        res.status(500).json({ error: "Failed to upload to GitHub" });
-      }
-    }
-  });
-
   // Vite middleware for development and production (in this environment)
   const vite = await createViteServer({
     server: { middlewareMode: true },

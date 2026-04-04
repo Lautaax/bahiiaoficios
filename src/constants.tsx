@@ -42,7 +42,6 @@ export const ZONAS = [
   'San Andrés', 
   'Tiro Federal', 
   'Ingeniero White',
-  'Ing. White',
   'Aldea Romana',
   'Villa Harding Green',
   'Villa Rosas',
@@ -52,6 +51,5 @@ export const ZONAS = [
   'Napostá',
   'Pedro Pico',
   'General Daniel Cerri',
-  'Cerri',
   'Cabildo'
 ];

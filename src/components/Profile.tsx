@@ -4,26 +4,20 @@ import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { User as UserType, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck } from 'lucide-react';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
 
-interface ProfileProps {
-  initialSection?: 'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion';
-}
-
-export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
+export const Profile: React.FC = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
-  const [activeSection, setActiveSection] = useState<'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion'>(initialSection || 'datos');
 
   const [formData, setFormData] = useState({
     nombre: '',
-    nombreNegocio: '',
     zona: '',
     fotoUrl: '',
     rubro: '',
@@ -39,10 +33,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
     tipoFactura: '' as 'A' | 'C' | '',
     haceUrgencias: false,
     disponibilidadInmediata: false,
-    matriculado: false,
-    preciosReferencia: [] as { servicio: string; precio: string }[],
-    badges: [] as string[],
-    fotoPortada: ''
+    matriculado: false
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -54,18 +45,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [dniUploadProgress, setDniUploadProgress] = useState(0);
 
   // Works Images State
-  const [existingWorkImages, setExistingWorkImages] = useState<{ url: string; descripcion: string }[]>([]);
-  const [newWorkFiles, setNewWorkFiles] = useState<{ file: File; descripcion: string }[]>([]);
+  const [existingWorkImages, setExistingWorkImages] = useState<string[]>([]);
+  const [newWorkFiles, setNewWorkFiles] = useState<File[]>([]);
   const [newWorkPreviews, setNewWorkPreviews] = useState<string[]>([]);
   const [uploadingWorks, setUploadingWorks] = useState(false);
-  const [worksUploadProgress, setWorksUploadProgress] = useState<{ [key: number]: number }>({});
-  const [isDragging, setIsDragging] = useState(false);
-
-  useEffect(() => {
-    if (initialSection) {
-      setActiveSection(initialSection);
-    }
-  }, [initialSection]);
 
   useEffect(() => {
     const status = searchParams.get('status');
@@ -97,21 +80,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
         tipoFactura: currentUser.profesionalInfo?.tipoFactura || '',
         haceUrgencias: currentUser.profesionalInfo?.haceUrgencias || false,
         disponibilidadInmediata: currentUser.profesionalInfo?.disponibilidadInmediata || false,
-        matriculado: currentUser.profesionalInfo?.matriculado || false,
-        nombreNegocio: currentUser.profesionalInfo?.nombreNegocio || currentUser.nombreNegocio || '',
-        preciosReferencia: currentUser.profesionalInfo?.preciosReferencia || [],
-        badges: currentUser.profesionalInfo?.badges || [],
-        fotoPortada: currentUser.profesionalInfo?.fotoPortada || ''
+        matriculado: currentUser.profesionalInfo?.matriculado || false
       });
       setImagePreview(currentUser.fotoUrl || null);
       setDniPreview(currentUser.profesionalInfo?.fotoDni || null);
       if (currentUser.profesionalInfo?.fotoDni) {
         setDniUploadStatus('success');
       }
-      
-      const existing = currentUser.profesionalInfo?.fotosTrabajosDetalle || 
-                       (currentUser.profesionalInfo?.fotosTrabajos || []).map(url => ({ url, descripcion: '' }));
-      setExistingWorkImages(existing);
+      setExistingWorkImages(currentUser.profesionalInfo?.fotosTrabajos || []);
     }
   }, [currentUser]);
 
@@ -138,48 +114,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const handleWorkImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files) as File[];
-      processWorkFiles(files);
-    }
-  };
-
-  const processWorkFiles = (files: File[]) => {
-    const totalCurrent = existingWorkImages.length + newWorkFiles.length;
-    const remaining = 20 - totalCurrent;
-    
-    if (remaining <= 0) {
-      setError('Has alcanzado el límite máximo de 20 fotos para tu portafolio.');
-      return;
-    }
-
-    const filesToAdd = files.slice(0, remaining);
-    const newEntries = filesToAdd.map(file => ({ file, descripcion: '' }));
-    setNewWorkFiles(prev => [...prev, ...newEntries]);
-    
-    const newPreviews = filesToAdd.map(file => URL.createObjectURL(file));
-    setNewWorkPreviews(prev => [...prev, ...newPreviews]);
-
-    if (files.length > remaining) {
-      setError(`Solo se agregaron ${remaining} fotos. El límite es de 20.`);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files) {
-      const files = Array.from(e.dataTransfer.files) as File[];
-      const imageFiles = files.filter(f => f.type.startsWith('image/'));
-      processWorkFiles(imageFiles);
+      setNewWorkFiles(prev => [...prev, ...files]);
+      
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setNewWorkPreviews(prev => [...prev, ...newPreviews]);
     }
   };
 
@@ -190,41 +128,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const removeNewWorkImage = (index: number) => {
     setNewWorkFiles(prev => prev.filter((_, i) => i !== index));
     setNewWorkPreviews(prev => {
+      // Revoke URL to avoid memory leaks
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
-  };
-
-  const addPriceReference = () => {
-    setFormData(prev => ({
-      ...prev,
-      preciosReferencia: [...prev.preciosReferencia, { servicio: '', precio: '' }]
-    }));
-  };
-
-  const removePriceReference = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      preciosReferencia: prev.preciosReferencia.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updatePriceReference = (index: number, field: 'servicio' | 'precio', value: string) => {
-    const updated = [...formData.preciosReferencia];
-    updated[index] = { ...updated[index], [field]: value };
-    setFormData(prev => ({ ...prev, preciosReferencia: updated }));
-  };
-
-  const updateExistingWorkDescription = (index: number, descripcion: string) => {
-    const updated = [...existingWorkImages];
-    updated[index] = { ...updated[index], descripcion };
-    setExistingWorkImages(updated);
-  };
-
-  const updateNewWorkDescription = (index: number, descripcion: string) => {
-    const updated = [...newWorkFiles];
-    updated[index] = { ...updated[index], descripcion };
-    setNewWorkFiles(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,68 +149,93 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
       let newFotoDni = formData.fotoDni;
       let finalWorkImages = [...existingWorkImages];
 
+      // Upload Profile Image
       if (imageFile) {
         try {
-          const imageCompression = (await import('browser-image-compression')).default;
-          const compressed = await imageCompression(imageFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
-          const webpFile = new File([compressed], 'profile.webp', { type: 'image/webp' });
           const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
-          await uploadBytes(storageRef, webpFile);
+          await uploadBytes(storageRef, imageFile);
           newFotoUrl = await getDownloadURL(storageRef);
         } catch (uploadError) {
+          console.error("Error uploading image:", uploadError);
           setError('Error al subir la imagen de perfil.');
-          setLoading(false);
-          return;
         }
       }
 
+      // Upload DNI Image
       if (dniFile) {
         setDniUploadStatus('uploading');
         setDniUploadProgress(0);
+        
         try {
-          const imageCompression = (await import('browser-image-compression')).default;
-          const compressedFile = await imageCompression(dniFile, { maxSizeMB: 1, maxWidthOrHeight: 1920, fileType: 'image/webp' });
-          const webpFile = new File([compressedFile], 'dni.webp', { type: 'image/webp' });
+          // Compress image
+          const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true
+          };
+          
+          let fileToUpload = dniFile;
+          try {
+            // Dynamic import to avoid global side effects
+            const imageCompression = (await import('browser-image-compression')).default;
+            fileToUpload = await imageCompression(dniFile, options);
+          } catch (compressionError) {
+            console.error("Error compressing image, uploading original:", compressionError);
+          }
+
           const storageRef = ref(storage, `dni_images/${currentUser.uid}`);
-          const uploadTask = uploadBytesResumable(storageRef, webpFile);
+          const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+
+          // Wrap uploadTask in a promise to await completion
           newFotoDni = await new Promise<string>((resolve, reject) => {
             uploadTask.on('state_changed', 
-              (snap) => setDniUploadProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-              (err) => reject(err),
-              async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setDniUploadProgress(progress);
+              }, 
+              (error) => {
+                console.error("Error uploading DNI:", error);
+                setDniUploadStatus('error');
+                reject(error);
+              }, 
+              async () => {
+                try {
+                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                  setDniUploadStatus('success');
+                  resolve(downloadURL);
+                } catch (err) {
+                  reject(err);
+                }
+              }
             );
           });
-          setDniUploadStatus('success');
-        } catch (err) {
+        } catch (uploadError) {
+          console.error("Error uploading DNI:", uploadError);
           setDniUploadStatus('error');
-          setError('Error al subir el DNI.');
+          setError('Error al subir la foto del DNI.');
           setLoading(false);
-          return;
+          return; // Stop execution if DNI upload fails
         }
       }
 
+      // Upload New Work Images
       if (newWorkFiles.length > 0) {
         setUploadingWorks(true);
         try {
-          const imageCompression = (await import('browser-image-compression')).default;
-          const uploadPromises = newWorkFiles.map(async (item, index) => {
-            const compressed = await imageCompression(item.file, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
-            const webpFile = new File([compressed], `${Date.now()}_${index}.webp`, { type: 'image/webp' });
-            const storageRef = ref(storage, `work_images/${currentUser.uid}/${webpFile.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, webpFile);
-            const url = await new Promise<string>((resolve, reject) => {
-              uploadTask.on('state_changed',
-                (snap) => setWorksUploadProgress(prev => ({ ...prev, [index]: (snap.bytesTransferred / snap.totalBytes) * 100 })),
-                (err) => reject(err),
-                async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
-              );
-            });
-            return { url, descripcion: item.descripcion };
+          const uploadPromises = newWorkFiles.map(async (file) => {
+            const timestamp = Date.now();
+            const randomSuffix = Math.floor(Math.random() * 1000);
+            const storageRef = ref(storage, `work_images/${currentUser.uid}/${timestamp}_${randomSuffix}`);
+            await uploadBytes(storageRef, file);
+            return await getDownloadURL(storageRef);
           });
-          const results = await Promise.all(uploadPromises);
-          finalWorkImages = [...finalWorkImages, ...results];
-        } catch (err) {
-          setError('Error al subir imágenes del portafolio.');
+
+          const uploadedUrls = await Promise.all(uploadPromises);
+          finalWorkImages = [...finalWorkImages, ...uploadedUrls];
+        } catch (workUploadError) {
+          console.error("Error uploading work images:", workUploadError);
+          setError('Error al subir algunas imágenes de trabajos.');
+          // Continue anyway to save other data
         } finally {
           setUploadingWorks(false);
         }
@@ -311,24 +243,28 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
       const updateData: any = {
         nombre: formData.nombre,
-        nombreNegocio: formData.nombreNegocio || null,
         zona: formData.zona,
         fotoUrl: newFotoUrl,
-        rol: formData.rol,
-        isAdmin: currentUser.email === 'lautaroj.aguilera@gmail.com'
+        rol: formData.rol
       };
 
       if (formData.rol === 'profesional') {
+        if (!formData.cuit || !formData.telefono) {
+          setError('Para perfiles profesionales, el CUIT/CUIL y el teléfono son obligatorios.');
+          setLoading(false);
+          return;
+        }
+
+        // Ensure professional info exists or is updated
+        // Saving contact info to profesionalInfo as requested: telefono, direccion, contactEmail
         updateData.profesionalInfo = {
-          rubro: formData.rubros[0] || formData.rubro,
+          rubro: formData.rubros.length > 0 ? formData.rubros[0] : formData.rubro,
           rubros: formData.rubros,
           descripcion: formData.descripcion,
           isVip: currentUser.profesionalInfo?.isVip || false,
           ratingAvg: currentUser.profesionalInfo?.ratingAvg || 0,
           reviewCount: currentUser.profesionalInfo?.reviewCount || 0,
-          fotosTrabajos: finalWorkImages.map(img => img.url),
-          fotosTrabajosDetalle: finalWorkImages,
-          fotoPortada: formData.fotoPortada,
+          fotosTrabajos: finalWorkImages,
           telefono: formData.telefono,
           direccion: formData.direccion,
           contactEmail: formData.contactEmail,
@@ -338,250 +274,594 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
           tipoFactura: formData.haceFactura ? formData.tipoFactura : null,
           haceUrgencias: formData.haceUrgencias,
           disponibilidadInmediata: formData.disponibilidadInmediata,
-          matriculado: formData.matriculado,
-          nombreNegocio: formData.nombreNegocio || null,
-          preciosReferencia: formData.preciosReferencia,
-          badges: formData.badges
+          matriculado: formData.matriculado
         };
       }
 
       await updateDoc(userRef, updateData);
+      
+      // Clear new files after successful save
       setNewWorkFiles([]);
       setNewWorkPreviews([]);
       setExistingWorkImages(finalWorkImages);
+
       setSuccess(true);
+      
     } catch (err) {
+      console.error(err);
       setError('Error al actualizar el perfil.');
     } finally {
       setLoading(false);
     }
   };
 
-  const sections = [
-    { id: 'datos', label: 'Datos Básicos', icon: User },
-    { id: 'profesional', label: 'Info Profesional', icon: Briefcase, hide: formData.rol !== 'profesional' },
-    { id: 'portafolio', label: 'Portafolio', icon: IconImage, hide: formData.rol !== 'profesional' },
-    { id: 'precios', label: 'Precios', icon: CreditCard, hide: formData.rol !== 'profesional' },
-    { id: 'verificacion', label: 'Verificación', icon: BadgeCheck, hide: formData.rol !== 'profesional' },
-  ];
+  const rubros = PROFESSIONS.map(p => p.name);
+  const zonas = ZONAS;
 
-  if (!currentUser) return <div className="p-8 text-center">Cargando...</div>;
+  if (!currentUser) return <div>Cargando...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Menu */}
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden lg:sticky lg:top-24">
-            <div className="hidden lg:block p-4 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="font-bold text-gray-900 dark:text-white">Configuración</h3>
-            </div>
-            <nav className="p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible custom-scrollbar">
-              {sections.filter(s => !s.hide).map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id as any)}
-                  className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                    activeSection === section.id
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <section.icon size={18} />
-                  <span className="whitespace-nowrap">{section.label}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {sections.find(s => s.id === activeSection)?.label}
-            </h2>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-              Guardar
-            </button>
-          </div>
-
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl flex items-center border border-green-100 dark:border-green-800">
-              <CheckCircle size={20} className="mr-3" /> Perfil actualizado correctamente.
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl flex items-center border border-red-100 dark:border-red-800">
-              <AlertCircle size={20} className="mr-3" /> {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {activeSection === 'datos' && (
-              <div className="space-y-8">
-                <div className="grid grid-cols-2 gap-4">
-                  <div 
-                    onClick={() => setFormData({...formData, rol: 'cliente'})}
-                    className={`cursor-pointer p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${formData.rol === 'cliente' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-100 dark:border-gray-700'}`}
-                  >
-                    <User size={32} />
-                    <span className="font-bold">Soy Cliente</span>
-                  </div>
-                  <div 
-                    onClick={() => setFormData({...formData, rol: 'profesional'})}
-                    className={`cursor-pointer p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${formData.rol === 'profesional' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-100 dark:border-gray-700'}`}
-                  >
-                    <Briefcase size={32} />
-                    <span className="font-bold">Soy Profesional</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <div className="relative">
-                    <img src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.nombre)}&background=random`} className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg" />
-                    <label htmlFor="profile-upload" className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer hover:bg-indigo-700 shadow-lg"><Camera size={16} /></label>
-                    <input id="profile-upload" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </div>
-                  <div className="flex-1 w-full">
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nombre Completo</label>
-                    <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />
-                  </div>
-                  <div className="flex-1 w-full">
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nombre del Negocio (Opcional)</label>
-                    <input type="text" name="nombreNegocio" value={formData.nombreNegocio} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ej: Electricidad Bahía" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Zona</label>
-                    <select name="zona" value={formData.zona} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
-                      <option value="">Seleccionar Zona</option>
-                      {ZONAS.map(z => <option key={z} value={z}>{z}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'profesional' && formData.rol === 'profesional' && (
-              <div className="space-y-8">
-                <VipButton />
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Rubros (Hasta 5)</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 custom-scrollbar">
-                      {PROFESSIONS.map(p => {
-                        const isSelected = formData.rubros.includes(p.name);
-                        return (
-                          <button key={p.name} type="button" onClick={() => setFormData({...formData, rubros: isSelected ? formData.rubros.filter(r => r !== p.name) : formData.rubros.length < 5 ? [...formData.rubros, p.name] : formData.rubros})} className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-sm ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
-                            <p.icon size={16} /> <span className="truncate">{p.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
-                    <textarea name="descripcion" rows={5} value={formData.descripcion} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="WhatsApp" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
-                    <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleChange} placeholder="Email de contacto" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
-                    <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} placeholder="Dirección" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
-                    <input type="text" name="cuit" value={formData.cuit} onChange={handleChange} placeholder="CUIT/CUIL" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 cursor-pointer">
-                      <input type="checkbox" checked={formData.haceFactura} onChange={(e) => setFormData({...formData, haceFactura: e.target.checked})} className="w-5 h-5 text-indigo-600" />
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Emito Factura</span>
-                    </label>
-                    <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 cursor-pointer">
-                      <input type="checkbox" checked={formData.haceUrgencias} onChange={(e) => setFormData({...formData, haceUrgencias: e.target.checked})} className="w-5 h-5 text-red-600" />
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Urgencias 24hs</span>
-                    </label>
-                    <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 cursor-pointer">
-                      <input type="checkbox" checked={formData.matriculado} onChange={(e) => setFormData({...formData, matriculado: e.target.checked})} className="w-5 h-5 text-blue-600" />
-                      <span className="font-bold text-gray-700 dark:text-gray-300">Matriculado</span>
-                    </label>
-                  </div>
-                  <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><CreditCard /> Mercado Pago</h3>
-                    <p className="text-sm text-gray-600 mb-6">Vinculá tu cuenta para cobrar señas.</p>
-                    {currentUser?.mpConnect?.access_token ? (
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 font-bold">Cuenta Vinculada</div>
-                    ) : (
-                      <button type="button" onClick={() => window.location.href = `https://auth.mercadopago.com.ar/authorization?client_id=6870942065529124&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(window.location.origin + '/profile')}`} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Vincular MP</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'portafolio' && formData.rol === 'profesional' && (
-              <div className="space-y-8">
-                <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} className={`border-2 border-dashed rounded-2xl p-12 text-center ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
-                  <input type="file" id="work-images" multiple accept="image/*" className="hidden" onChange={handleWorkImagesChange} />
-                  <label htmlFor="work-images" className="cursor-pointer flex flex-col items-center gap-4">
-                    <Upload size={32} className="text-indigo-600" />
-                    <p className="font-bold">Arrastrá tus fotos acá o hacé clic</p>
-                  </label>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {existingWorkImages.map((item, idx) => (
-                    <div key={`ex-${idx}`} className="group relative aspect-square rounded-xl overflow-hidden border border-gray-200">
-                      <img src={item.url} className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => removeExistingWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
-                      <button type="button" onClick={() => setFormData({...formData, fotoPortada: item.url})} className={`absolute bottom-1 right-1 p-1 rounded-full ${formData.fotoPortada === item.url ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 opacity-0 group-hover:opacity-100'}`}><Star size={12} fill={formData.fotoPortada === item.url ? "currentColor" : "none"} /></button>
-                    </div>
-                  ))}
-                  {newWorkPreviews.map((url, idx) => (
-                    <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border-2 border-indigo-500">
-                      <img src={url} className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => removeNewWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'precios' && formData.rol === 'profesional' && (
-              <div className="space-y-6">
-                {formData.preciosReferencia.map((item, idx) => (
-                  <div key={idx} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                    <input type="text" value={item.servicio} onChange={(e) => updatePriceReference(idx, 'servicio', e.target.value)} placeholder="Servicio" className="flex-1 px-4 py-2 rounded-xl border" />
-                    <input type="text" value={item.precio} onChange={(e) => updatePriceReference(idx, 'precio', e.target.value)} placeholder="Precio" className="w-32 px-4 py-2 rounded-xl border" />
-                    <button type="button" onClick={() => removePriceReference(idx)} className="text-red-500"><Trash2 size={20} /></button>
-                  </div>
-                ))}
-                <button type="button" onClick={addPriceReference} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-500 hover:text-indigo-600 transition-all font-bold">+ Agregar Precio</button>
-              </div>
-            )}
-
-            {activeSection === 'verificacion' && formData.rol === 'profesional' && (
-              <div className="space-y-8">
-                <div className="flex flex-col items-center gap-6 p-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <div className="relative w-full max-w-md aspect-[1.6/1] bg-white dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
-                    {dniPreview ? <img src={dniPreview} className="w-full h-full object-cover" /> : <FileText size={48} className="text-gray-300" />}
-                    {dniUploadStatus === 'uploading' && <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white">Subiendo {Math.round(dniUploadProgress)}%</div>}
-                  </div>
-                  <label className="cursor-pointer bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2">
-                    <Camera size={20} /> {dniPreview ? 'Cambiar Foto' : 'Subir Foto DNI'}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleDniChange} />
-                  </label>
-                </div>
-              </div>
-            )}
-          </form>
-        </div>
+    <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Editar Perfil</h2>
       </div>
+
+      {success && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center">
+          {searchParams.get('status') === 'success' ? (
+             <>
+               <CheckCircle size={18} className="mr-2" /> 
+               <span>¡Pago exitoso! Tu membresía VIP se activará en breve.</span>
+             </>
+          ) : (
+             <>
+               <Save size={18} className="mr-2" /> 
+               <span>Perfil actualizado correctamente.</span>
+             </>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center">
+          <AlertCircle size={18} className="mr-2" /> {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tipo de Perfil Selection */}
+        <div className="grid grid-cols-2 gap-4">
+          <div 
+            onClick={() => setFormData({...formData, rol: 'cliente'})}
+            className={`cursor-pointer p-4 rounded-lg border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+              formData.rol === 'cliente' 
+                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-500' 
+                : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <User size={28} />
+            <span className="font-bold">Soy Cliente</span>
+            <span className="text-xs text-center opacity-80">Busco profesionales</span>
+          </div>
+          <div 
+            onClick={() => setFormData({...formData, rol: 'profesional'})}
+            className={`cursor-pointer p-4 rounded-lg border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+              formData.rol === 'profesional' 
+                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-500' 
+                : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <Briefcase size={28} />
+            <span className="font-bold">Soy Profesional</span>
+            <span className="text-xs text-center opacity-80">Ofrezco mis servicios</span>
+          </div>
+        </div>
+
+        {/* Foto de Perfil */}
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <img 
+              src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.nombre)}&background=random`} 
+              alt="Perfil" 
+              className="w-20 h-20 rounded-full object-cover border-2 border-indigo-100"
+            />
+            <label 
+              htmlFor="profile-upload" 
+              className="absolute bottom-0 right-0 bg-indigo-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-indigo-700 shadow-sm"
+            >
+              <Camera size={14} />
+            </label>
+            <input 
+              id="profile-upload" 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleImageChange}
+            />
+          </div>
+          
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL de Foto (Opcional)</label>
+            <input
+              type="text"
+              name="fotoUrl"
+              value={formData.fotoUrl}
+              onChange={handleChange}
+              placeholder="https://..."
+              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+            <p className="text-xs text-gray-500 mt-1">Sube una foto o pega una URL.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre Completo</label>
+            <input
+              type="text"
+              name="nombre"
+              value={formData.nombre}
+              onChange={handleChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Zona</label>
+            <select
+              name="zona"
+              value={formData.zona}
+              onChange={handleChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">Seleccionar Zona</option>
+              {zonas.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {formData.rol === 'profesional' && (
+          <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <UserCog size={20} /> Información Profesional
+              </h3>
+            </div>
+
+            {/* VIP Button Section - Only show if actually a professional in DB to avoid confusion or errors */}
+            {currentUser.rol === 'profesional' ? (
+              <div className="mb-6">
+                <VipButton />
+              </div>
+            ) : (
+              <div className="bg-blue-50 text-blue-700 p-3 rounded-md text-sm mb-4">
+                Guarda los cambios para acceder a las opciones VIP.
+              </div>
+            )}
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rubros (Selecciona uno o más)</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                  {PROFESSIONS.map((p) => {
+                    const isSelected = formData.rubros.includes(p.name);
+                    return (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => {
+                          const newRubros = isSelected
+                            ? formData.rubros.filter(r => r !== p.name)
+                            : [...formData.rubros, p.name];
+                          setFormData({ ...formData, rubros: newRubros });
+                        }}
+                        className={`flex items-center gap-2 p-2 rounded-lg border transition-all text-sm text-left ${
+                          isSelected
+                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500'
+                            : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <p.icon size={16} className={isSelected ? 'text-indigo-600' : 'text-gray-400'} />
+                        <span className="truncate">{p.name}</span>
+                        {isSelected && <CheckCircle size={14} className="ml-auto text-indigo-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                {formData.rubros.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Debes seleccionar al menos un rubro.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción Profesional</label>
+                <textarea
+                  name="descripcion"
+                  rows={4}
+                  value={formData.descripcion}
+                  onChange={handleChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Describe tus servicios..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Teléfono de Contacto <span className="text-red-500">*</span>
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone size={14} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      value={formData.telefono}
+                      onChange={handleChange}
+                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="291 1234567"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email de Contacto</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail size={14} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      name="contactEmail"
+                      value={formData.contactEmail}
+                      onChange={handleChange}
+                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="contacto@ejemplo.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dirección (Opcional)</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MapPin size={14} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="direccion"
+                      value={formData.direccion}
+                      onChange={handleChange}
+                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Calle 123"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    CUIT/CUIL <span className="text-red-500">*</span>
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FileText size={14} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="cuit"
+                      value={formData.cuit}
+                      onChange={handleChange}
+                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="20-12345678-9"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center mb-4">
+                  <input
+                    id="haceFactura"
+                    name="haceFactura"
+                    type="checkbox"
+                    checked={formData.haceFactura}
+                    onChange={(e) => setFormData({...formData, haceFactura: e.target.checked})}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="haceFactura" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+                    ¿Realizas Factura?
+                  </label>
+                </div>
+
+                {formData.haceFactura && (
+                  <div className="ml-6">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Factura</label>
+                    <div className="flex gap-4">
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="tipoFactura"
+                          value="A"
+                          checked={formData.tipoFactura === 'A'}
+                          onChange={(e) => setFormData({...formData, tipoFactura: 'A'})}
+                          className="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Factura A</span>
+                      </label>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="tipoFactura"
+                          value="C"
+                          checked={formData.tipoFactura === 'C'}
+                          onChange={(e) => setFormData({...formData, tipoFactura: 'C'})}
+                          className="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Factura C</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center">
+                  <input
+                    id="haceUrgencias"
+                    name="haceUrgencias"
+                    type="checkbox"
+                    checked={formData.haceUrgencias}
+                    onChange={(e) => setFormData({...formData, haceUrgencias: e.target.checked})}
+                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="haceUrgencias" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+                    ¿Atiendes Urgencias 24/7?
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center">
+                  <input
+                    id="disponibilidadInmediata"
+                    name="disponibilidadInmediata"
+                    type="checkbox"
+                    checked={formData.disponibilidadInmediata}
+                    onChange={(e) => setFormData({...formData, disponibilidadInmediata: e.target.checked})}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="disponibilidadInmediata" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+                    ¿Tienes disponibilidad inmediata?
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Mercado Pago Connect */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg>
+                </span>
+                Cobros con Mercado Pago
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Vincula tu cuenta de Mercado Pago para poder cobrar señas directamente a tus clientes. El dinero ingresará a tu cuenta.
+              </p>
+              
+              {currentUser?.mpConnect?.access_token ? (
+                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
+                    <div>
+                      <p className="font-medium text-green-800 dark:text-green-300">Cuenta Vinculada</p>
+                      <p className="text-xs text-green-600 dark:text-green-400">Ya puedes recibir pagos de señas.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/mp/auth-url?userId=${currentUser.uid}&redirectUrl=${encodeURIComponent(window.location.origin)}`);
+                      const data = await res.json();
+                      if (data.url) {
+                        window.location.href = data.url;
+                      }
+                    } catch (error) {
+                      console.error("Error fetching MP auth URL:", error);
+                      alert("Error al conectar con Mercado Pago.");
+                    }
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 bg-[#009EE3] hover:bg-[#0088C4] text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  Vincular Mercado Pago
+                </button>
+              )}
+            </div>
+
+            {/* DNI Photo Upload */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Foto del DNI (Verificación)</label>
+                {currentUser?.profesionalInfo?.isVerified ? (
+                  <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium border border-blue-200">
+                    <ShieldCheck size={14} />
+                    Perfil Verificado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium border border-gray-200">
+                    Pendiente de Verificación
+                  </span>
+                )}
+              </div>
+              <div className={`flex items-center gap-4 p-4 border-2 border-dashed rounded-lg bg-gray-50 dark:bg-gray-800 transition-colors ${
+                dniUploadStatus === 'error' ? 'border-red-300 bg-red-50' : 
+                dniUploadStatus === 'success' ? 'border-green-300 bg-green-50' : 
+                'border-gray-300 dark:border-gray-600'
+              }`}>
+                {dniPreview ? (
+                  <div className="relative h-32 w-auto">
+                    <img 
+                      src={dniPreview} 
+                      alt="DNI Preview" 
+                      className="h-full rounded-md object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { 
+                        setDniFile(null); 
+                        setDniPreview(null); 
+                        setDniUploadStatus('idle');
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-600"
+                    >
+                      <AlertCircle size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center w-full py-4 text-gray-500 dark:text-gray-400">
+                    <FileText size={32} className="mb-2 opacity-50" />
+                    <span className="text-xs">No hay foto cargada</span>
+                  </div>
+                )}
+                
+                <div className="flex-1">
+                  {dniUploadStatus === 'uploading' ? (
+                    <div className="w-full">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Subiendo...</span>
+                        <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{Math.round(dniUploadProgress)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                        <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${dniUploadProgress}%` }}></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <label 
+                        htmlFor="dni-upload" 
+                        className={`cursor-pointer inline-flex items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md text-white ${
+                          dniUploadStatus === 'error' 
+                            ? 'bg-red-600 hover:bg-red-700 border-transparent' 
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {dniUploadStatus === 'error' ? (
+                          <>
+                            <RefreshCw size={16} className="mr-2" />
+                            Reintentar Subida
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} className="mr-2" />
+                            {dniFile ? 'Cambiar Foto DNI' : 'Subir Foto DNI'}
+                          </>
+                        )}
+                      </label>
+                      <input 
+                        id="dni-upload" 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleDniChange}
+                      />
+                      {dniUploadStatus === 'success' && (
+                        <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                          <p className="text-sm text-green-700 dark:text-green-400 font-medium flex items-center">
+                            <CheckCircle size={16} className="mr-2" /> 
+                            ¡DNI subido correctamente!
+                          </p>
+                        </div>
+                      )}
+                      {dniUploadStatus === 'error' && (
+                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
+                          <p className="text-sm text-red-700 dark:text-red-400 font-medium flex items-center">
+                            <AlertCircle size={16} className="mr-2" />
+                            Error al subir. Intenta nuevamente.
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        Sube una foto clara de tu DNI para verificar tu identidad. Esta imagen no será pública.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Works Images Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Portafolio de Trabajos</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                ¡Incentivamos a que subas fotos de tus trabajos previos! En servicios manuales, una imagen vale más que cualquier descripción y ayuda a generar más confianza en los clientes.
+              </p>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4">
+                  {/* Existing Images */}
+                  {existingWorkImages.map((url, index) => (
+                    <div key={`existing-${index}`} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                      <img src={url} alt={`Trabajo ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingWorkImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* New Images Previews */}
+                  {newWorkPreviews.map((url, index) => (
+                    <div key={`new-${index}`} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-indigo-200 dark:border-indigo-800 ring-2 ring-indigo-500 ring-opacity-50">
+                      <img src={url} alt={`Nuevo Trabajo ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeNewWorkImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-indigo-600/70 text-white text-[10px] text-center py-0.5">
+                        Nuevo
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Upload Button */}
+                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <IconImage size={24} className="text-gray-400 mb-1" />
+                    <span className="text-xs text-gray-500 text-center px-1">Agregar Fotos</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleWorkImagesChange}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Sube fotos de tus trabajos anteriores para mostrar tu experiencia a los clientes.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+          >
+            {loading ? 'Guardando...' : 'Guardar Cambios'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
