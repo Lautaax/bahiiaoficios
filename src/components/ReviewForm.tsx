@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Star, Image as ImageIcon, X } from 'lucide-react';
-import { uploadToImgur } from '../services/imgurService';
+import { Star, ImageIcon, X } from 'lucide-react';
+import { uploadToFirebase } from '../services/firebaseStorageService';
 
 interface ReviewFormProps {
   profesionalId: string;
@@ -79,7 +79,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
     try {
       let uploadedUrls: string[] = [];
       if (images.length > 0) {
-        const uploadPromises = images.map(file => uploadToImgur(file));
+        const uploadPromises = images.map(file => uploadToFirebase(file, `reviews/${profesionalId}`));
         uploadedUrls = await Promise.all(uploadPromises);
       }
 

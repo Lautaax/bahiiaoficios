@@ -27,6 +27,30 @@ export const Dashboard: React.FC = () => {
   const [showVipWelcome, setShowVipWelcome] = useState(false);
   const [isRubroOpen, setIsRubroOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [ads, setAds] = useState<any[]>([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+
+  useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        const q = query(collection(db, 'ads'), where('active', '==', true), where('position', '==', 'sidebar'));
+        const snapshot = await getDocs(q);
+        setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching dashboard ads:", error);
+      }
+    };
+    fetchAds();
+  }, []);
+
+  useEffect(() => {
+    if (ads.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentAdIndex((prev) => (prev + 1) % ads.length);
+      }, 6000);
+      return () => clearInterval(timer);
+    }
+  }, [ads]);
 
   useEffect(() => {
     const search = searchParams.get('search');
@@ -544,6 +568,64 @@ export const Dashboard: React.FC = () => {
                   <br />
                   (Mientras tanto, se muestran datos de prueba).
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Ads Carousel Section */}
+        {ads.length > 0 && (
+          <div className="mb-8 overflow-hidden rounded-2xl shadow-sm border border-gray-100 bg-white">
+            <div className="flex items-center justify-between p-4 border-b border-gray-50">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Megaphone size={16} className="text-indigo-600" />
+                Sponsors y Ofertas
+              </h3>
+              <div className="flex gap-1">
+                <button 
+                  onClick={() => setCurrentAdIndex((prev) => (prev - 1 + ads.length) % ads.length)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <ChevronDown size={16} className="rotate-90" />
+                </button>
+                <button 
+                  onClick={() => setCurrentAdIndex((prev) => (prev + 1) % ads.length)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <ChevronDown size={16} className="-rotate-90" />
+                </button>
+              </div>
+            </div>
+            <div className="relative h-32 sm:h-40 overflow-hidden">
+              <div 
+                className="flex transition-transform duration-500 ease-out h-full"
+                style={{ transform: `translateX(-${currentAdIndex * 100}%)` }}
+              >
+                {ads.map((ad) => (
+                  <div key={ad.id} className="min-w-full h-full flex flex-col sm:flex-row items-center gap-4 p-4">
+                    <img 
+                      src={ad.imageUrl} 
+                      alt={ad.title} 
+                      className="w-24 h-24 sm:w-32 sm:h-32 object-contain rounded-xl shadow-sm bg-gray-50" 
+                      referrerPolicy="no-referrer" 
+                      loading="lazy"
+                    />
+                    <div className="flex-1 text-center sm:text-left">
+                      <h4 className="font-bold text-gray-900 text-lg line-clamp-1">{ad.title}</h4>
+                      <p className="text-gray-600 text-sm line-clamp-2 mb-2">{ad.description}</p>
+                      {ad.link && (
+                        <a 
+                          href={ad.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-indigo-600 font-bold text-xs hover:underline"
+                        >
+                          Ver más
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
