@@ -28,7 +28,7 @@ export const Login: React.FC = () => {
         // Existing user -> Redirect based on role
         const userData = userDoc.data();
         if (userData?.rol === 'profesional') {
-          navigate('/dashboard-profesional');
+          navigate('/');
         } else {
           navigate('/');
         }
@@ -61,7 +61,7 @@ export const Login: React.FC = () => {
 
         // 3. Redirect based on role
         if (role === 'profesional') {
-          navigate('/dashboard-profesional');
+          navigate('/');
         } else {
           navigate('/');
         }

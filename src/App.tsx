@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, LogOut, User as UserIcon, Moon, Sun, Settings, MessageSquare, Users, Eye } from 'lucide-react';
+import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { collection, getCountFromServer, doc, getDoc, setDoc, increment, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { NotificationsDropdown } from './components/NotificationsDropdown';
@@ -32,16 +32,11 @@ import { ChatBadge } from './components/ChatBadge';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
-  };
-
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -52,43 +47,32 @@ function Navbar() {
             <div className="bg-indigo-600 p-2 rounded-lg">
               <MapPin className="text-white" size={20} />
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Bahia Oficios</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Portal de Profesionales</p>
+            <div className="flex flex-col">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">Bahia Oficios</h1>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Portal de Profesionales</p>
             </div>
           </Link>
           <Link to="/blog" className="hidden md:block ml-6 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
             Blog y Consejos
           </Link>
         </div>
-        <div className="flex items-center gap-4">
-          {/* Theme Toggle */}
-          <button 
-            onClick={toggleTheme}
-            className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
-            title={resolvedTheme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-          >
-            {resolvedTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-
+        <div className="flex items-center gap-2 sm:gap-4">
           {currentUser ? (
-            <div className="flex items-center gap-4">
-              <Link to="/dashboard" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link to="/dashboard" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 Directorio
               </Link>
               {currentUser.rol === 'profesional' && (
                 <>
-                  <Link to="/dashboard-profesional" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  <Link to="/dashboard-profesional" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                     Mi Panel
-                  </Link>
-                  <Link to="/beneficios" className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    Beneficios
                   </Link>
                 </>
               )}
               {currentUser.isAdmin && (
-                <Link to="/admin" className="hidden sm:block text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
-                  Admin
+                <Link to="/admin" className="flex items-center gap-1 text-xs sm:text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">
+                  <ShieldCheck size={16} />
+                  <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
               <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
@@ -99,24 +83,23 @@ function Navbar() {
                     <UserIcon size={20} />
                   )}
                 </div>
-                <span className="hidden sm:inline">Hola, {currentUser.nombre}</span>
+                <span className="hidden lg:inline">Hola, {currentUser.nombre}</span>
               </Link>
               
-              <NotificationsDropdown />
-              
-              <ChatBadge />
-
-              <Link to="/profile" className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Editar Perfil">
-                <Settings size={20} />
-              </Link>
-
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
-              >
-                <LogOut size={18} />
-                <span className="hidden sm:inline">Salir</span>
-              </button>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <NotificationsDropdown />
+                <ChatBadge />
+                <Link to="/profile" className="hidden sm:block p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Editar Perfil">
+                  <Settings size={20} />
+                </Link>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  title="Salir"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -133,6 +116,7 @@ function Navbar() {
 }
 
 import { AdminDashboard } from './components/AdminDashboard';
+import { HelpChatbot } from './components/HelpChatbot';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState({ users: 0, visits: 0 });
@@ -174,9 +158,12 @@ function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-200 overflow-x-hidden">
       <Navbar />
-      {children}
+      <main className="flex-1">
+        {children}
+      </main>
+      <HelpChatbot />
       {/* Footer */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-12 py-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">

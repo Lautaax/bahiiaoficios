@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { User as UserType, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck } from 'lucide-react';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
 
 interface ProfileProps {
-  initialSection?: 'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion';
+  initialSection?: 'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const { currentUser } = useAuth();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
-  const [activeSection, setActiveSection] = useState<'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion'>(initialSection || 'datos');
+  const [activeSection, setActiveSection] = useState<'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias'>(initialSection || 'datos');
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -357,24 +359,90 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
     }
   };
 
+  const calculateCompleteness = () => {
+    let score = 0;
+    let total = 5;
+    if (formData.nombre) score++;
+    if (formData.zona) score++;
+    if (formData.fotoUrl) score++;
+    if (formData.telefono) score++;
+    
+    if (formData.rol === 'profesional') {
+      total += 4;
+      if (formData.rubros.length > 0) score++;
+      if (formData.descripcion) score++;
+      if (existingWorkImages.length > 0) score++;
+      if (formData.fotoDni) score++;
+    } else {
+      score++; // Placeholder for client-only fields if any
+    }
+    
+    return Math.round((score / total) * 100);
+  };
+
+  const completeness = calculateCompleteness();
+
   const sections = [
     { id: 'datos', label: 'Datos Básicos', icon: User },
     { id: 'profesional', label: 'Info Profesional', icon: Briefcase, hide: formData.rol !== 'profesional' },
     { id: 'portafolio', label: 'Portafolio', icon: IconImage, hide: formData.rol !== 'profesional' },
     { id: 'precios', label: 'Precios', icon: CreditCard, hide: formData.rol !== 'profesional' },
     { id: 'verificacion', label: 'Verificación', icon: BadgeCheck, hide: formData.rol !== 'profesional' },
+    { id: 'preferencias', label: 'Preferencias', icon: Settings },
   ];
 
   if (!currentUser) return <div className="p-8 text-center">Cargando...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Profile Header */}
+      <div className="relative mb-8 rounded-3xl overflow-hidden bg-indigo-600 h-32 sm:h-48 shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-90"></div>
+        <div className="absolute inset-0 flex items-end p-6 sm:p-8">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="relative">
+              <img 
+                src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.nombre)}&background=random`} 
+                className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-white dark:border-gray-800 shadow-xl" 
+              />
+              <label htmlFor="profile-upload-header" className="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 text-indigo-600 p-2 rounded-xl cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                <Camera size={16} />
+              </label>
+              <input id="profile-upload-header" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            </div>
+            <div className="text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{formData.nombre || 'Tu Perfil'}</h1>
+              <p className="text-indigo-100 text-sm sm:text-base font-medium opacity-90">
+                {formData.rol === 'profesional' ? (formData.rubros[0] || 'Profesional') : 'Cliente'} • {formData.zona || 'Bahía Blanca'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar Menu */}
         <div className="w-full lg:w-64 flex-shrink-0">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden lg:sticky lg:top-24">
             <div className="hidden lg:block p-4 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="font-bold text-gray-900 dark:text-white">Configuración</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-3">Configuración</h3>
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Perfil Completo</span>
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{completeness}%</span>
+                </div>
+                <div className="w-full bg-indigo-200 dark:bg-indigo-900/40 rounded-full h-1.5">
+                  <div 
+                    className="bg-indigo-600 h-1.5 rounded-full transition-all duration-1000" 
+                    style={{ width: `${completeness}%` }}
+                  ></div>
+                </div>
+                {completeness < 100 && (
+                  <p className="text-[9px] text-indigo-500/80 dark:text-indigo-400/60 mt-1.5 font-medium leading-tight">
+                    Completa tu perfil para ganar más confianza de los clientes.
+                  </p>
+                )}
+              </div>
             </div>
             <nav className="p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible custom-scrollbar">
               {sections.filter(s => !s.hide).map((section) => (
@@ -443,12 +511,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <div className="relative">
-                    <img src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.nombre)}&background=random`} className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg" />
-                    <label htmlFor="profile-upload" className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer hover:bg-indigo-700 shadow-lg"><Camera size={16} /></label>
-                    <input id="profile-upload" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="flex-1 w-full">
                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nombre Completo</label>
                     <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -576,6 +639,30 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                     <Camera size={20} /> {dniPreview ? 'Cambiar Foto' : 'Subir Foto DNI'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleDniChange} />
                   </label>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'preferencias' && (
+              <div className="space-y-8">
+                <div className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Sun size={20} className="text-indigo-600" />
+                    Apariencia
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-gray-800 dark:text-gray-200">Modo Oscuro</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Cambia entre el tema claro y oscuro de la aplicación.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${resolvedTheme === 'dark' ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${resolvedTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

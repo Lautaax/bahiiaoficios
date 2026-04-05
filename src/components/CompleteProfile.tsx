@@ -5,7 +5,7 @@ import { db, storage } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
-import { Upload, User, Briefcase, Phone } from 'lucide-react';
+import { Upload, User, Briefcase, Phone, AlertCircle } from 'lucide-react';
 import { ZONAS, PROFESSIONS } from '../constants';
 
 export const CompleteProfile: React.FC = () => {
@@ -176,39 +176,46 @@ export const CompleteProfile: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center">
-            <User className="h-6 w-6 text-indigo-600" />
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-100 mb-4">
+            <User className="text-white" size={32} />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Completa tu Perfil
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            Completar Perfil
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Necesitamos algunos datos más para terminar de configurar tu cuenta.
+          <p className="mt-2 text-sm text-gray-500">
+            {role === 'profesional' 
+              ? 'Configura tu perfil profesional para empezar a recibir trabajos' 
+              : 'Danos unos detalles más para mejorar tu experiencia'}
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-            <p className="text-red-700 text-sm">{error}</p>
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center">
+              <AlertCircle className="text-red-400 mr-2" size={18} />
+              <p className="text-red-700 text-sm font-medium">{error}</p>
+            </div>
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {/* Profile Image */}
-            <div className="flex flex-col items-center justify-center mb-6">
-              <div className="relative w-24 h-24 mb-2">
-                <img 
-                  src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'User')}&background=random`} 
-                  alt="Profile Preview" 
-                  className="w-24 h-24 rounded-full object-cover border-2 border-indigo-100"
-                />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
+            {/* Profile Image Section */}
+            <div className="flex flex-col items-center justify-center mb-8">
+              <div className="relative group">
+                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl group-hover:border-indigo-100 transition-all">
+                  <img 
+                    src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'User')}&background=random`} 
+                    alt="Profile Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <label 
                   htmlFor="file-upload" 
-                  className="absolute bottom-0 right-0 bg-indigo-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-indigo-700 shadow-sm"
+                  className="absolute bottom-1 right-1 bg-indigo-600 text-white p-2.5 rounded-full cursor-pointer hover:bg-indigo-700 shadow-lg transform transition-transform hover:scale-110"
                 >
-                  <Upload size={14} />
+                  <Upload size={18} />
                 </label>
                 <input 
                   id="file-upload" 
@@ -218,45 +225,48 @@ export const CompleteProfile: React.FC = () => {
                   onChange={handleImageChange}
                 />
               </div>
-              <span className="text-xs text-gray-500 font-medium">Foto de perfil (Obligatorio)</span>
+              <span className="mt-3 text-xs text-gray-500 font-semibold uppercase tracking-wider">Foto de perfil obligatoria</span>
             </div>
 
-            <div>
-              <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">Nombre Completo</label>
-              <input
-                id="nombre"
-                type="text"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">Teléfono (WhatsApp)</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="nombre" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Nombre Completo</label>
                 <input
-                  id="telefono"
-                  type="tel"
+                  id="nombre"
+                  type="text"
                   required
-                  placeholder="Ej: 2915551234"
-                  className="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
+                  placeholder="Tu nombre y apellido"
+                  className="appearance-none block w-full px-4 py-3 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm bg-gray-50"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
                 />
+              </div>
+
+              <div>
+                <label htmlFor="telefono" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Teléfono (WhatsApp)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    id="telefono"
+                    type="tel"
+                    required
+                    placeholder="Ej: 2915551234"
+                    className="block w-full pl-11 px-4 py-3 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm bg-gray-50"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700">Soy...</label>
+                <label htmlFor="role" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Tipo de Cuenta</label>
                 <select
                   id="role"
-                  className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm"
                   value={role}
                   onChange={(e) => setRole(e.target.value as Role)}
                 >
@@ -266,10 +276,10 @@ export const CompleteProfile: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="zona" className="block text-sm font-medium text-gray-700">Zona</label>
+                <label htmlFor="zona" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Zona</label>
                 <select
                   id="zona"
-                  className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm"
                   value={zona}
                   onChange={(e) => setZona(e.target.value)}
                 >
@@ -281,24 +291,24 @@ export const CompleteProfile: React.FC = () => {
             </div>
 
             {role === 'profesional' && (
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4 animate-in fade-in slide-in-from-top-4">
-                <div className="flex items-center gap-2 text-indigo-700 mb-2">
-                  <Briefcase size={18} />
-                  <span className="font-medium text-sm">Datos Profesionales</span>
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <Briefcase className="text-indigo-600" size={20} />
+                  <h3 className="text-lg font-bold text-gray-900">Información Profesional</h3>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Rubros (Selecciona hasta 5)</label>
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 ml-1">Rubros (Selecciona hasta 5)</label>
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-3 border border-gray-200 rounded-xl bg-gray-50 custom-scrollbar">
                     {rubros.map((r) => (
                       <button
                         key={r}
                         type="button"
                         onClick={() => toggleRubro(r)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                           rubrosSeleccionados.includes(r)
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-105'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
                         }`}
                       >
                         {r}
@@ -308,107 +318,37 @@ export const CompleteProfile: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
+                  <label htmlFor="descripcion" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Descripción de tus servicios</label>
                   <textarea
                     id="descripcion"
-                    rows={3}
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Describe tus servicios..."
+                    rows={4}
+                    className="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm"
+                    placeholder="Contanos sobre tu experiencia y lo que ofrecés..."
                     value={descripcion}
                     onChange={(e) => setDescripcion(e.target.value)}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="direccion" className="block text-sm font-medium text-gray-700">Dirección (Opcional)</label>
-                    <input
-                      id="direccion"
-                      type="text"
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      value={direccion}
-                      onChange={(e) => setDireccion(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700">Email de Contacto</label>
-                    <input
-                      id="contactEmail"
-                      type="email"
-                      placeholder={currentUser.email || ''}
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      value={contactEmail}
-                      onChange={(e) => setContactEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="cuit" className="block text-sm font-medium text-gray-700">CUIT/CUIL</label>
-                    <input
-                      id="cuit"
-                      type="text"
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      value={cuit}
-                      onChange={(e) => setCuit(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="tipoFactura" className="block text-sm font-medium text-gray-700">Tipo de Factura</label>
-                    <select
-                      id="tipoFactura"
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      value={tipoFactura}
-                      onChange={(e) => setTipoFactura(e.target.value as any)}
-                    >
-                      <option value="">No emito factura</option>
-                      <option value="A">Factura A</option>
-                      <option value="C">Factura C</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="haceFactura"
-                      type="checkbox"
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      checked={haceFactura}
-                      onChange={(e) => setHaceFactura(e.target.checked)}
-                    />
-                    <label htmlFor="haceFactura" className="text-sm text-gray-700">Emito factura</label>
-                  </div>
-                  <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors cursor-pointer group">
                     <input
                       id="haceUrgencias"
                       type="checkbox"
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded-lg transition-all"
                       checked={haceUrgencias}
                       onChange={(e) => setHaceUrgencias(e.target.checked)}
                     />
-                    <label htmlFor="haceUrgencias" className="text-sm text-gray-700">Atención de Urgencias 24/7</label>
+                    <label htmlFor="haceUrgencias" className="text-xs font-bold text-gray-700 cursor-pointer group-hover:text-indigo-600 transition-colors">Urgencias 24/7</label>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="disponibilidadInmediata"
-                      type="checkbox"
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      checked={disponibilidadInmediata}
-                      onChange={(e) => setDisponibilidadInmediata(e.target.checked)}
-                    />
-                    <label htmlFor="disponibilidadInmediata" className="text-sm text-gray-700">Disponibilidad Inmediata</label>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors cursor-pointer group">
                     <input
                       id="matriculado"
                       type="checkbox"
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded-lg transition-all"
                       checked={matriculado}
                       onChange={(e) => setMatriculado(e.target.checked)}
                     />
-                    <label htmlFor="matriculado" className="text-sm text-gray-700">Soy Profesional Matriculado</label>
+                    <label htmlFor="matriculado" className="text-xs font-bold text-gray-700 cursor-pointer group-hover:text-indigo-600 transition-colors">Matriculado</label>
                   </div>
                 </div>
               </div>

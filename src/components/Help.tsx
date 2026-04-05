@@ -1,7 +1,8 @@
 import React from 'react';
-import { HelpCircle, ArrowLeft, Mail, MessageCircle, FileQuestion } from 'lucide-react';
+import { HelpCircle, ArrowLeft, Mail, MessageCircle, FileQuestion, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FAQ } from './FAQ';
+import { HelpChatbot } from './HelpChatbot';
 
 export const Help: React.FC = () => {
   return (
@@ -45,6 +46,18 @@ export const Help: React.FC = () => {
               <a href="https://wa.me/5492911234567" target="_blank" rel="noopener noreferrer" className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
                 Contactar por WhatsApp
               </a>
+            </div>
+          </div>
+          
+          <div className="bg-indigo-600 rounded-2xl p-8 text-white flex flex-col justify-center items-center text-center">
+            <Bot size={48} className="mb-4" />
+            <h3 className="text-xl font-bold mb-2">Asistente Virtual AI</h3>
+            <p className="text-indigo-100 text-sm mb-6">
+              ¿Tienes dudas sobre la plataforma o necesitas consejos técnicos? Nuestro asistente inteligente está listo para ayudarte.
+            </p>
+            <div className="flex items-center gap-2 text-xs bg-white/20 px-3 py-1.5 rounded-full font-medium">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+              Disponible ahora
             </div>
           </div>
         </div>
