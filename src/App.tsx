@@ -26,6 +26,7 @@ import { Terms } from './components/Terms';
 import { Privacy } from './components/Privacy';
 import { Help } from './components/Help';
 import { TradeDiscounts } from './components/TradeDiscounts';
+import { PublicidadComercio } from './components/PublicidadComercio';
 import { NotificationListener } from './components/NotificationListener';
 
 import { ChatBadge } from './components/ChatBadge';
@@ -63,11 +64,9 @@ function Navbar() {
                 Directorio
               </Link>
               {currentUser.rol === 'profesional' && (
-                <>
-                  <Link to="/dashboard-profesional" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    Mi Panel
-                  </Link>
-                </>
+                <Link to="/beneficios" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  Beneficios
+                </Link>
               )}
               {currentUser.isAdmin && (
                 <Link to="/admin" className="flex items-center gap-1 text-xs sm:text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">
@@ -89,7 +88,11 @@ function Navbar() {
               <div className="flex items-center gap-1 sm:gap-2">
                 <NotificationsDropdown />
                 <ChatBadge />
-                <Link to="/profile" className="hidden sm:block p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" title="Editar Perfil">
+                <Link 
+                  to={currentUser.rol === 'profesional' ? "/dashboard-profesional" : "/profile"} 
+                  className="hidden sm:block p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" 
+                  title={currentUser.rol === 'profesional' ? "Mi Panel" : "Editar Perfil"}
+                >
                   <Settings size={20} />
                 </Link>
                 <button 
@@ -322,6 +325,12 @@ function AppContent() {
             <Route path="/beneficios" element={
               <Layout>
                 <TradeDiscounts />
+              </Layout>
+            } />
+            
+            <Route path="/publicitar" element={
+              <Layout>
+                <PublicidadComercio />
               </Layout>
             } />
           </Routes>

@@ -95,6 +95,15 @@ export interface Ad {
   active: boolean;
   position: 'home_carousel' | 'sidebar' | 'footer';
   createdAt: any;
+  updatedAt?: any;
+  businessUid?: string; // UID of the business that paid for the ad
+  paymentStatus?: 'pending' | 'paid' | 'expired';
+  paymentId?: string;
+  expirationDate?: any;
+  plan?: 'monthly' | 'quarterly' | 'semi-annual' | 'annual';
+  price?: number;
+  offersTradeDiscount?: boolean;
+  tradeDiscountDetails?: string;
 }
 
 export interface TradeDiscount {

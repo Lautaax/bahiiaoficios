@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { doc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, limit } from 'firebase/firestore';
-import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard } from 'lucide-react';
+import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { ProfessionalOnboarding } from './ProfessionalOnboarding';
@@ -405,6 +405,32 @@ export const ProfessionalDashboard: React.FC = () => {
                   <VipButton />
                 </div>
               )}
+
+              {/* Trade Discounts Info */}
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-800 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                    <Tag size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-100">Beneficios para el Gremio</h3>
+                    <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                      Muchos comercios ofrecen descuentos exclusivos a profesionales de <strong>Bahía Oficios</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-center md:text-right">
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mb-2 italic">
+                    * Para acceder, mencioná que venís de la web y mostrá tu perfil.
+                  </p>
+                  <Link 
+                    to="/beneficios" 
+                    className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
+                  >
+                    Ver Comercios Adheridos
+                  </Link>
+                </div>
+              </div>
 
               {/* Recent Activity / Pedidos */}
               <div className="space-y-4">

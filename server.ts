@@ -209,7 +209,8 @@ async function startServer() {
       const notificationUrl = `${process.env.SHARED_APP_URL || baseUrl}/api/webhook`;
       
       const isDeposit = type === 'deposit';
-      const unitPrice = Number(price) || (isDeposit ? 10000 : 5000);
+      const isAd = type === 'ad_payment';
+      const unitPrice = Number(price) || (isDeposit ? 10000 : (isAd ? 15000 : 5000));
       
       // If it's a deposit, we need to use the professional's access token
       if (isDeposit && metadata?.profesional_id) {
@@ -286,7 +287,7 @@ async function startServer() {
         if (payment.status === 'approved') {
           console.log(`Payment ${id} approved. Metadata:`, payment.metadata);
           
-          const { user_id, months, type, request_id, profesional_id } = payment.metadata;
+          const { user_id, months, type, request_id, profesional_id, adId } = payment.metadata;
           
           if (type === 'deposit' && request_id && profesional_id) {
             try {
@@ -317,6 +318,26 @@ async function startServer() {
               }
             } catch (dbError) {
               console.error("Error updating Firestore for deposit:", dbError);
+            }
+          } else if (type === 'ad_payment' && adId && months) {
+            try {
+              const db = admin.firestore();
+              const adRef = db.collection('ads').doc(adId);
+              
+              const now = new Date();
+              const expirationDate = new Date(now.setMonth(now.getMonth() + Number(months)));
+              
+              await adRef.update({
+                paymentStatus: 'approved',
+                paymentId: id,
+                expirationDate: admin.firestore.Timestamp.fromDate(expirationDate),
+                active: true, // Activate ad after payment
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+              });
+              
+              console.log(`Ad ${adId} paid and activated until ${expirationDate}`);
+            } catch (dbError) {
+              console.error("Error updating Firestore for ad:", dbError);
             }
           } else if (user_id && months) {
             try {

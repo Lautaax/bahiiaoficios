@@ -255,6 +255,19 @@ export function Home() {
                       <p className="text-gray-600 text-sm line-clamp-2 mb-4">
                         {ad.description}
                       </p>
+                      
+                      {ad.offersTradeDiscount && (
+                        <div className="mb-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                          <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs mb-1">
+                            <Tag size={14} />
+                            Beneficio Gremio: {ad.tradeDiscountDetails}
+                          </div>
+                          <p className="text-[10px] text-indigo-500 leading-tight">
+                            * Presentá tu perfil de <strong>Bahía Oficios</strong> para acceder.
+                          </p>
+                        </div>
+                      )}
+
                       {ad.link && (
                         <a 
                           href={ad.link} 
@@ -345,6 +358,34 @@ export function Home() {
               className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-50 transition-all shadow-lg hover:scale-105 active:scale-95 whitespace-nowrap"
             >
               Ver Beneficios
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Merchant Ads Section */}
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gray-900 rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
+            
+            <div className="max-w-xl relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Megaphone className="text-indigo-400" size={24} />
+                <span className="text-indigo-300 font-bold tracking-wider uppercase text-sm">Publicidad para Negocios</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">¿Tenés un Comercio?</h2>
+              <p className="text-gray-300 text-lg">
+                Llegá a miles de clientes potenciales en Bahía Blanca. Publicitá tu negocio en nuestro carrusel principal y banners estratégicos.
+              </p>
+            </div>
+            <Link 
+              to="/publicitar"
+              className="relative z-10 bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg hover:scale-105 active:scale-95 whitespace-nowrap flex items-center gap-2"
+            >
+              Soy Comercio y quiero Publicitar
+              <ArrowRight size={20} />
             </Link>
           </div>
         </div>

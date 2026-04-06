@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 
 // Helper to normalize strings (remove accents)
@@ -613,6 +613,19 @@ export const Dashboard: React.FC = () => {
                     <div className="flex-1 text-center sm:text-left">
                       <h4 className="font-bold text-gray-900 text-lg line-clamp-1">{ad.title}</h4>
                       <p className="text-gray-600 text-sm line-clamp-2 mb-2">{ad.description}</p>
+                      
+                      {ad.offersTradeDiscount && (
+                        <div className="mb-2 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                          <div className="flex items-center gap-1 text-indigo-700 font-bold text-[10px] mb-0.5">
+                            <Tag size={10} />
+                            Beneficio Gremio: {ad.tradeDiscountDetails}
+                          </div>
+                          <p className="text-[8px] text-indigo-500 leading-tight">
+                            * Presentá tu perfil de <strong>Bahía Oficios</strong>.
+                          </p>
+                        </div>
+                      )}
+
                       {ad.link && (
                         <a 
                           href={ad.link} 

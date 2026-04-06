@@ -29,6 +29,11 @@ export const CompleteProfile: React.FC = () => {
   const [matriculado, setMatriculado] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dniFile, setDniFile] = useState<File | null>(null);
+  const [dniPreview, setDniPreview] = useState<string | null>(null);
+  const [jobPhotos, setJobPhotos] = useState<File[]>([]);
+  const [jobPhotosPreviews, setJobPhotosPreviews] = useState<string[]>([]);
+  const [preciosReferencia, setPreciosReferencia] = useState<{ servicio: string, precio: string }[]>([{ servicio: '', precio: '' }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,6 +58,31 @@ export const CompleteProfile: React.FC = () => {
       setImagePreview(URL.createObjectURL(file));
     }
   };
+
+  const handleDniChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setDniFile(file);
+      setDniPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleJobPhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files) as File[];
+      setJobPhotos([...jobPhotos, ...files]);
+      const previews = files.map(file => URL.createObjectURL(file));
+      setJobPhotosPreviews([...jobPhotosPreviews, ...previews]);
+    }
+  };
+
+  const addPrecio = () => setPreciosReferencia([...preciosReferencia, { servicio: '', precio: '' }]);
+  const updatePrecio = (index: number, field: 'servicio' | 'precio', value: string) => {
+    const newPrecios = [...preciosReferencia];
+    newPrecios[index][field] = value;
+    setPreciosReferencia(newPrecios);
+  };
+  const removePrecio = (index: number) => setPreciosReferencia(preciosReferencia.filter((_, i) => i !== index));
 
   const toggleRubro = (r: string) => {
     if (rubrosSeleccionados.includes(r)) {
@@ -94,12 +124,21 @@ export const CompleteProfile: React.FC = () => {
       return;
     }
 
+    if (role === 'profesional' && !dniFile) {
+      setError('La foto del DNI es obligatoria para profesionales.');
+      setLoading(false);
+      return;
+    }
+
     try {
       let fotoUrl = currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`;
+      let fotoDni = '';
+      let fotosTrabajos: string[] = [];
+
+      const imageCompression = (await import('browser-image-compression')).default;
 
       if (imageFile) {
         try {
-          const imageCompression = (await import('browser-image-compression')).default;
           const compressed = await imageCompression(imageFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
           const webpFile = new File([compressed], 'profile.webp', { type: 'image/webp' });
           const storageRef = ref(storage, `profile_images/${currentUser.uid}`);
@@ -109,6 +148,35 @@ export const CompleteProfile: React.FC = () => {
           setError(uploadError.message || "Error al subir la imagen de perfil.");
           setLoading(false);
           return;
+        }
+      }
+
+      if (dniFile) {
+        try {
+          const compressed = await imageCompression(dniFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
+          const webpFile = new File([compressed], 'dni.webp', { type: 'image/webp' });
+          const storageRef = ref(storage, `dni_images/${currentUser.uid}`);
+          await uploadBytes(storageRef, webpFile);
+          fotoDni = await getDownloadURL(storageRef);
+        } catch (uploadError: any) {
+          setError("Error al subir la foto del DNI.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (jobPhotos.length > 0) {
+        for (let i = 0; i < jobPhotos.length; i++) {
+          try {
+            const compressed = await imageCompression(jobPhotos[i], { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
+            const webpFile = new File([compressed], `job_${i}.webp`, { type: 'image/webp' });
+            const storageRef = ref(storage, `job_images/${currentUser.uid}/${i}`);
+            await uploadBytes(storageRef, webpFile);
+            const url = await getDownloadURL(storageRef);
+            fotosTrabajos.push(url);
+          } catch (err) {
+            console.error("Error uploading job photo", i);
+          }
         }
       }
 
@@ -135,10 +203,12 @@ export const CompleteProfile: React.FC = () => {
           rubros: rubrosSeleccionados,
           descripcion: descripcion || 'Profesional registrado en Oficios Bahía.',
           isVip: false,
+          isVerified: false,
+          fotoDni,
           ratingAvg: 0,
           reviewCount: 0,
-          fotosTrabajos: [],
-          fotosTrabajosDetalle: [],
+          fotosTrabajos: fotosTrabajos,
+          fotosTrabajosDetalle: fotosTrabajos.map(url => ({ url, caption: '' })),
           telefono: telefono.replace(/\D/g, ''),
           direccion,
           contactEmail: contactEmail || currentUser.email,
@@ -148,7 +218,7 @@ export const CompleteProfile: React.FC = () => {
           haceUrgencias,
           disponibilidadInmediata,
           matriculado,
-          preciosReferencia: [],
+          preciosReferencia: preciosReferencia.filter(p => p.servicio && p.precio),
           badges: []
         };
       }
@@ -349,6 +419,72 @@ export const CompleteProfile: React.FC = () => {
                       onChange={(e) => setMatriculado(e.target.checked)}
                     />
                     <label htmlFor="matriculado" className="text-xs font-bold text-gray-700 cursor-pointer group-hover:text-indigo-600 transition-colors">Matriculado</label>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide ml-1">Verificación de Identidad (DNI)</label>
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-3 text-gray-400" />
+                        <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click para subir</span> foto de tu DNI</p>
+                      </div>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleDniChange} />
+                    </label>
+                  </div>
+                  {dniPreview && (
+                    <div className="mt-2 relative w-full h-40 rounded-xl overflow-hidden border border-gray-200">
+                      <img src={dniPreview} alt="DNI Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide ml-1">Precios de Referencia</label>
+                  {preciosReferencia.map((p, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Servicio (Ej: Cambio de térmica)"
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={p.servicio}
+                        onChange={(e) => updatePrecio(index, 'servicio', e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Precio (Ej: $5000)"
+                        className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={p.precio}
+                        onChange={(e) => updatePrecio(index, 'precio', e.target.value)}
+                      />
+                      <button type="button" onClick={() => removePrecio(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <AlertCircle size={18} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={addPrecio} className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    <Upload size={14} /> Agregar otro precio
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide ml-1">Fotos de tus Trabajos</label>
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-3 text-gray-400" />
+                        <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click para subir</span> fotos de trabajos realizados</p>
+                      </div>
+                      <input type="file" className="hidden" accept="image/*" multiple onChange={handleJobPhotosChange} />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {jobPhotosPreviews.map((p, i) => (
+                      <div key={i} className="aspect-square rounded-lg overflow-hidden border border-gray-200">
+                        <img src={p} alt={`Job ${i}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

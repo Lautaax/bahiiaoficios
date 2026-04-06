@@ -14,13 +14,33 @@ export const TradeDiscounts: React.FC = () => {
   useEffect(() => {
     const fetchDiscounts = async () => {
       try {
-        const q = query(collection(db, 'tradeDiscounts'), where('active', '==', true));
-        const querySnapshot = await getDocs(q);
-        const fetchedDiscounts = querySnapshot.docs.map(doc => ({
+        // Fetch explicit trade discounts
+        const qDiscounts = query(collection(db, 'tradeDiscounts'), where('active', '==', true));
+        const querySnapshotDiscounts = await getDocs(qDiscounts);
+        const fetchedDiscounts = querySnapshotDiscounts.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as TradeDiscount[];
-        setDiscounts(fetchedDiscounts);
+
+        // Fetch ads that offer trade discounts
+        const qAds = query(collection(db, 'ads'), where('active', '==', true), where('offersTradeDiscount', '==', true));
+        const querySnapshotAds = await getDocs(qAds);
+        const fetchedAds = querySnapshotAds.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            businessName: data.title,
+            description: data.tradeDiscountDetails || data.description,
+            discount: 'PROMO',
+            category: 'Publicidad',
+            address: 'Ver anuncio',
+            imageUrl: data.imageUrl,
+            link: data.link,
+            active: true
+          } as TradeDiscount;
+        });
+
+        setDiscounts([...fetchedDiscounts, ...fetchedAds]);
       } catch (error) {
         console.error("Error fetching trade discounts:", error);
       } finally {

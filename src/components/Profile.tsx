@@ -9,6 +9,7 @@ import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Ma
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
+import { motion } from 'motion/react';
 
 interface ProfileProps {
   initialSection?: 'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
@@ -608,6 +609,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                   {newWorkPreviews.map((url, idx) => (
                     <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border-2 border-indigo-500">
                       <img src={url} className="w-full h-full object-cover" />
+                      {worksUploadProgress > 0 && worksUploadProgress < 100 && (
+                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-2">
+                          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-1">
+                            <motion.div 
+                              className="h-full bg-indigo-500"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${worksUploadProgress}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold">{Math.round(worksUploadProgress)}%</span>
+                        </div>
+                      )}
                       <button type="button" onClick={() => removeNewWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
                     </div>
                   ))}
@@ -633,7 +646,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                 <div className="flex flex-col items-center gap-6 p-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
                   <div className="relative w-full max-w-md aspect-[1.6/1] bg-white dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
                     {dniPreview ? <img src={dniPreview} className="w-full h-full object-cover" /> : <FileText size={48} className="text-gray-300" />}
-                    {dniUploadStatus === 'uploading' && <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white">Subiendo {Math.round(dniUploadProgress)}%</div>}
+                    {dniUploadStatus === 'uploading' && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
+          <div className="w-full max-w-[200px] h-2 bg-white/20 rounded-full overflow-hidden mb-2">
+            <motion.div 
+              className="h-full bg-indigo-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${dniUploadProgress}%` }}
+            />
+          </div>
+          <span className="text-sm font-bold">Subiendo {Math.round(dniUploadProgress)}%</span>
+        </div>
+      )}
                   </div>
                   <label className="cursor-pointer bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2">
                     <Camera size={20} /> {dniPreview ? 'Cambiar Foto' : 'Subir Foto DNI'}

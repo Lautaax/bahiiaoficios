@@ -17,7 +17,10 @@ export const AdminDashboard: React.FC = () => {
   const [discounts, setDiscounts] = useState<TradeDiscount[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [viewingDni, setViewingDni] = useState<User | null>(null);
+  const [managingBadges, setManagingBadges] = useState<User | null>(null);
+  const [newBadge, setNewBadge] = useState('');
 
   // Ad/Discount Form States
   const [showAdForm, setShowAdForm] = useState(false);
@@ -79,6 +82,37 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleAddBadge = async () => {
+    if (!managingBadges || !newBadge.trim()) return;
+    const currentBadges = managingBadges.profesionalInfo?.badges || [];
+    if (currentBadges.includes(newBadge.trim())) return;
+    
+    const updatedBadges = [...currentBadges, newBadge.trim()];
+    try {
+      await updateDoc(doc(db, 'usuarios', managingBadges.uid), {
+        'profesionalInfo.badges': updatedBadges
+      });
+      setUsers(users.map(u => u.uid === managingBadges.uid ? { ...u, profesionalInfo: { ...u.profesionalInfo, badges: updatedBadges } as any } : u));
+      setManagingBadges({ ...managingBadges, profesionalInfo: { ...managingBadges.profesionalInfo, badges: updatedBadges } as any });
+      setNewBadge('');
+    } catch (error) {
+      console.error("Error adding badge:", error);
+    }
+  };
+
+  const handleRemoveBadge = async (badge: string) => {
+    if (!managingBadges) return;
+    const updatedBadges = (managingBadges.profesionalInfo?.badges || []).filter(b => b !== badge);
+    try {
+      await updateDoc(doc(db, 'usuarios', managingBadges.uid), {
+        'profesionalInfo.badges': updatedBadges
+      });
+      setUsers(users.map(u => u.uid === managingBadges.uid ? { ...u, profesionalInfo: { ...u.profesionalInfo, badges: updatedBadges } as any } : u));
+      setManagingBadges({ ...managingBadges, profesionalInfo: { ...managingBadges.profesionalInfo, badges: updatedBadges } as any });
+    } catch (error) {
+      console.error("Error removing badge:", error);
+    }
+  };
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
@@ -113,17 +147,33 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     setUploading(true);
     try {
-      const adRef = collection(db, 'ads');
-      const adData = {
-        ...newAd,
-        createdAt: new Date()
-      };
-      const docRef = await addDoc(adRef, adData);
-      setAds([...ads, { ...adData, id: docRef.id } as Ad]);
+      if (editingAd) {
+        await updateDoc(doc(db, 'ads', editingAd.id), {
+          ...newAd,
+          offersTradeDiscount: newAd.offersTradeDiscount || false,
+          tradeDiscountDetails: newAd.offersTradeDiscount ? newAd.tradeDiscountDetails : '',
+          updatedAt: new Date()
+        });
+        setAds(ads.map(ad => ad.id === editingAd.id ? { ...ad, ...newAd } as Ad : ad));
+        alert("Publicidad actualizada");
+      } else {
+        const adRef = collection(db, 'ads');
+        const adData = {
+          ...newAd,
+          offersTradeDiscount: newAd.offersTradeDiscount || false,
+          tradeDiscountDetails: newAd.offersTradeDiscount ? newAd.tradeDiscountDetails : '',
+          createdAt: new Date()
+        };
+        const docRef = await addDoc(adRef, adData);
+        setAds([...ads, { ...adData, id: docRef.id } as Ad]);
+        alert("Publicidad creada");
+      }
       setShowAdForm(false);
+      setEditingAd(null);
       setNewAd({ position: 'home_carousel', active: true });
     } catch (error) {
       console.error("Error saving ad:", error);
+      alert("Error al guardar la publicidad");
     } finally {
       setUploading(false);
     }
@@ -287,13 +337,22 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {user.rol === 'profesional' && user.profesionalInfo?.fotoDni && (
+                        {user.rol === 'profesional' && user.profesionalInfo?.fotoDni && currentUser?.isAdmin && (
                           <button 
                             onClick={() => setViewingDni(user)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Ver DNI"
                           >
                             <ImageIcon size={18} />
+                          </button>
+                        )}
+                        {user.rol === 'profesional' && (
+                          <button 
+                            onClick={() => setManagingBadges(user)}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            title="Gestionar Insignias"
+                          >
+                            <Tag size={18} />
                           </button>
                         )}
                         <button 
@@ -342,21 +401,39 @@ export const AdminDashboard: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {ads.map(ad => (
-              <div key={ad.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
-                <img src={ad.imageUrl} alt={ad.title} className="w-full h-40 object-cover" />
+              <div key={ad.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 group">
+                <div className="relative h-40 overflow-hidden">
+                  <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setEditingAd(ad);
+                        setNewAd(ad);
+                        setShowAdForm(true);
+                      }}
+                      className="p-2 bg-white/90 dark:bg-gray-800/90 rounded-full text-indigo-600 shadow-sm hover:bg-white transition-colors"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => deleteAd(ad.id)}
+                      className="p-2 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-600 shadow-sm hover:bg-white transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
                 <div className="p-4">
-                  <h3 className="font-bold text-gray-900 dark:text-white">{ad.title}</h3>
-                  <p className="text-sm text-gray-500 mb-4">{ad.position}</p>
+                  <h3 className="font-bold text-gray-900 dark:text-white line-clamp-1">{ad.title}</h3>
+                  <p className="text-xs text-gray-500 mb-4 uppercase tracking-wider font-semibold">{ad.position.replace('_', ' ')}</p>
                   <div className="flex justify-between items-center">
                     <button 
                       onClick={() => toggleAdStatus(ad.id, ad.active)}
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${ad.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${ad.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
                     >
                       {ad.active ? 'Activa' : 'Inactiva'}
                     </button>
-                    <button onClick={() => deleteAd(ad.id)} className="text-red-500 hover:text-red-700">
-                      <Trash2 size={18} />
-                    </button>
+                    <span className="text-[10px] text-gray-400">ID: {ad.id.substring(0, 8)}</span>
                   </div>
                 </div>
               </div>
@@ -403,11 +480,20 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Ad Form Modal */}
       {showAdForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Nueva Publicidad</h3>
-              <button onClick={() => setShowAdForm(false)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                {editingAd ? 'Editar Publicidad' : 'Nueva Publicidad'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAdForm(false);
+                  setEditingAd(null);
+                  setNewAd({ position: 'home_carousel', active: true });
+                }} 
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -436,6 +522,30 @@ export const AdminDashboard: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link (Opcional)</label>
                 <input type="url" value={newAd.link || ''} onChange={e => setNewAd({...newAd, link: e.target.value})} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700" />
+              </div>
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">¿Descuento al gremio?</span>
+                  <button
+                    type="button"
+                    onClick={() => setNewAd({...newAd, offersTradeDiscount: !newAd.offersTradeDiscount})}
+                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${newAd.offersTradeDiscount ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${newAd.offersTradeDiscount ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {newAd.offersTradeDiscount && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-1">Detalle del Descuento</label>
+                    <input 
+                      type="text" 
+                      value={newAd.tradeDiscountDetails || ''} 
+                      onChange={e => setNewAd({...newAd, tradeDiscountDetails: e.target.value})} 
+                      placeholder="Ej: 10% OFF a profesionales"
+                      className="w-full px-3 py-1.5 text-sm border border-indigo-200 dark:border-indigo-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800"
+                    />
+                  </div>
+                )}
               </div>
               <button type="submit" disabled={uploading} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50">
                 {uploading ? 'Subiendo...' : 'Guardar Publicidad'}
@@ -602,7 +712,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {viewingDni && (
+      {viewingDni && currentUser?.isAdmin && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
             <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
@@ -640,6 +750,73 @@ export const AdminDashboard: React.FC = () => {
                   className="px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                 >
                   <XCircle size={18} /> Rechazar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {managingBadges && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Insignias: {managingBadges.nombre}</h3>
+              <button onClick={() => setManagingBadges(null)} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="flex flex-wrap gap-2">
+                {(managingBadges.profesionalInfo?.badges || []).map(badge => (
+                  <span key={badge} className="flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-bold">
+                    {badge}
+                    <button onClick={() => handleRemoveBadge(badge)} className="hover:text-red-600">
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+                {(managingBadges.profesionalInfo?.badges || []).length === 0 && (
+                  <p className="text-gray-500 text-sm italic">Sin insignias asignadas.</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Sugerencias</label>
+                <div className="flex flex-wrap gap-2">
+                  {['Puntual', 'Gran Comunicación', 'Experto en Urgencias', 'Precio Justo', 'Limpieza', 'Matriculado', 'Verificado'].map(s => (
+                    <button 
+                      key={s}
+                      onClick={() => {
+                        setNewBadge(s);
+                        // Trigger add immediately if clicked from suggestions
+                        const currentBadges = managingBadges.profesionalInfo?.badges || [];
+                        if (!currentBadges.includes(s)) {
+                          setNewBadge(s);
+                          // We can't easily call handleAddBadge here because state hasn't updated yet
+                          // So we'll just set it and let them click add, or handle it here
+                        }
+                      }}
+                      className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-xs hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={newBadge} 
+                  onChange={e => setNewBadge(e.target.value)}
+                  placeholder="Nueva insignia..."
+                  className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button 
+                  onClick={handleAddBadge}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+                >
+                  Agregar
                 </button>
               </div>
             </div>
