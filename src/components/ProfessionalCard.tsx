@@ -109,7 +109,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, preciosReferencia, fotoPortada } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotoPortada } = professional.profesionalInfo;
 
   const isClient = currentUser?.rol === 'cliente';
 
@@ -287,8 +287,8 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                     <ShieldCheck size={18} className="fill-blue-100" />
                   </div>
                 )}
-                {matriculado && (
-                  <div className="flex items-center text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="Profesional Matriculado">
+                {matriculaVerified && (
+                  <div className="flex items-center text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="Profesional Matriculado y Verificado">
                     <span className="text-[10px] font-bold uppercase tracking-wider">Matriculado</span>
                   </div>
                 )}
@@ -319,7 +319,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
 
               {/* Badges Row */}
               <div className="flex flex-wrap gap-1 mb-2">
-                {(isVerified || matriculado) && (
+                {(isVerified || matriculaVerified) && (
                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100" title="Perfil Verificado">
                     <ShieldCheck size={10} className="fill-blue-100" />
                     <span className="text-[9px] font-bold uppercase tracking-tight">Verificado</span>

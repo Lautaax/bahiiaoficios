@@ -5,8 +5,9 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
+import { api } from '../services/api';
 
 // Helper to normalize strings (remove accents)
 const normalizeString = (str: string) => {
@@ -55,6 +56,12 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const search = searchParams.get('search');
     const rubro = searchParams.get('rubro');
+    const urgencias = searchParams.get('urgencias');
+
+    if (urgencias === 'true') {
+      setHaceUrgencias(true);
+      setShowAdvancedFilters(true);
+    }
 
     if (rubro) {
       setSelectedRubro(rubro);
@@ -238,7 +245,7 @@ export const Dashboard: React.FC = () => {
         const countB = counts[b] || 0;
         return countB - countA; // Descending order
       })
-      .slice(0, 6); // Show top 6
+      .slice(0, 4); // Show top 4
   }, [professionals]);
 
   const rubros = ['Todos', ...PROFESSIONS.map(p => p.name)];
@@ -297,7 +304,10 @@ export const Dashboard: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  if (e.target.value) setSelectedRubro('Todos');
+                  if (e.target.value) {
+                    setSelectedRubro('Todos');
+                    api.trackSearch(e.target.value);
+                  }
                 }}
               />
             </div>
@@ -368,6 +378,7 @@ export const Dashboard: React.FC = () => {
                                   setSelectedRubro(profession.name);
                                   setIsRubroOpen(false);
                                   setSearchTerm('');
+                                  api.trackSearch(profession.name);
                                 }}
                               >
                                 <profession.icon size={18} className={`${selectedRubro === profession.name ? 'text-indigo-600' : 'text-gray-400'}`} />
@@ -516,6 +527,8 @@ export const Dashboard: React.FC = () => {
                 'Servicios Generales': Wrench,
                 'Automotor': Car,
                 'Digital y Diseño': Megaphone,
+                'Servicios Profesionales': Scale,
+                'Estética y Salud': Scissors,
                 'Otros': Sparkles
               };
               const CategoryIcon = categoryIcons[category] || Sparkles;

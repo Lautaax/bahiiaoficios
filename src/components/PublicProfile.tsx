@@ -3,9 +3,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -285,7 +286,29 @@ export const PublicProfile: React.FC = () => {
   }
 
   const { nombre, zona, fotoUrl } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada } = professional.profesionalInfo;
+
+  const profileUrl = window.location.href;
+
+  const downloadQRCode = () => {
+    const svg = document.getElementById('profile-qr');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `QR-${nombre.replace(/\s+/g, '-')}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -332,8 +355,8 @@ export const PublicProfile: React.FC = () => {
                       <ShieldCheck size={24} className="fill-blue-100" />
                     </div>
                   )}
-                  {matriculado && (
-                    <div className="flex items-center text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200" title="Profesional Matriculado">
+                  {matriculaVerified && (
+                    <div className="flex items-center text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800" title="Profesional Matriculado y Verificado">
                       <span className="text-xs font-bold uppercase tracking-wider">Matriculado</span>
                     </div>
                   )}
@@ -462,7 +485,7 @@ export const PublicProfile: React.FC = () => {
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wider">Insignias</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {/* Badge: Verificado */}
-                  {(isVerified || matriculado) && (
+                  {(isVerified || matriculaVerified) && (
                     <div className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-100 dark:border-indigo-800">
                       <ShieldCheck size={16} className="text-indigo-600 dark:text-indigo-400" />
                       <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase">Verificado</span>
@@ -492,7 +515,26 @@ export const PublicProfile: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-3">
+              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                <div className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-700/30 rounded-2xl border border-gray-100 dark:border-gray-700">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-xs uppercase tracking-wider mb-3">Tu Código QR</h3>
+                  <div className="bg-white p-3 rounded-xl shadow-sm mb-3">
+                    <QRCodeSVG 
+                      id="profile-qr"
+                      value={profileUrl} 
+                      size={120}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <button 
+                    onClick={downloadQRCode}
+                    className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline"
+                  >
+                    <Download size={14} /> Descargar QR para tu camioneta
+                  </button>
+                </div>
+
                 {telefono && (
                   <a
                     href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi tu perfil en Bahía Oficios y necesito presupuesto para...`)}`}

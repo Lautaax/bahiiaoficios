@@ -25,7 +25,7 @@ export const SignUp: React.FC = () => {
   const [haceFactura, setHaceFactura] = useState(false);
   const [tipoFactura, setTipoFactura] = useState<'A' | 'C' | ''>('');
   const [haceUrgencias, setHaceUrgencias] = useState(false);
-  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(false);
+  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(true);
   const [matriculado, setMatriculado] = useState(false);
   const [preciosReferencia, setPreciosReferencia] = useState<{ servicio: string; precio: string }[]>([]);
   const [acceptTerms, setAcceptTerms] = useState(false);

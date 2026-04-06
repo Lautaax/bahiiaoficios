@@ -1,27 +1,34 @@
 import { Category } from '../types';
+import { PROFESSIONS } from '../constants';
+import { db } from '../firebase';
+import { doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore';
 
 export const api = {
   getCategories: async (): Promise<Category[]> => {
-    // Mock data
-    return [
-      { id: '1', name: 'Electricista', slug: 'electricista' },
-      { id: '2', name: 'Gasista', slug: 'gasista' },
-      { id: '3', name: 'Plomero', slug: 'plomero' },
-      { id: '4', name: 'Albañil', slug: 'albanil' },
-      { id: '5', name: 'Pintor', slug: 'pintor' },
-      { id: '6', name: 'Carpintero', slug: 'carpintero' },
-      { id: '7', name: 'Jardinero', slug: 'jardinero' },
-      { id: '8', name: 'Mecánico', slug: 'mecanico' },
-      { id: '9', name: 'Cerrajero', slug: 'cerrajero' },
-      { id: '10', name: 'Flete', slug: 'flete' },
-      { id: '11', name: 'Limpieza', slug: 'limpieza' },
-      { id: '12', name: 'Techista', slug: 'techista' },
-      { id: '13', name: 'Informática', slug: 'informatica' },
-      { id: '14', name: 'Chapa y Pintura', slug: 'chapa-y-pintura' },
-      { id: '15', name: 'Herrería', slug: 'herreria' },
-      { id: '16', name: 'Aire Acondicionado', slug: 'aire-acondicionado' },
-      { id: '17', name: 'Modista', slug: 'modista' },
-      { id: '18', name: 'Electrónico', slug: 'electronico' }
-    ];
+    return PROFESSIONS.map((p, index) => ({
+      id: (index + 1).toString(),
+      name: p.name,
+      slug: p.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    }));
+  },
+  
+  trackSearch: async (rubro: string) => {
+    if (!rubro) return;
+    const rubroRef = doc(db, 'search_stats', rubro);
+    try {
+      const docSnap = await getDoc(rubroRef);
+      if (docSnap.exists()) {
+        await updateDoc(rubroRef, {
+          searchCount: increment(1)
+        });
+      } else {
+        await setDoc(rubroRef, {
+          name: rubro,
+          searchCount: 1
+        });
+      }
+    } catch (error) {
+      console.error("Error tracking search:", error);
+    }
   }
 };

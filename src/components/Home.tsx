@@ -1,28 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase, MessageSquare, CheckCircle, Megaphone } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase, MessageSquare, CheckCircle, Megaphone, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Category, User, Ad } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Tag, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Tag, ChevronLeft, ChevronRight, Briefcase as BriefcaseIcon } from 'lucide-react';
+import { PROFESSIONS, ZONAS } from '../constants';
 
 export function Home() {
   const { currentUser } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [featuredPros, setFeaturedPros] = useState<User[]>([]);
   const [currentProIndex, setCurrentProIndex] = useState(0);
   const [cardsPerPage, setCardsPerPage] = useState(4);
   const [ads, setAds] = useState<Ad[]>([]);
 
+  const [adsPerPage, setAdsPerPage] = useState(3);
+
   useEffect(() => {
     const updateCardsPerPage = () => {
-      if (window.innerWidth < 640) setCardsPerPage(1);
-      else if (window.innerWidth < 1024) setCardsPerPage(2);
-      else setCardsPerPage(4);
+      if (window.innerWidth < 640) {
+        setCardsPerPage(1);
+        setAdsPerPage(1);
+      } else if (window.innerWidth < 1024) {
+        setCardsPerPage(2);
+        setAdsPerPage(2);
+      } else {
+        setCardsPerPage(4);
+        setAdsPerPage(3);
+      }
     };
     updateCardsPerPage();
     window.addEventListener('resize', updateCardsPerPage);
@@ -33,7 +43,53 @@ export function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.getCategories().then(data => setCategories(data.slice(0, 8)));
+    const fetchPopularRubros = async () => {
+      try {
+        const q = query(
+          collection(db, 'search_stats'),
+          orderBy('searchCount', 'desc'),
+          limit(4)
+        );
+        const snapshot = await getDocs(q);
+        const popular = snapshot.docs.map(doc => doc.data());
+        
+        if (popular.length > 0) {
+          setCategories(popular.map((p: any) => {
+            const profession = PROFESSIONS.find(prof => prof.name === p.name);
+            return {
+              id: p.name,
+              name: p.name,
+              icon: profession?.icon || BriefcaseIcon
+            };
+          }));
+        } else {
+          // Fallback to default popular ones if no stats yet
+          const defaults = ['Electricista', 'Plomero', 'Gasista', 'Albañil'];
+          setCategories(defaults.map(name => {
+            const profession = PROFESSIONS.find(prof => prof.name === name);
+            return {
+              id: name,
+              name: name,
+              icon: profession?.icon || BriefcaseIcon
+            };
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching popular rubros:", error);
+        // Fallback
+        const defaults = ['Electricista', 'Plomero', 'Gasista', 'Albañil'];
+        setCategories(defaults.map(name => {
+          const profession = PROFESSIONS.find(prof => prof.name === name);
+          return {
+            id: name,
+            name: name,
+            icon: profession?.icon || BriefcaseIcon
+          };
+        }));
+      }
+    };
+
+    fetchPopularRubros();
     
     const fetchAds = async () => {
       try {
@@ -92,6 +148,7 @@ export function Home() {
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
+      api.trackSearch(searchTerm.trim());
       navigate(`/dashboard?search=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
@@ -152,14 +209,20 @@ export function Home() {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-indigo-800/50">
-              <p className="text-indigo-100 mb-4">¿No sabes a quién elegir?</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link 
                 to="/solicitar-presupuesto"
                 className="inline-flex items-center gap-2 bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg"
               >
                 <MessageSquare size={20} className="text-indigo-600" />
                 Solicitar Presupuesto Múltiple
+              </Link>
+              <Link 
+                to="/dashboard?urgencias=true"
+                className="inline-flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg animate-pulse"
+              >
+                <AlertCircle size={20} />
+                URGENCIAS 24HS
               </Link>
             </div>
           </motion.div>
@@ -175,18 +238,22 @@ export function Home() {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {categories.map((cat) => (
-              <Link 
-                key={cat.id} 
-                to={`/dashboard?rubro=${encodeURIComponent(cat.name)}`}
-                className="group bg-white hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 hover:shadow-xl rounded-xl p-6 transition-all duration-300 flex flex-col items-center text-center"
-              >
-                <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Briefcase className="w-7 h-7" />
-                </div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{cat.name}</h3>
-              </Link>
-            ))}
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <Link 
+                  key={cat.id} 
+                  to={`/dashboard?rubro=${encodeURIComponent(cat.name)}`}
+                  onClick={() => api.trackSearch(cat.name)}
+                  className="group bg-white hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 hover:shadow-xl rounded-xl p-6 transition-all duration-300 flex flex-col items-center text-center"
+                >
+                  <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Icon className="w-7 h-7" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{cat.name}</h3>
+                </Link>
+              );
+            })}
           </div>
           
           <div className="mt-12 text-center">
@@ -224,16 +291,17 @@ export function Home() {
 
             <div className="relative overflow-hidden">
               <motion.div 
-                className="flex gap-6"
-                animate={{ x: `-${currentAdIndex * (100 / (window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3))}%` }}
+                className="flex"
+                animate={{ x: `-${currentAdIndex * (100 / adsPerPage)}%` }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
                 {ads.map((ad) => (
                   <motion.div 
                     key={ad.id} 
-                    className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] bg-gray-50 rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex-shrink-0 group"
+                    className="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 px-3 group"
                     whileHover={{ y: -5 }}
                   >
+                    <div className="bg-gray-50 rounded-2xl shadow-lg border border-gray-100 overflow-hidden h-full">
                     <div className="relative h-48 overflow-hidden bg-white">
                       <img 
                         src={ad.imageUrl} 
@@ -279,6 +347,7 @@ export function Home() {
                         </a>
                       )}
                     </div>
+                    </div>
                   </motion.div>
                 ))}
               </motion.div>
@@ -306,9 +375,9 @@ export function Home() {
                     <ChevronLeft size={20} />
                   </button>
                   <button 
-                    onClick={() => setCurrentProIndex((prev) => Math.min(Math.ceil(featuredPros.length / cardsPerPage) - 1, prev + 1))}
-                    disabled={currentProIndex >= Math.ceil(featuredPros.length / cardsPerPage) - 1}
-                    className={`p-2 bg-white border border-gray-200 rounded-full shadow-sm transition-colors ${currentProIndex >= Math.ceil(featuredPros.length / cardsPerPage) - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                    onClick={() => setCurrentProIndex((prev) => Math.min(featuredPros.length - cardsPerPage, prev + 1))}
+                    disabled={currentProIndex >= featuredPros.length - cardsPerPage}
+                    className={`p-2 bg-white border border-gray-200 rounded-full shadow-sm transition-colors ${currentProIndex >= featuredPros.length - cardsPerPage ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 text-indigo-600'}`}
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -316,14 +385,14 @@ export function Home() {
               )}
             </div>
             
-            <div className="relative">
+            <div className="relative overflow-hidden">
               <motion.div 
-                className="flex gap-5"
-                animate={{ x: `-${currentProIndex * 100}%` }}
+                className="flex"
+                animate={{ x: `-${currentProIndex * (100 / cardsPerPage)}%` }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
                 {featuredPros.map((pro) => (
-                  <div key={pro.uid} className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)] flex-shrink-0">
+                  <div key={pro.uid} className="w-full sm:w-1/2 lg:w-1/4 flex-shrink-0 px-2.5">
                     <ProfessionalCard professional={pro} />
                   </div>
                 ))}

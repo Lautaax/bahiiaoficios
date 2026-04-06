@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { Send, ArrowLeft, User as UserIcon, FileText, X } from 'lucide-react';
+import { Send, ArrowLeft, User as UserIcon, FileText, X, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 interface Message {
   id: string;
@@ -144,6 +146,60 @@ export const Chat: React.FC = () => {
     }
   };
 
+  const generatePDF = (msg: Message) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFillColor(79, 70, 229); // Indigo-600
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRESUPUESTO FORMAL', 20, 25);
+    
+    doc.setFontSize(10);
+    doc.text('Bahía Oficios - Portal de Profesionales', pageWidth - 20, 25, { align: 'right' });
+    
+    // Content
+    doc.setTextColor(31, 41, 55); // Gray-900
+    doc.setFontSize(12);
+    doc.text(`Fecha: ${new Date(msg.timestamp?.toDate()).toLocaleDateString()}`, 20, 55);
+    doc.text(`Profesional: ${currentUser?.nombre}`, 20, 65);
+    doc.text(`Cliente: ${otherUser?.nombre}`, 20, 75);
+    
+    doc.setDrawColor(229, 231, 235); // Gray-200
+    doc.line(20, 85, pageWidth - 20, 85);
+    
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Detalle del Trabajo:', 20, 100);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const splitDescription = doc.splitTextToSize(msg.quoteDescription || '', pageWidth - 40);
+    doc.text(splitDescription, 20, 110);
+    
+    const finalY = 110 + (splitDescription.length * 7) + 20;
+    
+    doc.setFillColor(249, 250, 251); // Gray-50
+    doc.rect(20, finalY - 10, pageWidth - 40, 25, 'F');
+    
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(79, 70, 229);
+    doc.text(`TOTAL ESTIMADO: $${msg.quoteAmount?.toLocaleString('es-AR')}`, pageWidth / 2, finalY + 7, { align: 'center' });
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128); // Gray-500
+    doc.text('Este documento es un presupuesto estimativo generado a través de Bahía Oficios.', pageWidth / 2, doc.internal.pageSize.getHeight() - 20, { align: 'center' });
+    doc.text('La validez del mismo queda sujeta a la inspección presencial del profesional.', pageWidth / 2, doc.internal.pageSize.getHeight() - 15, { align: 'center' });
+    
+    doc.save(`Presupuesto-${msg.id.substring(0, 5)}.pdf`);
+  };
+
   if (!currentUser) return <div>Por favor, inicia sesión para ver tus mensajes.</div>;
 
   return (
@@ -199,6 +255,12 @@ export const Chat: React.FC = () => {
                     <div className="text-lg font-bold mt-2">
                       Total: ${msg.quoteAmount?.toLocaleString('es-AR')}
                     </div>
+                    <button 
+                      onClick={() => generatePDF(msg)}
+                      className="mt-3 flex items-center justify-center gap-2 w-full py-2 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 transition-colors"
+                    >
+                      <Download size={14} /> Descargar Presupuesto PDF
+                    </button>
                   </div>
                 ) : (
                   <p>{msg.text}</p>

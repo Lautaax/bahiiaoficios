@@ -37,6 +37,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
     direccion: '',
     contactEmail: '',
     fotoDni: '',
+    fotoMatricula: '',
     cuit: '',
     haceFactura: false,
     tipoFactura: '' as 'A' | 'C' | '',
@@ -55,6 +56,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [dniPreview, setDniPreview] = useState<string | null>(null);
   const [dniUploadStatus, setDniUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [dniUploadProgress, setDniUploadProgress] = useState(0);
+  
+  const [matriculaFile, setMatriculaFile] = useState<File | null>(null);
+  const [matriculaPreview, setMatriculaPreview] = useState<string | null>(null);
+  const [matriculaUploadStatus, setMatriculaUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [matriculaUploadProgress, setMatriculaUploadProgress] = useState(0);
 
   // Works Images State
   const [existingWorkImages, setExistingWorkImages] = useState<{ url: string; descripcion: string }[]>([]);
@@ -95,6 +101,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
         direccion: currentUser.profesionalInfo?.direccion || '',
         contactEmail: currentUser.profesionalInfo?.contactEmail || currentUser.email || '',
         fotoDni: currentUser.profesionalInfo?.fotoDni || '',
+        fotoMatricula: currentUser.profesionalInfo?.fotoMatricula || '',
         cuit: currentUser.profesionalInfo?.cuit || '',
         haceFactura: currentUser.profesionalInfo?.haceFactura || false,
         tipoFactura: currentUser.profesionalInfo?.tipoFactura || '',
@@ -110,6 +117,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
       setDniPreview(currentUser.profesionalInfo?.fotoDni || null);
       if (currentUser.profesionalInfo?.fotoDni) {
         setDniUploadStatus('success');
+      }
+      
+      setMatriculaPreview(currentUser.profesionalInfo?.fotoMatricula || null);
+      if (currentUser.profesionalInfo?.fotoMatricula) {
+        setMatriculaUploadStatus('success');
       }
       
       const existing = currentUser.profesionalInfo?.fotosTrabajosDetalle || 
@@ -135,6 +147,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
       const file = e.target.files[0];
       setDniFile(file);
       setDniPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleMatriculaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMatriculaFile(file);
+      setMatriculaPreview(URL.createObjectURL(file));
     }
   };
 
@@ -243,6 +263,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
       
       let newFotoUrl = formData.fotoUrl;
       let newFotoDni = formData.fotoDni;
+      let newFotoMatricula = formData.fotoMatricula;
       let finalWorkImages = [...existingWorkImages];
 
       if (imageFile) {
@@ -280,6 +301,31 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
         } catch (err) {
           setDniUploadStatus('error');
           setError('Error al subir el DNI.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (matriculaFile) {
+        setMatriculaUploadStatus('uploading');
+        setMatriculaUploadProgress(0);
+        try {
+          const imageCompression = (await import('browser-image-compression')).default;
+          const compressedFile = await imageCompression(matriculaFile, { maxSizeMB: 1, maxWidthOrHeight: 1920, fileType: 'image/webp' });
+          const webpFile = new File([compressedFile], 'matricula.webp', { type: 'image/webp' });
+          const storageRef = ref(storage, `matricula_images/${currentUser.uid}`);
+          const uploadTask = uploadBytesResumable(storageRef, webpFile);
+          newFotoMatricula = await new Promise<string>((resolve, reject) => {
+            uploadTask.on('state_changed', 
+              (snap) => setMatriculaUploadProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+              (err) => reject(err),
+              async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
+            );
+          });
+          setMatriculaUploadStatus('success');
+        } catch (err) {
+          setMatriculaUploadStatus('error');
+          setError('Error al subir la matrícula.');
           setLoading(false);
           return;
         }
@@ -336,12 +382,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
           direccion: formData.direccion,
           contactEmail: formData.contactEmail,
           fotoDni: newFotoDni,
+          fotoMatricula: newFotoMatricula,
           cuit: formData.cuit,
           haceFactura: formData.haceFactura,
           tipoFactura: formData.haceFactura ? formData.tipoFactura : null,
           haceUrgencias: formData.haceUrgencias,
           disponibilidadInmediata: formData.disponibilidadInmediata,
           matriculado: formData.matriculado,
+          matriculaVerified: currentUser.profesionalInfo?.matriculaVerified || false,
           nombreNegocio: formData.nombreNegocio || null,
           preciosReferencia: formData.preciosReferencia,
           badges: formData.badges
@@ -643,26 +691,54 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
             {activeSection === 'verificacion' && formData.rol === 'profesional' && (
               <div className="space-y-8">
-                <div className="flex flex-col items-center gap-6 p-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <div className="relative w-full max-w-md aspect-[1.6/1] bg-white dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
-                    {dniPreview ? <img src={dniPreview} className="w-full h-full object-cover" /> : <FileText size={48} className="text-gray-300" />}
-                    {dniUploadStatus === 'uploading' && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
-          <div className="w-full max-w-[200px] h-2 bg-white/20 rounded-full overflow-hidden mb-2">
-            <motion.div 
-              className="h-full bg-indigo-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${dniUploadProgress}%` }}
-            />
-          </div>
-          <span className="text-sm font-bold">Subiendo {Math.round(dniUploadProgress)}%</span>
-        </div>
-      )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* DNI Upload */}
+                  <div className="flex flex-col items-center gap-6 p-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Foto DNI (Frente)</h3>
+                    <div className="relative w-full aspect-[1.6/1] bg-white dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
+                      {dniPreview ? <img src={dniPreview} className="w-full h-full object-cover" /> : <FileText size={48} className="text-gray-300" />}
+                      {dniUploadStatus === 'uploading' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
+                          <div className="w-full max-w-[200px] h-2 bg-white/20 rounded-full overflow-hidden mb-2">
+                            <motion.div 
+                              className="h-full bg-indigo-500"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${dniUploadProgress}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold">Subiendo {Math.round(dniUploadProgress)}%</span>
+                        </div>
+                      )}
+                    </div>
+                    <label className="cursor-pointer bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2">
+                      <Camera size={20} /> {dniPreview ? 'Cambiar Foto' : 'Subir Foto DNI'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleDniChange} />
+                    </label>
                   </div>
-                  <label className="cursor-pointer bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2">
-                    <Camera size={20} /> {dniPreview ? 'Cambiar Foto' : 'Subir Foto DNI'}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleDniChange} />
-                  </label>
+
+                  {/* Matricula Upload */}
+                  <div className="flex flex-col items-center gap-6 p-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Credencial de Matrícula</h3>
+                    <div className="relative w-full aspect-[1.6/1] bg-white dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
+                      {matriculaPreview ? <img src={matriculaPreview} className="w-full h-full object-cover" /> : <BadgeCheck size={48} className="text-gray-300" />}
+                      {matriculaUploadStatus === 'uploading' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
+                          <div className="w-full max-w-[200px] h-2 bg-white/20 rounded-full overflow-hidden mb-2">
+                            <motion.div 
+                              className="h-full bg-indigo-500"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${matriculaUploadProgress}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold">Subiendo {Math.round(matriculaUploadProgress)}%</span>
+                        </div>
+                      )}
+                    </div>
+                    <label className="cursor-pointer bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2">
+                      <Camera size={20} /> {matriculaPreview ? 'Cambiar Foto' : 'Subir Matrícula'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleMatriculaChange} />
+                    </label>
+                  </div>
                 </div>
               </div>
             )}

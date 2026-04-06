@@ -27,6 +27,8 @@ export interface ProfesionalInfo {
   disponibilidadInmediata?: boolean;
   isVerified?: boolean;
   matriculado?: boolean; // Added for matriculado status
+  matriculaVerified?: boolean; // Admin verified the license
+  fotoMatricula?: string; // URL to the license image
   nombreNegocio?: string; // Optional business name
   profileViews?: number;
   whatsappClicks?: number;

@@ -1,4 +1,7 @@
-import { Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car, Monitor, Wind, Scissors, Cpu, Anvil, Calculator, FileSignature } from 'lucide-react';
+import { 
+  Lightbulb, Flame, Droplets, BrickWall, Brush, Hammer, Sprout, Wrench, Key, Truck, Sparkles, House, Megaphone, SprayCan, Bike, Car, Monitor, Wind, Scissors, Cpu, Anvil, Calculator, FileSignature,
+  PenTool, Ruler, Square, Sofa, Settings, Disc, Move, Snowflake, Tv, Bell, Video, Scale, Pen, Brain, Apple, Activity, Hand, Dumbbell, GraduationCap, Languages, Palette
+} from 'lucide-react';
 
 export const PROFESSIONS = [
   { name: 'Electricista', icon: Lightbulb, category: 'Hogar y Construcción' },
@@ -11,21 +14,41 @@ export const PROFESSIONS = [
   { name: 'Techista', icon: House, category: 'Hogar y Construcción' },
   { name: 'Herrería', icon: Anvil, category: 'Hogar y Construcción' },
   { name: 'Aire Acondicionado', icon: Wind, category: 'Hogar y Construcción' },
+  { name: 'Arquitecto', icon: PenTool, category: 'Hogar y Construcción' },
+  { name: 'Maestro Mayor de Obra', icon: Ruler, category: 'Hogar y Construcción' },
+  { name: 'Vidriero', icon: Square, category: 'Hogar y Construcción' },
+  { name: 'Tapicero', icon: Sofa, category: 'Hogar y Construcción' },
   { name: 'Cerrajero', icon: Key, category: 'Servicios Generales' },
   { name: 'Flete', icon: Truck, category: 'Servicios Generales' },
   { name: 'Limpieza', icon: Sparkles, category: 'Servicios Generales' },
   { name: 'Modista', icon: Scissors, category: 'Servicios Generales' },
   { name: 'Informática', icon: Monitor, category: 'Servicios Generales' },
   { name: 'Electrónico', icon: Cpu, category: 'Servicios Generales' },
+  { name: 'Tornero', icon: Settings, category: 'Servicios Generales' },
+  { name: 'Reparación de Electrodomésticos', icon: Tv, category: 'Servicios Generales' },
+  { name: 'Instalador de Alarmas', icon: Bell, category: 'Servicios Generales' },
+  { name: 'Cámaras de Seguridad', icon: Video, category: 'Servicios Generales' },
   { name: 'Contador', icon: Calculator, category: 'Servicios Profesionales' },
   { name: 'Mandatario/Gestor', icon: FileSignature, category: 'Servicios Profesionales' },
+  { name: 'Abogado', icon: Scale, category: 'Servicios Profesionales' },
+  { name: 'Escribano', icon: Pen, category: 'Servicios Profesionales' },
+  { name: 'Psicólogo', icon: Brain, category: 'Servicios Profesionales' },
+  { name: 'Nutricionista', icon: Apple, category: 'Servicios Profesionales' },
+  { name: 'Kinesiólogo', icon: Activity, category: 'Servicios Profesionales' },
+  { name: 'Traductor', icon: Languages, category: 'Servicios Profesionales' },
+  { name: 'Profesor Particular', icon: GraduationCap, category: 'Servicios Profesionales' },
   { name: 'Mecánico', icon: Wrench, category: 'Automotor' },
   { name: 'Pintor Autos', icon: SprayCan, category: 'Automotor' },
   { name: 'Chapa y Pintura', icon: Car, category: 'Automotor' },
   { name: 'Mecánico Motos', icon: Bike, category: 'Automotor' },
-  { name: 'Mecánico Autos', icon: Car, category: 'Automotor' },
-  { name: 'Mecánico Camiones', icon: Truck, category: 'Automotor' },
+  { name: 'Gomería', icon: Disc, category: 'Automotor' },
+  { name: 'Alineación y Balanceo', icon: Move, category: 'Automotor' },
+  { name: 'Lavadero de Autos', icon: Droplets, category: 'Automotor' },
   { name: 'Community Manager', icon: Megaphone, category: 'Digital y Diseño' },
+  { name: 'Diseñador Gráfico', icon: Palette, category: 'Digital y Diseño' },
+  { name: 'Peluquero/Barbero', icon: Scissors, category: 'Estética y Salud' },
+  { name: 'Manicuría/Pedicuría', icon: Hand, category: 'Estética y Salud' },
+  { name: 'Entrenador Personal', icon: Dumbbell, category: 'Estética y Salud' },
 ];
 
 export const ZONAS = [

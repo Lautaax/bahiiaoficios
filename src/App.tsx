@@ -191,6 +191,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</Link>
             <Link to="/help" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Ayuda</Link>
             <Link to="/beneficios" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Beneficios</Link>
+            <Link to="/blog" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Blog</Link>
           </div>
         </div>
       </footer>

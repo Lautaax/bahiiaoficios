@@ -3,7 +3,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save } from 'lucide-react';
+import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Ad, TradeDiscount } from '../types';
 import { uploadToFirebase } from '../services/firebaseStorageService';
@@ -67,6 +67,22 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error updating verification:", error);
       alert("Error al actualizar la verificación.");
+    }
+  };
+
+  const handleApproveMatricula = async (userId: string) => {
+    if (!window.confirm("¿Estás seguro de que quieres aprobar la matrícula de este profesional?")) return;
+    
+    try {
+      await updateDoc(doc(db, 'usuarios', userId), {
+        'profesionalInfo.matriculaVerified': true,
+        'profesionalInfo.matriculado': true
+      });
+      setUsers(users.map(u => u.uid === userId && u.profesionalInfo ? { ...u, profesionalInfo: { ...u.profesionalInfo, matriculaVerified: true, matriculado: true } } : u));
+      alert("Matrícula aprobada correctamente.");
+    } catch (error) {
+      console.error("Error approving matricula:", error);
+      alert("Error al aprobar la matrícula.");
     }
   };
 
@@ -250,6 +266,31 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleResetAvailability = async () => {
+    if (!window.confirm("¿Estás seguro de que quieres poner a TODOS los profesionales como DISPONIBLES?")) return;
+    
+    setLoading(true);
+    try {
+      const batch: any[] = [];
+      const professionals = users.filter(u => u.rol === 'profesional');
+      
+      for (const prof of professionals) {
+        batch.push(updateDoc(doc(db, 'usuarios', prof.uid), {
+          'profesionalInfo.disponibilidadInmediata': true
+        }));
+      }
+      
+      await Promise.all(batch);
+      setUsers(users.map(u => u.rol === 'profesional' ? { ...u, profesionalInfo: { ...u.profesionalInfo, disponibilidadInmediata: true } as any } : u));
+      alert("Todos los profesionales ahora están disponibles.");
+    } catch (error) {
+      console.error("Error resetting availability:", error);
+      alert("Error al resetear la disponibilidad.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Cargando panel de administración...</div>;
 
   return (
@@ -259,7 +300,7 @@ export const AdminDashboard: React.FC = () => {
         Panel de Administración
       </h1>
 
-      <div className="flex gap-4 mb-8">
+      <div className="flex flex-wrap gap-4 mb-8">
         <button 
           onClick={() => setActiveTab('usuarios')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'usuarios' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
@@ -281,6 +322,16 @@ export const AdminDashboard: React.FC = () => {
           <Tag size={20} />
           Descuentos Gremio
         </button>
+        
+        {activeTab === 'usuarios' && (
+          <button 
+            onClick={handleResetAvailability}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all ml-auto"
+          >
+            <CheckCircle size={20} />
+            Resetear Disponibilidad (Todos)
+          </button>
+        )}
       </div>
 
       {activeTab === 'usuarios' && (
@@ -722,17 +773,34 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
             <div className="p-4 flex flex-col items-center">
-              {viewingDni.profesionalInfo?.fotoDni ? (
-                <img 
-                  src={viewingDni.profesionalInfo.fotoDni} 
-                  alt="DNI" 
-                  className="max-w-full max-h-[60vh] object-contain rounded-lg border border-gray-200 dark:border-gray-700" 
-                />
-              ) : (
-                <p className="text-gray-500">No hay foto de DNI disponible.</p>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div className="flex flex-col items-center">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">DNI</h4>
+                  {viewingDni.profesionalInfo?.fotoDni ? (
+                    <img 
+                      src={viewingDni.profesionalInfo.fotoDni} 
+                      alt="DNI" 
+                      className="max-w-full max-h-[40vh] object-contain rounded-lg border border-gray-200 dark:border-gray-700" 
+                    />
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay foto de DNI disponible.</p>
+                  )}
+                </div>
+                <div className="flex flex-col items-center">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Matrícula</h4>
+                  {viewingDni.profesionalInfo?.fotoMatricula ? (
+                    <img 
+                      src={viewingDni.profesionalInfo.fotoMatricula} 
+                      alt="Matrícula" 
+                      className="max-w-full max-h-[40vh] object-contain rounded-lg border border-gray-200 dark:border-gray-700" 
+                    />
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay foto de matrícula disponible.</p>
+                  )}
+                </div>
+              </div>
               
-              <div className="flex gap-4 mt-6 w-full justify-center">
+              <div className="flex flex-wrap gap-4 mt-8 w-full justify-center">
                 <button 
                   onClick={() => {
                     handleVerify(viewingDni.uid, false);
@@ -740,16 +808,26 @@ export const AdminDashboard: React.FC = () => {
                   }}
                   className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                 >
-                  <CheckCircle size={18} /> Aceptar y Verificar
+                  <CheckCircle size={18} /> Verificar DNI
                 </button>
+                {viewingDni.profesionalInfo?.fotoMatricula && (
+                  <button 
+                    onClick={() => {
+                      handleApproveMatricula(viewingDni.uid);
+                      setViewingDni(null);
+                    }}
+                    className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <BadgeCheck size={18} /> Verificar Matrícula
+                  </button>
+                )}
                 <button 
                   onClick={() => {
-                    handleVerify(viewingDni.uid, true); // this un-verifies
                     setViewingDni(null);
                   }}
                   className="px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                 >
-                  <XCircle size={18} /> Rechazar
+                  <X size={18} /> Cerrar
                 </button>
               </div>
             </div>

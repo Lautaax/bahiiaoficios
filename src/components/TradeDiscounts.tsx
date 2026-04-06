@@ -30,8 +30,8 @@ export const TradeDiscounts: React.FC = () => {
           return {
             id: doc.id,
             businessName: data.title,
-            description: data.tradeDiscountDetails || data.description,
-            discount: 'PROMO',
+            description: data.description,
+            discount: data.tradeDiscountDetails || '10%',
             category: 'Publicidad',
             address: 'Ver anuncio',
             imageUrl: data.imageUrl,
@@ -131,7 +131,7 @@ export const TradeDiscounts: React.FC = () => {
                   </div>
                 )}
                 <div className="absolute top-4 right-4 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
-                  {discount.discount} OFF
+                  {discount.category === 'Publicidad' ? 'PROMO ' : ''}{discount.discount} OFF
                 </div>
               </div>
               <div className="p-6">
@@ -141,8 +141,11 @@ export const TradeDiscounts: React.FC = () => {
                   </span>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{discount.businessName}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 line-clamp-2">
                   {discount.description}
+                </p>
+                <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold mb-4">
+                  Este comercio adherido realiza el {discount.discount} de descuento a los clientes.
                 </p>
                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm mb-6">
                   <MapPin size={16} />
