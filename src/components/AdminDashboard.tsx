@@ -56,8 +56,8 @@ export const AdminDashboard: React.FC = () => {
     fetchData();
   }, [currentUser, navigate]);
 
-  const handleVerify = async (userId: string, currentStatus: boolean) => {
-    if (!window.confirm(`¿Estás seguro de que quieres ${currentStatus ? 'quitar la verificación' : 'verificar'} a este profesional?`)) return;
+  const handleVerifyIdentity = async (userId: string, currentStatus: boolean) => {
+    if (!window.confirm(`¿Estás seguro de que quieres ${currentStatus ? 'quitar la verificación de identidad' : 'verificar la identidad'} de este profesional?`)) return;
     
     try {
       await updateDoc(doc(db, 'usuarios', userId), {
@@ -70,19 +70,19 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleApproveMatricula = async (userId: string) => {
-    if (!window.confirm("¿Estás seguro de que quieres aprobar la matrícula de este profesional?")) return;
+  const handleToggleMatricula = async (userId: string, currentStatus: boolean) => {
+    if (!window.confirm(`¿Estás seguro de que quieres ${currentStatus ? 'quitar la verificación de matrícula' : 'verificar la matrícula'} de este profesional?`)) return;
     
     try {
       await updateDoc(doc(db, 'usuarios', userId), {
-        'profesionalInfo.matriculaVerified': true,
-        'profesionalInfo.matriculado': true
+        'profesionalInfo.matriculaVerified': !currentStatus,
+        'profesionalInfo.matriculado': !currentStatus
       });
-      setUsers(users.map(u => u.uid === userId && u.profesionalInfo ? { ...u, profesionalInfo: { ...u.profesionalInfo, matriculaVerified: true, matriculado: true } } : u));
-      alert("Matrícula aprobada correctamente.");
+      setUsers(users.map(u => u.uid === userId && u.profesionalInfo ? { ...u, profesionalInfo: { ...u.profesionalInfo, matriculaVerified: !currentStatus, matriculado: !currentStatus } } : u));
+      alert(`Matrícula ${!currentStatus ? 'aprobada' : 'desaprobada'} correctamente.`);
     } catch (error) {
-      console.error("Error approving matricula:", error);
-      alert("Error al aprobar la matrícula.");
+      console.error("Error toggling matricula:", error);
+      alert("Error al actualizar la matrícula.");
     }
   };
 
@@ -343,7 +343,8 @@ export const AdminDashboard: React.FC = () => {
                   <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Usuario</th>
                   <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
                   <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Email</th>
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Verificado</th>
+                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Identidad</th>
+                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Matrícula</th>
                   <th className="p-4 font-semibold text-gray-700 dark:text-gray-300 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -376,11 +377,26 @@ export const AdminDashboard: React.FC = () => {
                     <td className="p-4">
                       {user.rol === 'profesional' ? (
                         <button 
-                          onClick={() => handleVerify(user.uid, !!user.profesionalInfo?.isVerified)}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.isVerified ? 'bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-green-100 hover:text-green-700'}`}
+                          onClick={() => handleVerifyIdentity(user.uid, !!user.profesionalInfo?.isVerified)}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.isVerified ? 'bg-blue-100 text-blue-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
+                          title={user.profesionalInfo?.isVerified ? 'Quitar verificación de DNI' : 'Verificar DNI'}
                         >
-                          {user.profesionalInfo?.isVerified ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                          {user.profesionalInfo?.isVerified ? 'Verificado' : 'No Verificado'}
+                          {user.profesionalInfo?.isVerified ? <ShieldCheck size={16} /> : <XCircle size={16} />}
+                          {user.profesionalInfo?.isVerified ? 'ID OK' : 'Sin ID'}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {user.rol === 'profesional' ? (
+                        <button 
+                          onClick={() => handleToggleMatricula(user.uid, !!user.profesionalInfo?.matriculaVerified)}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.matriculaVerified ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                          title={user.profesionalInfo?.matriculaVerified ? 'Quitar verificación de Matrícula' : 'Verificar Matrícula'}
+                        >
+                          {user.profesionalInfo?.matriculaVerified ? <BadgeCheck size={16} /> : <XCircle size={16} />}
+                          {user.profesionalInfo?.matriculaVerified ? 'MAT OK' : 'Sin MAT'}
                         </button>
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>

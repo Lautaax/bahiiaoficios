@@ -30,6 +30,8 @@ export const Dashboard: React.FC = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [ads, setAds] = useState<any[]>([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const professionalsPerPage = 12;
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -111,7 +113,7 @@ export const Dashboard: React.FC = () => {
             where('rol', '==', 'profesional'),
             orderBy('profesionalInfo.isVip', 'desc'),
             orderBy('profesionalInfo.ratingAvg', 'desc'),
-            limit(20)
+            limit(100) // Fetch more results for pagination/filtering
           );
 
           const querySnapshot = await getDocs(q);
@@ -124,7 +126,7 @@ export const Dashboard: React.FC = () => {
              const simpleQ = query(
                usersRef,
                where('rol', '==', 'profesional'),
-               limit(50)
+               limit(200)
              );
              const querySnapshot = await getDocs(simpleQ);
              let docs = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as unknown as User));
@@ -247,6 +249,22 @@ export const Dashboard: React.FC = () => {
       })
       .slice(0, 4); // Show top 4
   }, [professionals]);
+
+  // Pagination
+  const totalPages = Math.ceil(sortedProfessionals.length / professionalsPerPage);
+  const currentProfessionals = sortedProfessionals.slice(
+    (currentPage - 1) * professionalsPerPage,
+    currentPage * professionalsPerPage
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRubro, selectedZona, searchTerm, disponibilidadInmediata, haceUrgencias]);
 
   const rubros = ['Todos', ...PROFESSIONS.map(p => p.name)];
   const zonas = ['Todas', ...ZONAS];
@@ -670,11 +688,48 @@ export const Dashboard: React.FC = () => {
                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
              </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedProfessionals.map(prof => (
-                <ProfessionalCard key={prof.uid} professional={prof} />
-            ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {currentProfessionals.map(prof => (
+                    <ProfessionalCard key={prof.uid} professional={prof} />
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="mt-12 flex justify-center items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                  >
+                    <ChevronDown size={20} className="rotate-90" />
+                  </button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`w-10 h-10 rounded-lg border font-medium transition-all ${
+                        currentPage === page
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                  >
+                    <ChevronDown size={20} className="-rotate-90" />
+                  </button>
+                </div>
+              )}
+            </>
         )}
 
         {!loading && sortedProfessionals.length === 0 && (

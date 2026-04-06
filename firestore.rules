@@ -31,10 +31,18 @@ service cloud.firestore {
                     isAdmin() ||
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profesionalInfo']) && 
                      'profesionalInfo' in resource.data &&
-                     (request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['profileViews']) ||
-                      request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['whatsappClicks']) ||
-                      request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['ratingAvg', 'reviewCount'])));
+                     (request.resource.data.profesionalInfo.diff(resource.data.profesionalInfo).affectedKeys().hasOnly(['profileViews', 'whatsappClicks', 'ratingAvg', 'reviewCount'])));
       allow delete: if isAdmin();
+
+      match /stats/{statId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if true; // Permite incrementar vistas diarias
+      }
+    }
+
+    match /search_stats/{statId} {
+      allow read: if true;
+      allow write: if true;
     }
 
     match /ads/{adId} {
