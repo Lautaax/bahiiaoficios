@@ -292,32 +292,6 @@ export const ProfessionalDashboard: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-2xl text-blue-600 dark:text-blue-400">
-                      <Eye size={24} />
-                    </div>
-                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">+12%</span>
-                  </div>
-                  <h3 className="text-gray-500 dark:text-gray-400 font-medium">Visitas Totales</h3>
-                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-2">
-                    {profesionalInfo?.profileViews || 0}
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-2xl text-green-600 dark:text-green-400">
-                      <MessageSquare size={24} />
-                    </div>
-                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">+5%</span>
-                  </div>
-                  <h3 className="text-gray-500 dark:text-gray-400 font-medium">Contactos WhatsApp</h3>
-                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-2">
-                    {profesionalInfo?.whatsappClicks || 0}
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all">
-                  <div className="flex items-center justify-between mb-4">
                     <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-2xl text-amber-600 dark:text-amber-400">
                       <Star size={24} />
                     </div>
@@ -326,6 +300,18 @@ export const ProfessionalDashboard: React.FC = () => {
                   <h3 className="text-gray-500 dark:text-gray-400 font-medium">Reputación</h3>
                   <p className="text-4xl font-black text-gray-900 dark:text-white mt-2">
                     {profesionalInfo?.ratingAvg?.toFixed(1) || '0.0'}
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                      <MessageSquare size={24} />
+                    </div>
+                  </div>
+                  <h3 className="text-gray-500 dark:text-gray-400 font-medium">Reseñas Totales</h3>
+                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-2">
+                    {profesionalInfo?.reviewCount || 0}
                   </p>
                 </div>
               </div>

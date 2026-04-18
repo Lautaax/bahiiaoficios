@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, MessageSquare, MessageCircle, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart, AlertCircle } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, MessageSquare, MessageCircle, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart, AlertCircle, Eye, Share2, Check, BadgeCheck } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
@@ -20,6 +20,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showShareFeedback, setShowShareFeedback] = useState(false);
   
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -48,6 +49,17 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     
     localStorage.setItem('favorites', JSON.stringify(newFavorites));
     setIsFavorite(!isFavorite);
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const profileUrl = `${window.location.origin}/profesional/${professional.slug || uid}`;
+    navigator.clipboard.writeText(profileUrl).then(() => {
+      setShowShareFeedback(true);
+      setTimeout(() => setShowShareFeedback(false), 2000);
+    });
   };
 
   useEffect(() => {
@@ -262,6 +274,24 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           />
         </button>
 
+        {/* Share Button */}
+        <button
+          onClick={handleShare}
+          className="absolute top-3 left-14 z-20 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all hover:scale-110 group"
+          title="Compartir perfil"
+        >
+          {showShareFeedback ? (
+            <Check size={20} className="text-green-600 animate-in zoom-in" />
+          ) : (
+            <Share2 size={20} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
+          )}
+          {showShareFeedback && (
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap animate-in fade-in slide-in-from-top-1">
+              ¡Copiado!
+            </span>
+          )}
+        </button>
+
         <div className="p-4 pt-0 flex flex-col h-full relative">
           {/* Header */}
           <div className="flex items-start gap-3 mb-3 -mt-6">
@@ -280,16 +310,21 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             </div>
             
             <div className="flex-1 min-w-0 pt-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <h3 className="font-bold text-base text-gray-900 truncate">{nombre}</h3>
+              <div className="flex items-center gap-1.5 mb-1">
+                <h3 className="font-bold text-base text-white truncate drop-shadow-md">{nombre}</h3>
+              </div>
+              
+              <div className="flex flex-wrap gap-1.5 mb-2">
                 {isVerified && (
-                  <div className="flex items-center text-blue-600" title="Perfil Verificado">
-                    <ShieldCheck size={18} className="fill-blue-100" />
+                  <div className="flex items-center gap-1 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm" title="Identidad Verificada">
+                    <ShieldCheck size={10} className="fill-white" />
+                    <span className="tracking-tighter">VERIFICADO</span>
                   </div>
                 )}
                 {matriculaVerified && (
-                  <div className="flex items-center text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="Profesional Matriculado y Verificado">
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Matriculado</span>
+                  <div className="flex items-center gap-1 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm" title="Matrícula Profesional Verificada">
+                    <BadgeCheck size={10} className="fill-white" />
+                    <span className="tracking-tighter">MATRICULADO</span>
                   </div>
                 )}
               </div>
@@ -319,12 +354,6 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
 
               {/* Badges Row */}
               <div className="flex flex-wrap gap-1 mb-2">
-                {(isVerified || matriculaVerified) && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100" title="Perfil Verificado">
-                    <ShieldCheck size={10} className="fill-blue-100" />
-                    <span className="text-[9px] font-bold uppercase tracking-tight">Verificado</span>
-                  </div>
-                )}
                 {(ratingAvg || 0) >= 4.5 && (
                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100" title="Puntualidad">
                     <Star size={10} className="fill-amber-100" />
@@ -449,6 +478,17 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   Contactar
                 </button>
               )}
+            </div>
+            
+            {/* Solicitar Presupuesto Button */}
+            <div className="mt-3">
+              <Link
+                to={`/solicitar-presupuesto?profesionalId=${uid}`}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+              >
+                <MessageCircle size={14} />
+                Solicitar Presupuesto
+              </Link>
             </div>
           </div>
 

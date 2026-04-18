@@ -8,6 +8,7 @@ import { ProfessionalCard } from './ProfessionalCard';
 import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { api } from '../services/api';
+import { ZonaMap } from './ZonaMap';
 
 // Helper to normalize strings (remove accents)
 const normalizeString = (str: string) => {
@@ -16,22 +17,57 @@ const normalizeString = (str: string) => {
 
 export const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [professionals, setProfessionals] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRubro, setSelectedRubro] = useState<string>('Todos');
-  const [selectedZona, setSelectedZona] = useState<string>('Todas');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(false);
-  const [haceUrgencias, setHaceUrgencias] = useState(false);
+  
+  // Initialize from URL or defaults
+  const [selectedRubro, setSelectedRubro] = useState<string>(searchParams.get('rubro') || 'Todos');
+  const [selectedZona, setSelectedZona] = useState<string>(searchParams.get('zona') || 'Todas');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(searchParams.get('disponibilidad') === 'true');
+  const [haceUrgencias, setHaceUrgencias] = useState(searchParams.get('urgencias') === 'true');
+  const [sortBy, setSortBy] = useState<'score' | 'rating' | 'reviews'>(searchParams.get('sort') as any || 'score');
+  
   const [indexErrorLink, setIndexErrorLink] = useState<string | null>(null);
   const [showVipWelcome, setShowVipWelcome] = useState(false);
   const [isRubroOpen, setIsRubroOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [ads, setAds] = useState<any[]>([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const professionalsPerPage = 12;
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    
+    let finalRubro = selectedRubro;
+    let finalSearchTerm = searchTerm;
+
+    // Smart search: if searching for a rubro name, switch to that rubro
+    if (searchTerm && selectedRubro === 'Todos') {
+      const normalizedSearch = normalizeString(searchTerm);
+      const matchedProfession = PROFESSIONS.find(p => normalizeString(p.name) === normalizedSearch);
+      if (matchedProfession) {
+        finalRubro = matchedProfession.name;
+        finalSearchTerm = '';
+        setSelectedRubro(finalRubro);
+        setSearchTerm('');
+      }
+    }
+
+    if (finalRubro !== 'Todos') params.rubro = finalRubro;
+    if (selectedZona !== 'Todas') params.zona = selectedZona;
+    if (finalSearchTerm) params.search = finalSearchTerm;
+    if (haceUrgencias) params.urgencias = 'true';
+    if (disponibilidadInmediata) params.disponibilidad = 'true';
+    if (sortBy !== 'score') params.sort = sortBy;
+    
+    setSearchParams(params, { replace: true });
+    setCurrentPage(1); // Reset to first page on filter change
+  }, [selectedRubro, selectedZona, searchTerm, haceUrgencias, disponibilidadInmediata]);
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -54,38 +90,6 @@ export const Dashboard: React.FC = () => {
       return () => clearInterval(timer);
     }
   }, [ads]);
-
-  useEffect(() => {
-    const search = searchParams.get('search');
-    const rubro = searchParams.get('rubro');
-    const urgencias = searchParams.get('urgencias');
-
-    if (urgencias === 'true') {
-      setHaceUrgencias(true);
-      setShowAdvancedFilters(true);
-    }
-
-    if (rubro) {
-      setSelectedRubro(rubro);
-      setSearchTerm('');
-    } else if (search) {
-      const term = search.trim();
-      const normalizedSearch = normalizeString(term);
-      
-      // Check if the search term matches a profession name exactly (normalized)
-      // This handles cases like "Gasista" or "gasista" -> Filter by Rubro: Gasista
-      const matchedProfession = PROFESSIONS.find(p => normalizeString(p.name) === normalizedSearch);
-      
-      if (matchedProfession) {
-        setSelectedRubro(matchedProfession.name);
-        setSearchTerm('');
-      } else {
-        // Otherwise, it's a general search (name, description, etc.)
-        setSelectedRubro('Todos');
-        setSearchTerm(term);
-      }
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     if (currentUser?.rol === 'profesional' && currentUser?.profesionalInfo?.isVip) {
@@ -171,7 +175,7 @@ export const Dashboard: React.FC = () => {
           ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.includes(selectedRubro)) || 
           p.profesionalInfo?.rubro === selectedRubro)
         );
-      const matchesZona = selectedZona === 'Todas' || p.zona === selectedZona;
+      const matchesZona = !selectedZona || selectedZona === 'Todas' || (p.zona && normalizeString(p.zona).includes(normalizeString(selectedZona)));
       
       const term = normalizeString(searchTerm.trim());
       const matchesSearch = !term || 
@@ -188,13 +192,28 @@ export const Dashboard: React.FC = () => {
     });
   }, [professionals, selectedRubro, selectedZona, searchTerm, disponibilidadInmediata, haceUrgencias]);
 
-  // Sort professionals by gamification score
+  // Sort professionals by gamification score or selected criteria
   const sortedProfessionals = useMemo(() => {
     return [...filteredProfessionals].sort((a, b) => {
       // VIP always first
       if (a.profesionalInfo?.isVip && !b.profesionalInfo?.isVip) return -1;
       if (!a.profesionalInfo?.isVip && b.profesionalInfo?.isVip) return 1;
 
+      if (sortBy === 'rating') {
+        const diff = (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0);
+        if (diff !== 0) return diff;
+        // Secondary sort by review count if rating is equal
+        return (b.profesionalInfo?.reviewCount || 0) - (a.profesionalInfo?.reviewCount || 0);
+      }
+
+      if (sortBy === 'reviews') {
+        const diff = (b.profesionalInfo?.reviewCount || 0) - (a.profesionalInfo?.reviewCount || 0);
+        if (diff !== 0) return diff;
+        // Secondary sort by rating if review count is equal
+        return (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0);
+      }
+
+      // Default: Score based sorting (gamification)
       // Calculate score for A
       let scoreA = 0;
       if (a.profesionalInfo) {
@@ -414,18 +433,38 @@ export const Dashboard: React.FC = () => {
 
                 {/* Filtro Zona */}
                 <div className="relative min-w-[180px]">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                    value={selectedZona}
-                    onChange={(e) => setSelectedZona(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm appearance-none"
-                >
-                    {zonas.map(z => (
-                    <option key={z} value={z}>{z}</option>
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                      type="text"
+                      value={selectedZona}
+                      onChange={(e) => setSelectedZona(e.target.value)}
+                      placeholder="Zona o Barrio"
+                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
+                      list="dashboard-zonas-list"
+                  />
+                  <datalist id="dashboard-zonas-list">
+                    {ZONAS.map(z => (
+                      <option key={z} value={z} />
                     ))}
-                </select>
+                  </datalist>
+                </div>
+
+                {/* Ordenar por */}
+                <div className="relative min-w-[160px]">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="block w-full pl-4 pr-10 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm appearance-none"
+                  >
+                    <option value="score">Recomendados</option>
+                    <option value="rating">Mejor Calificados</option>
+                    <option value="reviews">Más Reseñas</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ChevronDown size={16} className="text-gray-400" />
+                  </div>
                 </div>
 
                 <button
@@ -676,12 +715,37 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Results Grid */}
-        <div className="mb-6 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {sortedProfessionals.length} Profesionales encontrados
-          </h3>
-          <span className="text-sm text-gray-500">Ordenado por: Destacados y Calificación</span>
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {sortedProfessionals.length} Profesionales encontrados
+            </h3>
+            <span className="text-sm text-gray-500">Ordenado por: Destacados y Calificación</span>
+          </div>
+          
+          <button 
+            onClick={() => setShowMap(!showMap)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all ${showMap ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`}
+          >
+            <MapPin size={18} />
+            {showMap ? 'Ocultar Mapa' : 'Ver Mapa de Zonas'}
+          </button>
         </div>
+
+        {showMap && (
+          <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+            <ZonaMap 
+              selectedZona={selectedZona} 
+              onSelectZona={(zona) => {
+                setSelectedZona(zona);
+                // Scroll to results after selection on mobile
+                if (window.innerWidth < 768) {
+                  setShowMap(false);
+                }
+              }} 
+            />
+          </div>
+        )}
 
         {loading ? (
              <div className="flex justify-center py-12">
@@ -697,36 +761,73 @@ export const Dashboard: React.FC = () => {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="mt-12 flex justify-center items-center gap-2">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50 transition-colors"
-                  >
-                    <ChevronDown size={20} className="rotate-90" />
-                  </button>
-                  
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <div className="mt-12 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2">
                     <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`w-10 h-10 rounded-lg border font-medium transition-all ${
-                        currentPage === page
-                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      title="Anterior"
                     >
-                      {page}
+                      <ChevronDown size={20} className="rotate-90" />
                     </button>
-                  ))}
+                    
+                    <div className="flex items-center gap-1">
+                      {/* First Page */}
+                      {currentPage > 2 && (
+                        <>
+                          <button
+                            onClick={() => handlePageChange(1)}
+                            className="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                          >
+                            1
+                          </button>
+                          {currentPage > 3 && <span className="px-1 text-gray-400">...</span>}
+                        </>
+                      )}
 
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50 transition-colors"
-                  >
-                    <ChevronDown size={20} className="-rotate-90" />
-                  </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => Math.abs(page - currentPage) <= 1)
+                        .map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`w-10 h-10 rounded-lg border font-medium transition-all ${
+                              currentPage === page
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+
+                      {/* Last Page */}
+                      {currentPage < totalPages - 1 && (
+                        <>
+                          {currentPage < totalPages - 2 && <span className="px-1 text-gray-400">...</span>}
+                          <button
+                            onClick={() => handlePageChange(totalPages)}
+                            className="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                          >
+                            {totalPages}
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      title="Siguiente"
+                    >
+                      <ChevronDown size={20} className="-rotate-90" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Página {currentPage} de {totalPages}
+                  </p>
                 </div>
               )}
             </>

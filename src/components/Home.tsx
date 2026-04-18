@@ -460,6 +460,33 @@ export function Home() {
         </div>
       </div>
 
+      {/* Directory by Profession Section */}
+      <div className="bg-slate-50 py-16 border-y border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900">Directorio por Oficio</h2>
+            <p className="mt-4 text-gray-600">Páginas dedicadas con consejos y profesionales especializados en cada área</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {PROFESSIONS.slice(0, 18).map((prof) => (
+              <Link 
+                key={prof.name}
+                to={`/professions/${prof.name.toLowerCase().replace(/\s+/g, '-')}`}
+                className="group p-4 bg-white rounded-xl text-center hover:bg-indigo-600 transition-all border border-gray-200 hover:border-indigo-600 shadow-sm hover:shadow-md"
+              >
+                <div className="mb-2 flex justify-center text-indigo-600 group-hover:text-white transition-colors">
+                  <prof.icon size={24} />
+                </div>
+                <span className="text-sm font-bold text-gray-700 group-hover:text-white transition-colors">{prof.name}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link to="/dashboard" className="text-indigo-600 font-bold hover:underline">Ver todos los oficios →</Link>
+          </div>
+        </div>
+      </div>
+
       {/* CTA Section */}
       <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

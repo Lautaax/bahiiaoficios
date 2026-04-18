@@ -8,6 +8,7 @@ import { User as UserType, Role } from '../types';
 import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
+import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { motion } from 'motion/react';
 
@@ -69,6 +70,38 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [uploadingWorks, setUploadingWorks] = useState(false);
   const [worksUploadProgress, setWorksUploadProgress] = useState<{ [key: number]: number }>({});
   const [isDragging, setIsDragging] = useState(false);
+  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['places']
+  });
+
+  const onAutocompleteLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
+    setAutocomplete(autocompleteInstance);
+  };
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      if (place.formatted_address) {
+        setFormData(prev => ({ ...prev, direccion: place.formatted_address }));
+      }
+      
+      const addressComponents = place.address_components;
+      if (addressComponents) {
+        const neighborhood = addressComponents.find(c => 
+          c.types.includes('neighborhood') || 
+          c.types.includes('sublocality') || 
+          c.types.includes('sublocality_level_1')
+        );
+        if (neighborhood) {
+          setFormData(prev => ({ ...prev, zona: neighborhood.long_name }));
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     if (initialSection) {
@@ -573,11 +606,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Zona</label>
-                    <select name="zona" value={formData.zona} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
-                      <option value="">Seleccionar Zona</option>
-                      {ZONAS.map(z => <option key={z} value={z}>{z}</option>)}
-                    </select>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Zona (Barrio)</label>
+                    <input 
+                      type="text" 
+                      name="zona" 
+                      value={formData.zona} 
+                      onChange={handleChange} 
+                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" 
+                      list="zonas-list"
+                      placeholder="Ej: Centro, Patagonia..."
+                    />
+                    <datalist id="zonas-list">
+                      {ZONAS.map(z => <option key={z} value={z} />)}
+                    </datalist>
                   </div>
                 </div>
               </div>
@@ -607,7 +648,29 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="WhatsApp" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
                     <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleChange} placeholder="Email de contacto" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
-                    <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} placeholder="Dirección" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
+                    
+                    {isLoaded ? (
+                      <Autocomplete
+                        onLoad={onAutocompleteLoad}
+                        onPlaceChanged={onPlaceChanged}
+                        options={{
+                          componentRestrictions: { country: "ar" },
+                          fields: ["address_components", "geometry", "formatted_address"],
+                        }}
+                      >
+                        <input 
+                          type="text" 
+                          name="direccion" 
+                          value={formData.direccion} 
+                          onChange={handleChange} 
+                          placeholder="Busca tu dirección..." 
+                          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" 
+                        />
+                      </Autocomplete>
+                    ) : (
+                      <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} placeholder="Dirección" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
+                    )}
+                    
                     <input type="text" name="cuit" value={formData.cuit} onChange={handleChange} placeholder="CUIT/CUIL" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -1,22 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { PROFESSIONS, ZONAS } from '../constants';
-import { Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Send, CheckCircle, AlertCircle, User as UserIcon } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export const QuoteRequestForm: React.FC = () => {
   const { currentUser } = useAuth();
+  const [searchParams] = useSearchParams();
+  const targetProfId = searchParams.get('profesionalId');
+  
   const [formData, setFormData] = useState({
     rubro: '',
     zona: '',
     descripcion: '',
     telefono: ''
   });
+  const [targetProfessional, setTargetProfessional] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingProf, setLoadingProf] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchTargetProf = async () => {
+      if (!targetProfId) return;
+      setLoadingProf(true);
+      try {
+        const profDoc = await getDoc(doc(db, 'usuarios', targetProfId));
+        if (profDoc.exists()) {
+          const data = profDoc.data();
+          setTargetProfessional({ id: profDoc.id, ...data });
+          setFormData(prev => ({
+            ...prev,
+            rubro: data.profesionalInfo?.rubro || '',
+            zona: data.zona || ''
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching target professional:", err);
+      } finally {
+        setLoadingProf(false);
+      }
+    };
+    fetchTargetProf();
+  }, [targetProfId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,27 +67,33 @@ export const QuoteRequestForm: React.FC = () => {
     setError('');
 
     try {
-      // Find professionals matching the criteria
-      const profQuery = query(
-        collection(db, 'usuarios'),
-        where('rol', '==', 'profesional'),
-        where('zona', '==', formData.zona)
-      );
-      
-      const profSnapshot = await getDocs(profQuery);
-      
-      // Filter by rubro in memory and sort by rating
-      let matchedProfessionals = profSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as any))
-        .filter(prof => 
-          prof.profesionalInfo?.rubro === formData.rubro || 
-          (prof.profesionalInfo?.rubros && prof.profesionalInfo.rubros.includes(formData.rubro))
-        )
-        .sort((a, b) => (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0));
+      let assignedProfessionals: string[] = [];
 
-      // Take up to 10 professionals so the first 3 can respond
-      const topProfessionals = matchedProfessionals.slice(0, 10);
-      const assignedProfessionals = topProfessionals.map(p => p.id);
+      if (targetProfId) {
+        assignedProfessionals = [targetProfId];
+      } else {
+        // Find professionals matching the criteria
+        const profQuery = query(
+          collection(db, 'usuarios'),
+          where('rol', '==', 'profesional'),
+          where('zona', '==', formData.zona)
+        );
+        
+        const profSnapshot = await getDocs(profQuery);
+        
+        // Filter by rubro in memory and sort by rating
+        let matchedProfessionals = profSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as any))
+          .filter(prof => 
+            prof.profesionalInfo?.rubro === formData.rubro || 
+            (prof.profesionalInfo?.rubros && prof.profesionalInfo.rubros.includes(formData.rubro))
+          )
+          .sort((a, b) => (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0));
+
+        // Take up to 10 professionals so the first 3 can respond
+        const topProfessionals = matchedProfessionals.slice(0, 10);
+        assignedProfessionals = topProfessionals.map(p => p.id);
+      }
 
       if (assignedProfessionals.length === 0) {
         setError('No encontramos profesionales en ese rubro y zona por el momento. Intenta buscar manualmente o cambia la zona.');

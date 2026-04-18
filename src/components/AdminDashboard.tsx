@@ -3,7 +3,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck } from 'lucide-react';
+import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Ad, TradeDiscount } from '../types';
 import { uploadToFirebase } from '../services/firebaseStorageService';
@@ -19,7 +19,11 @@ export const AdminDashboard: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [viewingDni, setViewingDni] = useState<User | null>(null);
+  const [viewingMatricula, setViewingMatricula] = useState<User | null>(null);
   const [managingBadges, setManagingBadges] = useState<User | null>(null);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userDateFilter, setUserDateFilter] = useState('');
+  const [userTypeFilter, setUserTypeFilter] = useState<'todos' | 'clientes' | 'profesionales'>('todos');
   const [newBadge, setNewBadge] = useState('');
 
   // Ad/Discount Form States
@@ -291,6 +295,29 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const filteredUsers = users.filter(user => {
+    const registrationDate = user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString() : 
+                            (user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '');
+    
+    const matchesSearch = 
+      user.nombre.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      (user.profesionalInfo?.rubro || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      registrationDate.includes(userSearchTerm);
+    
+    const matchesType = 
+      userTypeFilter === 'todos' ||
+      (userTypeFilter === 'clientes' && user.rol === 'cliente') ||
+      (userTypeFilter === 'profesionales' && user.rol === 'profesional');
+      
+    const matchesDate = !userDateFilter || (user.createdAt && (
+      user.createdAt.toDate ? user.createdAt.toDate().toISOString().startsWith(userDateFilter) : 
+      new Date(user.createdAt).toISOString().startsWith(userDateFilter)
+    ));
+
+    return matchesSearch && matchesType && matchesDate;
+  });
+
   if (loading) return <div className="p-8 text-center">Cargando panel de administración...</div>;
 
   return (
@@ -335,120 +362,198 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {activeTab === 'usuarios' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Usuario</th>
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Email</th>
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Identidad</th>
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Matrícula</th>
-                  <th className="p-4 font-semibold text-gray-700 dark:text-gray-300 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(user => (
-                  <tr key={user.uid} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <img src={user.fotoUrl || `https://ui-avatars.com/api/?name=${user.nombre}`} alt={user.nombre} className="w-10 h-10 rounded-full object-cover" />
-                        <div>
-                          <p className="font-bold text-gray-900 dark:text-white">
-                            {user.nombre}
-                            {user.nombreNegocio && <span className="ml-2 text-xs font-normal text-gray-500">({user.nombreNegocio})</span>}
-                          </p>
-                          <p className="text-xs text-gray-500">{user.slug || user.uid}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${user.rol === 'profesional' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {user.rol}
-                      </span>
-                      {user.isAdmin && (
-                        <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold uppercase bg-red-100 text-red-700">
-                          Admin
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{user.email}</td>
-                    <td className="p-4">
-                      {user.rol === 'profesional' ? (
-                        <button 
-                          onClick={() => handleVerifyIdentity(user.uid, !!user.profesionalInfo?.isVerified)}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.isVerified ? 'bg-blue-100 text-blue-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
-                          title={user.profesionalInfo?.isVerified ? 'Quitar verificación de DNI' : 'Verificar DNI'}
-                        >
-                          {user.profesionalInfo?.isVerified ? <ShieldCheck size={16} /> : <XCircle size={16} />}
-                          {user.profesionalInfo?.isVerified ? 'ID OK' : 'Sin ID'}
-                        </button>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {user.rol === 'profesional' ? (
-                        <button 
-                          onClick={() => handleToggleMatricula(user.uid, !!user.profesionalInfo?.matriculaVerified)}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.matriculaVerified ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700'}`}
-                          title={user.profesionalInfo?.matriculaVerified ? 'Quitar verificación de Matrícula' : 'Verificar Matrícula'}
-                        >
-                          {user.profesionalInfo?.matriculaVerified ? <BadgeCheck size={16} /> : <XCircle size={16} />}
-                          {user.profesionalInfo?.matriculaVerified ? 'MAT OK' : 'Sin MAT'}
-                        </button>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        {user.rol === 'profesional' && user.profesionalInfo?.fotoDni && currentUser?.isAdmin && (
-                          <button 
-                            onClick={() => setViewingDni(user)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Ver DNI"
-                          >
-                            <ImageIcon size={18} />
-                          </button>
-                        )}
-                        {user.rol === 'profesional' && (
-                          <button 
-                            onClick={() => setManagingBadges(user)}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                            title="Gestionar Insignias"
-                          >
-                            <Tag size={18} />
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => navigate(`/profesional/${user.slug || user.uid}`)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Ver Perfil Público"
-                        >
-                          <ShieldCheck size={18} />
-                        </button>
-                        <button 
-                          onClick={() => setEditingUser(user)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Editar Usuario"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteUser(user.uid)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar Usuario"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="text" 
+                placeholder="Buscar por nombre, email, rubro o fecha..." 
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              />
+            </div>
+            <div className="relative">
+              <input 
+                type="date" 
+                value={userDateFilter}
+                onChange={(e) => setUserDateFilter(e.target.value)}
+                className="px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-gray-600 dark:text-gray-400"
+              />
+              {userDateFilter && (
+                <button 
+                  onClick={() => setUserDateFilter('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <div className="flex bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button 
+                onClick={() => setUserTypeFilter('todos')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${userTypeFilter === 'todos' ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+              >
+                Todos
+              </button>
+              <button 
+                onClick={() => setUserTypeFilter('clientes')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${userTypeFilter === 'clientes' ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+              >
+                Clientes
+              </button>
+              <button 
+                onClick={() => setUserTypeFilter('profesionales')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${userTypeFilter === 'profesionales' ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+              >
+                Profesionales
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Usuario</th>
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Registro</th>
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Identidad</th>
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Matrícula</th>
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(user => (
+                    <tr key={user.uid} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <img src={user.fotoUrl || `https://ui-avatars.com/api/?name=${user.nombre}`} alt={user.nombre} className="w-10 h-10 rounded-full object-cover" />
+                          <div>
+                            <p className="font-bold text-gray-900 dark:text-white">
+                              {user.nombre}
+                              {user.nombreNegocio && <span className="ml-2 text-xs font-normal text-gray-500">({user.nombreNegocio})</span>}
+                            </p>
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <select 
+                          value={user.rol}
+                          onChange={async (e) => {
+                            const newRol = e.target.value as any;
+                            if (window.confirm(`¿Cambiar rol de ${user.nombre} a ${newRol}?`)) {
+                              try {
+                                await updateDoc(doc(db, 'usuarios', user.uid), { rol: newRol });
+                                setUsers(users.map(u => u.uid === user.uid ? { ...u, rol: newRol } : u));
+                              } catch (error) {
+                                console.error("Error updating role:", error);
+                              }
+                            }
+                          }}
+                          className={`px-2 py-1 rounded-lg text-xs font-bold uppercase outline-none bg-transparent border border-gray-200 dark:border-gray-700 ${user.rol === 'profesional' ? 'text-indigo-700' : 'text-gray-700'}`}
+                        >
+                          <option value="cliente">Cliente</option>
+                          <option value="profesional">Profesional</option>
+                        </select>
+                        {user.isAdmin && (
+                          <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold uppercase bg-red-100 text-red-700">
+                            Admin
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-sm text-gray-600 dark:text-gray-300">
+                        {user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString() : 
+                         (user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A')}
+                      </td>
+                      <td className="p-4">
+                        {user.rol === 'profesional' ? (
+                          <button 
+                            onClick={() => handleVerifyIdentity(user.uid, !!user.profesionalInfo?.isVerified)}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.isVerified ? 'bg-blue-100 text-blue-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
+                            title={user.profesionalInfo?.isVerified ? 'Quitar verificación de DNI' : 'Verificar DNI'}
+                          >
+                            {user.profesionalInfo?.isVerified ? <ShieldCheck size={16} /> : <XCircle size={16} />}
+                            {user.profesionalInfo?.isVerified ? 'ID OK' : 'Sin ID'}
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {user.rol === 'profesional' ? (
+                          <button 
+                            onClick={() => handleToggleMatricula(user.uid, !!user.profesionalInfo?.matriculaVerified)}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${user.profesionalInfo?.matriculaVerified ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                            title={user.profesionalInfo?.matriculaVerified ? 'Quitar verificación de Matrícula' : 'Verificar Matrícula'}
+                          >
+                            {user.profesionalInfo?.matriculaVerified ? <BadgeCheck size={16} /> : <XCircle size={16} />}
+                            {user.profesionalInfo?.matriculaVerified ? 'MAT OK' : 'Sin MAT'}
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          {user.rol === 'profesional' && user.profesionalInfo?.fotoDni && currentUser?.isAdmin && (
+                            <button 
+                              onClick={() => setViewingDni(user)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Ver DNI"
+                            >
+                              <ImageIcon size={18} />
+                            </button>
+                          )}
+                          {user.rol === 'profesional' && user.profesionalInfo?.fotoMatricula && currentUser?.isAdmin && (
+                            <button 
+                              onClick={() => setViewingMatricula(user)}
+                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Ver Matrícula"
+                            >
+                              <BadgeCheck size={18} />
+                            </button>
+                          )}
+                          {user.rol === 'profesional' && (
+                            <button 
+                              onClick={() => setManagingBadges(user)}
+                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                              title="Gestionar Insignias"
+                            >
+                              <Tag size={18} />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => navigate(`/profesional/${user.slug || user.uid}`)}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Ver Perfil Público"
+                          >
+                            <ShieldCheck size={18} />
+                          </button>
+                          <button 
+                            onClick={() => setEditingUser(user)}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Editar Usuario"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(user.uid)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar Usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -473,6 +578,13 @@ export const AdminDashboard: React.FC = () => {
                   <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute top-2 right-2 flex gap-2">
                     <button 
+                      onClick={() => toggleAdStatus(ad.id, ad.active)}
+                      className={`p-2 rounded-full shadow-md transition-all ${ad.active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}
+                      title={ad.active ? 'Desactivar Publicidad' : 'Activar Publicidad'}
+                    >
+                      {ad.active ? <Eye size={16} /> : <EyeOff size={16} />}
+                    </button>
+                    <button 
                       onClick={() => {
                         setEditingAd(ad);
                         setNewAd(ad);
@@ -494,12 +606,9 @@ export const AdminDashboard: React.FC = () => {
                   <h3 className="font-bold text-gray-900 dark:text-white line-clamp-1">{ad.title}</h3>
                   <p className="text-xs text-gray-500 mb-4 uppercase tracking-wider font-semibold">{ad.position.replace('_', ' ')}</p>
                   <div className="flex justify-between items-center">
-                    <button 
-                      onClick={() => toggleAdStatus(ad.id, ad.active)}
-                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${ad.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
-                    >
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${ad.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                       {ad.active ? 'Activa' : 'Inactiva'}
-                    </button>
+                    </div>
                     <span className="text-[10px] text-gray-400">ID: {ad.id.substring(0, 8)}</span>
                   </div>
                 </div>
@@ -589,6 +698,16 @@ export const AdminDashboard: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link (Opcional)</label>
                 <input type="url" value={newAd.link || ''} onChange={e => setNewAd({...newAd, link: e.target.value})} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700" />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Estado de la Publicidad</span>
+                <button
+                  type="button"
+                  onClick={() => setNewAd({...newAd, active: !newAd.active})}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${newAd.active ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${newAd.active ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
               </div>
               <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-3">
                 <div className="flex items-center justify-between">
@@ -779,6 +898,45 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {viewingMatricula && currentUser?.isAdmin && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Verificación de Matrícula: {viewingMatricula.nombre}</h3>
+              <button onClick={() => setViewingMatricula(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 flex flex-col items-center">
+              <div className="w-full mb-6">
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 text-center">Credencial de Matrícula</h4>
+                <img 
+                  src={viewingMatricula.profesionalInfo?.fotoMatricula} 
+                  alt="Matrícula" 
+                  className="max-w-full max-h-[60vh] mx-auto object-contain rounded-lg border border-gray-200 dark:border-gray-700" 
+                />
+              </div>
+              <div className="flex gap-4 w-full">
+                <button 
+                  onClick={() => {
+                    handleToggleMatricula(viewingMatricula.uid, false);
+                    setViewingMatricula(null);
+                  }}
+                  className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={20} /> Aprobar Matrícula
+                </button>
+                <button 
+                  onClick={() => setViewingMatricula(null)}
+                  className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {viewingDni && currentUser?.isAdmin && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
@@ -819,7 +977,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex flex-wrap gap-4 mt-8 w-full justify-center">
                 <button 
                   onClick={() => {
-                    handleVerify(viewingDni.uid, false);
+                    handleVerifyIdentity(viewingDni.uid, false);
                     setViewingDni(null);
                   }}
                   className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
@@ -829,7 +987,7 @@ export const AdminDashboard: React.FC = () => {
                 {viewingDni.profesionalInfo?.fotoMatricula && (
                   <button 
                     onClick={() => {
-                      handleApproveMatricula(viewingDni.uid);
+                      handleToggleMatricula(viewingDni.uid, false);
                       setViewingDni(null);
                     }}
                     className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -838,12 +996,10 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                 )}
                 <button 
-                  onClick={() => {
-                    setViewingDni(null);
-                  }}
-                  className="px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                  onClick={() => setViewingDni(null)}
+                  className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
-                  <X size={18} /> Cerrar
+                  Cerrar
                 </button>
               </div>
             </div>

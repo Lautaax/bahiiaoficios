@@ -65,7 +65,6 @@ export const ZONAS = [
   'San Andrés', 
   'Tiro Federal', 
   'Ingeniero White',
-  'Ing. White',
   'Aldea Romana',
   'Villa Harding Green',
   'Villa Rosas',
@@ -75,6 +74,63 @@ export const ZONAS = [
   'Napostá',
   'Pedro Pico',
   'General Daniel Cerri',
-  'Cerri',
-  'Cabildo'
+  'Cabildo',
+  'Villa Belgrano',
+  'Villa Floresta',
+  'Villa Amaducci',
+  'Villa Duprat',
+  'Villa Serra',
+  'Villa Talleres',
+  'Km 5',
+  'Loma Paraguaya',
+  'San Roque',
+  'Estomba',
+  'Mariano Moreno',
+  'Kilómetro 5',
+  'Punta Alta'
 ];
+
+export const PROFESSION_TIPS: Record<string, string[]> = {
+  'Electricista': [
+    'Verifica que el profesional esté matriculado para trabajos que requieran certificación.',
+    'Pide un presupuesto detallado que incluya materiales y mano de obra.',
+    'Asegúrate de que utilice materiales normalizados (sellos IRAM).',
+    'Consulta si ofrece garantía por el trabajo realizado.'
+  ],
+  'Plomero': [
+    'Solicita referencias de trabajos anteriores similares.',
+    'Verifica si el profesional cuenta con herramientas adecuadas para detectar fugas.',
+    'Acuerda si el presupuesto incluye la rotura y reparación de paredes/pisos.',
+    'Pregunta por la duración estimada del trabajo.'
+  ],
+  'Gasista': [
+    'Es fundamental que sea un Gasista Matriculado por seguridad y normativas.',
+    'Verifica su credencial vigente antes de comenzar cualquier obra.',
+    'Pide que realice pruebas de hermeticidad al finalizar.',
+    'No aceptes instalaciones que no cumplan con las normas de Camuzzi.'
+  ],
+  'Albañil': [
+    'Define claramente el alcance del proyecto antes de empezar.',
+    'Establece un plan de pagos por etapas cumplidas.',
+    'Consulta quién se encarga de la compra y acarreo de materiales.',
+    'Asegúrate de que mantenga la limpieza de la obra.'
+  ],
+  'Pintor': [
+    'Pide asesoramiento sobre el tipo de pintura adecuado para cada superficie.',
+    'Verifica que el presupuesto incluya la preparación previa de las paredes (lijado, enduido).',
+    'Consulta cuántas manos de pintura están incluidas.',
+    'Asegúrate de que proteja muebles y pisos antes de comenzar.'
+  ],
+  'Carpintero': [
+    'Pide ver fotos de trabajos terminados o muestras de madera.',
+    'Define el tipo de herrajes y terminaciones (lustre, laca, melamina).',
+    'Toma medidas precisas y pide un diseño o croquis previo.',
+    'Consulta sobre el tiempo de entrega e instalación.'
+  ],
+  'Default': [
+    'Revisa las opiniones de otros clientes en su perfil.',
+    'Pide siempre un presupuesto por escrito antes de iniciar.',
+    'Comunícate a través del chat de la plataforma para mayor seguridad.',
+    'No realices pagos por adelantado sin una garantía o contrato.'
+  ]
+};
