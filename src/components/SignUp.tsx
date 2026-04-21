@@ -4,7 +4,6 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { Role } from '../types';
 import { Upload, User, Briefcase, AlertCircle } from 'lucide-react';
 import { ZONAS, PROFESSIONS } from '../constants';
@@ -37,40 +36,7 @@ export const SignUp: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const navigate = useNavigate();
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: ['places']
-  });
-
-  const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
-    setAutocomplete(autocompleteInstance);
-  };
-
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place.formatted_address) {
-        setDireccion(place.formatted_address);
-      }
-      
-      // Try to extract neighborhood/sublocality for the "zona"
-      const addressComponents = place.address_components;
-      if (addressComponents) {
-        const neighborhood = addressComponents.find(c => 
-          c.types.includes('neighborhood') || 
-          c.types.includes('sublocality') || 
-          c.types.includes('sublocality_level_1')
-        );
-        if (neighborhood) {
-          setZona(neighborhood.long_name);
-        }
-      }
-    }
-  };
 
   const rubros = PROFESSIONS.map(p => p.name);
   const zonas = ZONAS;
@@ -472,34 +438,15 @@ export const SignUp: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="direccion" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Dirección (Usa el buscador)</label>
-                  {isLoaded ? (
-                    <Autocomplete
-                      onLoad={onLoad}
-                      onPlaceChanged={onPlaceChanged}
-                      options={{
-                        componentRestrictions: { country: "ar" },
-                        fields: ["address_components", "geometry", "formatted_address"],
-                      }}
-                    >
-                      <input
-                        id="direccion"
-                        type="text"
-                        placeholder="Busca tu dirección..."
-                        className="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm"
-                        value={direccion}
-                        onChange={(e) => setDireccion(e.target.value)}
-                      />
-                    </Autocomplete>
-                  ) : (
-                    <input
-                      id="direccion"
-                      type="text"
-                      className="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm"
-                      value={direccion}
-                      onChange={(e) => setDireccion(e.target.value)}
-                    />
-                  )}
+                  <label htmlFor="direccion" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Dirección</label>
+                  <input
+                    id="direccion"
+                    type="text"
+                    placeholder="Tu dirección..."
+                    className="block w-full px-4 py-3 border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm"
+                    value={direccion}
+                    onChange={(e) => setDireccion(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label htmlFor="contactEmail" className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1 ml-1">Email de Contacto</label>

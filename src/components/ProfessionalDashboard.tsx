@@ -7,6 +7,7 @@ import { VipButton } from './VipButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { ProfessionalOnboarding } from './ProfessionalOnboarding';
 import { Profile } from './Profile';
+import { Skeleton } from './ui/Skeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 type TabType = 'resumen' | 'perfil' | 'estadisticas' | 'pedidos' | 'reseñas';
@@ -575,7 +576,22 @@ const ReviewsList: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="text-gray-500">Cargando reseñas...</div>;
+  if (loading) return (
+    <div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-3 w-1/6" />
+            </div>
+          </div>
+          <Skeleton className="h-20 w-full rounded-xl" />
+        </div>
+      ))}
+    </div>
+  );
   if (reviews.length === 0) return (
     <div className="bg-white dark:bg-gray-800 p-12 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
       <Star size={48} className="mx-auto text-gray-300 mb-4" />
@@ -701,6 +717,7 @@ const QuoteRequestsList: React.FC<{ limitCount?: number }> = ({ limitCount }) =>
     const fetchRequests = async () => {
       if (!currentUser) return;
       try {
+        setLoading(true);
         const q = query(
           collection(db, 'quoteRequests'),
           where('profesionalesAsignados', 'array-contains', currentUser.uid)
@@ -765,7 +782,22 @@ const QuoteRequestsList: React.FC<{ limitCount?: number }> = ({ limitCount }) =>
     }
   };
 
-  if (loading) return <div className="text-gray-500">Cargando solicitudes...</div>;
+  if (loading) return (
+    <div className="space-y-4">
+      {[...Array(2)].map((_, i) => (
+        <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-4">
+          <div className="flex justify-between">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <div className="flex justify-end">
+            <Skeleton className="h-10 w-32 rounded-xl" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
   if (requests.length === 0) return <div className="text-gray-500 p-8 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No hay solicitudes nuevas en tu rubro.</div>;
 
   return (

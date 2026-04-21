@@ -93,6 +93,15 @@ async function startServer() {
   // Middleware to parse JSON bodies
   app.use(express.json());
 
+  // Image Caching Middleware
+  app.use((req, res, next) => {
+    // Set caching for static images
+    if (req.url.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+    next();
+  });
+
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });

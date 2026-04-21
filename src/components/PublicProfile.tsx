@@ -286,7 +286,11 @@ export const PublicProfile: React.FC = () => {
   }
 
   const { nombre, zona, fotoUrl } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada, diasDisponibilidad } = professional.profesionalInfo;
+
+  const todayIndex = new Date().getDay();
+  const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
+  const DAYS_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
   const profileUrl = window.location.href;
 
@@ -386,18 +390,31 @@ export const PublicProfile: React.FC = () => {
                       <span>ATENCIÓN URGENCIAS 24/7</span>
                     </div>
                   )}
-                  {disponibilidadInmediata ? (
+                  {worksToday ? (
                     <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs px-3 py-1 rounded-full font-bold border border-green-100 dark:border-green-800">
                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                      <span>DISPONIBLE AHORA</span>
+                      <span>{disponibilidadInmediata ? 'DISPONIBLE AHORA' : 'ATIENDE HOY'}</span>
                     </div>
                   ) : (
                     <div className="inline-flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-full font-bold border border-gray-200 dark:border-gray-700">
                       <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                      <span>OCUPADO</span>
+                      <span>CERRADO HOY</span>
                     </div>
                   )}
                 </div>
+                
+                {diasDisponibilidad && (
+                  <div className="mt-4 flex flex-wrap justify-center gap-1">
+                    {DAYS_NAMES.map((d, index) => (
+                      <span 
+                        key={d} 
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${diasDisponibilidad.includes(index) ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : 'text-gray-300 dark:text-gray-600'}`}
+                      >
+                        {d}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-center gap-6 mb-6 border-t border-b border-gray-100 dark:border-gray-700 py-4">
@@ -537,7 +554,7 @@ export const PublicProfile: React.FC = () => {
 
                 {telefono && (
                   <a
-                    href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi tu perfil en Bahía Oficios y necesito presupuesto para...`)}`}
+                    href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${nombre}, vi tu perfil en Bahía Oficios y necesito presupuesto para un servicio de ${rubro}.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={handleWhatsAppClick}

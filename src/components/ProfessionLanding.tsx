@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { db } from '../firebase';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
+import { Skeleton } from './ui/Skeleton';
 import { PROFESSIONS, PROFESSION_TIPS } from '../constants';
 import { ShieldCheck, Info, ChevronLeft, Briefcase, Star, MapPin } from 'lucide-react';
 
@@ -22,6 +23,17 @@ export const ProfessionLanding: React.FC = () => {
 
   const professionName = professionData?.name || profession || '';
   const tips = PROFESSION_TIPS[professionName] || PROFESSION_TIPS['Default'];
+
+  // SEO Metadata
+  useEffect(() => {
+    if (professionName) {
+      document.title = `${professionName}s en Bahía Blanca | Bahía Oficios`;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', `Encontrá los mejores ${professionName.toLowerCase()}s en Bahía Blanca. Profesionales calificados, presupuestos sin cargo y atención garantizada en toda la ciudad.`);
+      }
+    }
+  }, [professionName]);
 
   useEffect(() => {
     const fetchProfessionals = async () => {
@@ -124,8 +136,14 @@ export const ProfessionLanding: React.FC = () => {
 
               {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="bg-white rounded-xl h-80 animate-pulse border border-gray-200"></div>
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-4">
+                      <Skeleton className="w-full h-48 rounded-xl" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : professionals.length > 0 ? (

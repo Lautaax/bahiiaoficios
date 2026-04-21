@@ -8,7 +8,6 @@ import { User as UserType, Role } from '../types';
 import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
-import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { motion } from 'motion/react';
 
@@ -45,6 +44,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
     haceUrgencias: false,
     disponibilidadInmediata: false,
     matriculado: false,
+    diasDisponibilidad: [1, 2, 3, 4, 5] as number[], // Default Mon-Fri
     preciosReferencia: [] as { servicio: string; precio: string }[],
     badges: [] as string[],
     fotoPortada: ''
@@ -70,38 +70,31 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [uploadingWorks, setUploadingWorks] = useState(false);
   const [worksUploadProgress, setWorksUploadProgress] = useState<{ [key: number]: number }>({});
   const [isDragging, setIsDragging] = useState(false);
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
 
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: ['places']
-  });
-
-  const onAutocompleteLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
-    setAutocomplete(autocompleteInstance);
-  };
-
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place.formatted_address) {
-        setFormData(prev => ({ ...prev, direccion: place.formatted_address }));
-      }
-      
-      const addressComponents = place.address_components;
-      if (addressComponents) {
-        const neighborhood = addressComponents.find(c => 
-          c.types.includes('neighborhood') || 
-          c.types.includes('sublocality') || 
-          c.types.includes('sublocality_level_1')
-        );
-        if (neighborhood) {
-          setFormData(prev => ({ ...prev, zona: neighborhood.long_name }));
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    if (currentUser) {
+      const savedDraft = localStorage.getItem(`profile_draft_${currentUser.uid}`);
+      if (savedDraft) {
+        try {
+          const draft = JSON.parse(savedDraft);
+          // Only apply draft if it exists and looks valid
+          if (draft && typeof draft === 'object') {
+            setFormData(prev => ({ ...prev, ...draft }));
+          }
+        } catch (e) {
+          console.error("Error loading profile draft:", e);
         }
       }
     }
-  };
+  }, [currentUser?.uid]);
+
+  // Save draft to localStorage whenever formData changes
+  useEffect(() => {
+    if (currentUser && formData.nombre) { // Only save if at least name is present to avoid saving empty states
+      localStorage.setItem(`profile_draft_${currentUser.uid}`, JSON.stringify(formData));
+    }
+  }, [formData, currentUser?.uid]);
 
   useEffect(() => {
     if (initialSection) {
@@ -141,6 +134,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
         haceUrgencias: currentUser.profesionalInfo?.haceUrgencias || false,
         disponibilidadInmediata: currentUser.profesionalInfo?.disponibilidadInmediata || false,
         matriculado: currentUser.profesionalInfo?.matriculado || false,
+        diasDisponibilidad: currentUser.profesionalInfo?.diasDisponibilidad || [1, 2, 3, 4, 5],
         nombreNegocio: currentUser.profesionalInfo?.nombreNegocio || currentUser.nombreNegocio || '',
         preciosReferencia: currentUser.profesionalInfo?.preciosReferencia || [],
         badges: currentUser.profesionalInfo?.badges || [],
@@ -402,12 +396,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
       if (formData.rol === 'profesional') {
         updateData.profesionalInfo = {
+          ...(currentUser.profesionalInfo || {}),
           rubro: formData.rubros[0] || formData.rubro,
           rubros: formData.rubros,
           descripcion: formData.descripcion,
-          isVip: currentUser.profesionalInfo?.isVip || false,
-          ratingAvg: currentUser.profesionalInfo?.ratingAvg || 0,
-          reviewCount: currentUser.profesionalInfo?.reviewCount || 0,
           fotosTrabajos: finalWorkImages.map(img => img.url),
           fotosTrabajosDetalle: finalWorkImages,
           fotoPortada: formData.fotoPortada,
@@ -422,7 +414,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
           haceUrgencias: formData.haceUrgencias,
           disponibilidadInmediata: formData.disponibilidadInmediata,
           matriculado: formData.matriculado,
-          matriculaVerified: currentUser.profesionalInfo?.matriculaVerified || false,
+          diasDisponibilidad: formData.diasDisponibilidad,
           nombreNegocio: formData.nombreNegocio || null,
           preciosReferencia: formData.preciosReferencia,
           badges: formData.badges
@@ -430,6 +422,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
       }
 
       await updateDoc(userRef, updateData);
+      
+      // Clear draft on successful save
+      localStorage.removeItem(`profile_draft_${currentUser.uid}`);
+      
       setNewWorkFiles([]);
       setNewWorkPreviews([]);
       setExistingWorkImages(finalWorkImages);
@@ -649,27 +645,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                     <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="WhatsApp" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
                     <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleChange} placeholder="Email de contacto" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
                     
-                    {isLoaded ? (
-                      <Autocomplete
-                        onLoad={onAutocompleteLoad}
-                        onPlaceChanged={onPlaceChanged}
-                        options={{
-                          componentRestrictions: { country: "ar" },
-                          fields: ["address_components", "geometry", "formatted_address"],
-                        }}
-                      >
-                        <input 
-                          type="text" 
-                          name="direccion" 
-                          value={formData.direccion} 
-                          onChange={handleChange} 
-                          placeholder="Busca tu dirección..." 
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" 
-                        />
-                      </Autocomplete>
-                    ) : (
-                      <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} placeholder="Dirección" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
-                    )}
+                    <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} placeholder="Dirección" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
                     
                     <input type="text" name="cuit" value={formData.cuit} onChange={handleChange} placeholder="CUIT/CUIL" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700" />
                   </div>
@@ -687,6 +663,35 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                       <span className="font-bold text-gray-700 dark:text-gray-300">Matriculado</span>
                     </label>
                   </div>
+
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Días de Atención</label>
+                    <div className="flex flex-wrap gap-2">
+                      {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day, index) => {
+                        const isSelected = formData.diasDisponibilidad.includes(index);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => {
+                              const newDays = isSelected
+                                ? formData.diasDisponibilidad.filter(d => d !== index)
+                                : [...formData.diasDisponibilidad, index].sort();
+                              setFormData({ ...formData, diasDisponibilidad: newDays });
+                            }}
+                            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                              isSelected
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                                : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-indigo-400'
+                            }`}
+                          >
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><CreditCard /> Mercado Pago</h3>
                     <p className="text-sm text-gray-600 mb-6">Vinculá tu cuenta para cobrar señas.</p>

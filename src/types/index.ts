@@ -33,6 +33,7 @@ export interface ProfesionalInfo {
   profileViews?: number;
   whatsappClicks?: number;
   badges?: string[]; // e.g., 'Puntualidad', '100 Trabajos', 'Verificado'
+  diasDisponibilidad?: number[]; // 0=Sunday, 1=Monday... 6=Saturday
   preciosReferencia?: { servicio: string; precio: string }[];
   fotosTrabajosDetalle?: { url: string; descripcion: string }[];
   fotoPortada?: string;

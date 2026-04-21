@@ -28,6 +28,11 @@ service firebase.storage {
       allow write: if isOwner(userId) || isAdmin();
     }
     
+    match /matricula_images/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
     match /work_images/{userId}/{allPaths=**} {
       allow read: if true;
       allow write: if isOwner(userId) || isAdmin();

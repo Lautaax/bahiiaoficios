@@ -5,10 +5,10 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
+import { Skeleton } from './ui/Skeleton';
 import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { api } from '../services/api';
-import { ZonaMap } from './ZonaMap';
 
 // Helper to normalize strings (remove accents)
 const normalizeString = (str: string) => {
@@ -33,7 +33,6 @@ export const Dashboard: React.FC = () => {
   const [showVipWelcome, setShowVipWelcome] = useState(false);
   const [isRubroOpen, setIsRubroOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [showMap, setShowMap] = useState(false);
   const [ads, setAds] = useState<any[]>([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -722,35 +721,24 @@ export const Dashboard: React.FC = () => {
             </h3>
             <span className="text-sm text-gray-500">Ordenado por: Destacados y Calificación</span>
           </div>
-          
-          <button 
-            onClick={() => setShowMap(!showMap)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all ${showMap ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`}
-          >
-            <MapPin size={18} />
-            {showMap ? 'Ocultar Mapa' : 'Ver Mapa de Zonas'}
-          </button>
         </div>
 
-        {showMap && (
-          <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
-            <ZonaMap 
-              selectedZona={selectedZona} 
-              onSelectZona={(zona) => {
-                setSelectedZona(zona);
-                // Scroll to results after selection on mobile
-                if (window.innerWidth < 768) {
-                  setShowMap(false);
-                }
-              }} 
-            />
-          </div>
-        )}
-
         {loading ? (
-             <div className="flex justify-center py-12">
-                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-             </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
+                <Skeleton className="w-full h-48 rounded-2xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-20 rounded-full" />
+                  <Skeleton className="h-8 w-20 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

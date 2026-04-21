@@ -121,7 +121,10 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotoPortada } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotoPortada, diasDisponibilidad } = professional.profesionalInfo;
+
+  const todayIndex = new Date().getDay();
+  const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
 
   const isClient = currentUser?.rol === 'cliente';
 
@@ -380,15 +383,15 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                     <span>Urgencias</span>
                   </div>
                 )}
-                {disponibilidadInmediata ? (
+                {worksToday ? (
                   <div className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-green-100">
                     <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span>
-                    <span>Disponible</span>
+                    <span>{disponibilidadInmediata ? 'Disponible' : 'Atiende Hoy'}</span>
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-gray-200">
                     <span className="w-1 h-1 rounded-full bg-gray-400"></span>
-                    <span>Ocupado</span>
+                    <span>Cerrado</span>
                   </div>
                 )}
               </div>
@@ -451,7 +454,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
               )}
               {telefono ? (
                 <a 
-                  href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi tu perfil en Bahía Oficios y necesito presupuesto para...`)}`}
+                  href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${nombre}, vi tu perfil en Bahía Oficios y necesito presupuesto para un servicio de ${rubro}.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`
