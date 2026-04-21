@@ -35,6 +35,33 @@ import { ChatBadge } from './components/ChatBadge';
 function Navbar() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -59,6 +86,14 @@ function Navbar() {
           </Link>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+          {showInstallBtn && (
+            <button
+              onClick={handleInstallClick}
+              className="hidden lg:flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800"
+            >
+              🚀 Instalar App
+            </button>
+          )}
           {currentUser ? (
             <div className="flex items-center gap-2 sm:gap-4">
               <Link to="/dashboard" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
