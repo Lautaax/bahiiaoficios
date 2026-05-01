@@ -84,7 +84,7 @@ export const VipButton: React.FC = () => {
         userEmail: currentUser.email,
         redirectUrl: window.location.origin,
         metadata: {
-          userId: currentUser.uid,
+          user_id: currentUser.uid,
           planId: selectedPlan.id,
           months: selectedPlan.months
         }

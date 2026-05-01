@@ -296,7 +296,13 @@ async function startServer() {
         if (payment.status === 'approved') {
           console.log(`Payment ${id} approved. Metadata:`, payment.metadata);
           
-          const { user_id, months, type, request_id, profesional_id, adId } = payment.metadata;
+          const metadata = payment.metadata || {};
+          const user_id = metadata.user_id || metadata.userId;
+          const months = metadata.months;
+          const type = metadata.type;
+          const request_id = metadata.request_id || metadata.requestId;
+          const profesional_id = metadata.profesional_id || metadata.profesionalId;
+          const adId = metadata.adId || metadata.ad_id;
           
           if (type === 'deposit' && request_id && profesional_id) {
             try {
@@ -352,18 +358,33 @@ async function startServer() {
             try {
               const db = admin.firestore();
               const userRef = db.collection('usuarios').doc(user_id);
+              const userDoc = await userRef.get();
               
-              // Calculate new expiration date
-              const now = new Date();
-              const expirationDate = new Date(now.setMonth(now.getMonth() + Number(months)));
-              
-              await userRef.update({
-                'profesionalInfo.isVip': true,
-                'profesionalInfo.vipExpiration': admin.firestore.Timestamp.fromDate(expirationDate),
-                'updatedAt': admin.firestore.FieldValue.serverTimestamp()
-              });
-              
-              console.log(`User ${user_id} upgraded to VIP until ${expirationDate}`);
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                const currentVip = userData?.profesionalInfo?.isVip || false;
+                const currentExpiration = userData?.profesionalInfo?.vipExpiration;
+                
+                let baseDate = new Date();
+                
+                // If user is already VIP and expiration is in the future, extend from that date
+                if (currentVip && currentExpiration) {
+                  const currentExpDate = currentExpiration.toDate();
+                  if (currentExpDate > baseDate) {
+                    baseDate = currentExpDate;
+                  }
+                }
+                
+                const expirationDate = new Date(baseDate.setMonth(baseDate.getMonth() + Number(months)));
+                
+                await userRef.update({
+                  'profesionalInfo.isVip': true,
+                  'profesionalInfo.vipExpiration': admin.firestore.Timestamp.fromDate(expirationDate),
+                  'updatedAt': admin.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log(`User ${user_id} upgraded/extended VIP until ${expirationDate}`);
+              }
             } catch (dbError) {
               console.error("Error updating Firestore:", dbError);
               // We don't return 500 here because we want to acknowledge the webhook

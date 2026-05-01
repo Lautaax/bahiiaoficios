@@ -96,7 +96,7 @@ export const PublicidadComercio: React.FC = () => {
         userEmail: currentUser.email,
         redirectUrl: window.location.origin + '/dashboard',
         metadata: {
-          userId: currentUser.uid,
+          user_id: currentUser.uid,
           adId: docRef.id,
           type: 'ad_payment',
           months: selectedPlan.months
