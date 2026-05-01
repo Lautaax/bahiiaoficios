@@ -9,6 +9,7 @@ import { ProfessionalOnboarding } from './ProfessionalOnboarding';
 import { Profile } from './Profile';
 import { Skeleton } from './ui/Skeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { QRCodeCanvas } from 'qrcode.react';
 
 type TabType = 'resumen' | 'perfil' | 'estadisticas' | 'pedidos' | 'reseñas';
 
@@ -304,16 +305,34 @@ export const ProfessionalDashboard: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl text-indigo-600 dark:text-indigo-400">
-                      <MessageSquare size={24} />
-                    </div>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all flex flex-col items-center justify-center text-center">
+                  <div className="mb-4">
+                    <QRCodeCanvas 
+                      id="prof-qr-code"
+                      value={`${window.location.origin}/profesional/${currentUser.uid}`}
+                      size={120}
+                      level="H"
+                      includeMargin={false}
+                      className="rounded-xl"
+                    />
                   </div>
-                  <h3 className="text-gray-500 dark:text-gray-400 font-medium">Reseñas Totales</h3>
-                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-2">
-                    {profesionalInfo?.reviewCount || 0}
-                  </p>
+                  <h3 className="text-gray-900 dark:text-white font-bold text-sm">Tu Código QR</h3>
+                  <p className="text-xs text-gray-500 mb-4">Escanealo para ver tu perfil</p>
+                  <button 
+                    onClick={() => {
+                      const canvas = document.getElementById('prof-qr-code') as HTMLCanvasElement;
+                      if (canvas) {
+                        const url = canvas.toDataURL('image/png');
+                        const link = document.createElement('a');
+                        link.download = `QR-BahiaOficios-${currentUser.nombre}.png`;
+                        link.href = url;
+                        link.click();
+                      }
+                    }}
+                    className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 transition-colors"
+                  >
+                    Descargar QR
+                  </button>
                 </div>
               </div>
 

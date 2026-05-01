@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
 import { Skeleton } from './ui/Skeleton';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { api } from '../services/api';
 
@@ -27,6 +27,8 @@ export const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(searchParams.get('disponibilidad') === 'true');
   const [haceUrgencias, setHaceUrgencias] = useState(searchParams.get('urgencias') === 'true');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(searchParams.get('favoritos') === 'true');
+  const [minRating, setMinRating] = useState<number>(Number(searchParams.get('rating')) || 0);
   const [sortBy, setSortBy] = useState<'score' | 'rating' | 'reviews'>(searchParams.get('sort') as any || 'score');
   
   const [indexErrorLink, setIndexErrorLink] = useState<string | null>(null);
@@ -62,11 +64,13 @@ export const Dashboard: React.FC = () => {
     if (finalSearchTerm) params.search = finalSearchTerm;
     if (haceUrgencias) params.urgencias = 'true';
     if (disponibilidadInmediata) params.disponibilidad = 'true';
+    if (showFavoritesOnly) params.favoritos = 'true';
+    if (minRating > 0) params.rating = minRating.toString();
     if (sortBy !== 'score') params.sort = sortBy;
     
     setSearchParams(params, { replace: true });
     setCurrentPage(1); // Reset to first page on filter change
-  }, [selectedRubro, selectedZona, searchTerm, haceUrgencias, disponibilidadInmediata]);
+  }, [selectedRubro, selectedZona, searchTerm, haceUrgencias, disponibilidadInmediata, showFavoritesOnly, minRating]);
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -187,9 +191,21 @@ export const Dashboard: React.FC = () => {
       const matchesDisponibilidad = !disponibilidadInmediata || p.profesionalInfo?.disponibilidadInmediata;
       const matchesUrgencias = !haceUrgencias || p.profesionalInfo?.haceUrgencias;
 
-      return matchesRubro && matchesZona && matchesSearch && matchesDisponibilidad && matchesUrgencias;
+      let isFav = false;
+      if (showFavoritesOnly) {
+        if (currentUser && currentUser.favoritos) {
+          isFav = currentUser.favoritos.includes(p.uid);
+        } else {
+          const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+          isFav = favorites.includes(p.uid);
+        }
+      }
+      const matchesFavorites = !showFavoritesOnly || isFav;
+      const matchesRating = !minRating || (p.profesionalInfo?.ratingAvg || 0) >= minRating;
+
+      return matchesRubro && matchesZona && matchesSearch && matchesDisponibilidad && matchesUrgencias && matchesFavorites && matchesRating;
     });
-  }, [professionals, selectedRubro, selectedZona, searchTerm, disponibilidadInmediata, haceUrgencias]);
+  }, [professionals, selectedRubro, selectedZona, searchTerm, disponibilidadInmediata, haceUrgencias, showFavoritesOnly, currentUser?.favoritos, minRating]);
 
   // Sort professionals by gamification score or selected criteria
   const sortedProfessionals = useMemo(() => {
@@ -504,6 +520,17 @@ export const Dashboard: React.FC = () => {
               <div className={`w-2 h-2 rounded-full ${haceUrgencias ? 'bg-red-500' : 'bg-gray-400'}`}></div>
               Urgencias 24h
             </button>
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+                showFavoritesOnly
+                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <Heart size={14} className={showFavoritesOnly ? 'fill-rose-500 text-rose-500' : 'text-gray-400'} />
+              Mis Guardados
+            </button>
             
             {selectedRubro !== 'Todos' && (
               <button
@@ -549,6 +576,21 @@ export const Dashboard: React.FC = () => {
                   />
                   <span className="text-sm text-gray-700">Atención de Urgencias 24h</span>
                 </label>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Rating mínimo:</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setMinRating(minRating === star ? 0 : star)}
+                        className={`p-1 transition-colors ${minRating >= star ? 'text-amber-400' : 'text-gray-300 hover:text-amber-200'}`}
+                      >
+                        <Star size={20} className={minRating >= star ? 'fill-current' : ''} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}

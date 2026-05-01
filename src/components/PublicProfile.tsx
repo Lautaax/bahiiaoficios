@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
@@ -18,6 +18,53 @@ export const PublicProfile: React.FC = () => {
   const [error, setError] = useState('');
   const { currentUser } = useAuth();
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showShareFeedback, setShowShareFeedback] = useState(false);
+
+  useEffect(() => {
+    if (currentUser && currentUser.favoritos && professional) {
+      setIsFavorite(currentUser.favoritos.includes(professional.uid));
+    } else if (professional) {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      setIsFavorite(favorites.includes(professional.uid));
+    }
+  }, [professional, currentUser?.favoritos]);
+
+  const toggleFavorite = async () => {
+    if (!professional) return;
+
+    if (currentUser) {
+      try {
+        const userRef = doc(db, 'usuarios', currentUser.uid);
+        const newFavorites = isFavorite
+          ? (currentUser.favoritos || []).filter((id: string) => id !== professional.uid)
+          : [...(currentUser.favoritos || []), professional.uid];
+        
+        await updateDoc(userRef, { favoritos: newFavorites });
+      } catch (error) {
+        console.error("Error updating favorites in Firestore:", error);
+      }
+    } else {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      let newFavorites;
+      
+      if (isFavorite) {
+        newFavorites = favorites.filter((id: string) => id !== professional.uid);
+      } else {
+        newFavorites = [...favorites, professional.uid];
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(newFavorites));
+      setIsFavorite(!isFavorite);
+    }
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setShowShareFeedback(true);
+      setTimeout(() => setShowShareFeedback(false), 2000);
+    });
+  };
 
   useEffect(() => {
     const fetchProfessional = async () => {
@@ -334,6 +381,37 @@ export const PublicProfile: React.FC = () => {
               ) : (
                 <div className="w-full h-full bg-gradient-to-r from-indigo-500 to-purple-600"></div>
               )}
+              
+              {/* Profile Actions */}
+              <div className="absolute top-4 left-4 z-20 flex gap-2">
+                <button
+                  onClick={toggleFavorite}
+                  className="p-2.5 rounded-full bg-white/80 backdrop-blur-md shadow-lg hover:bg-white transition-all transform hover:scale-110 group"
+                  title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+                >
+                  <Heart 
+                    size={20} 
+                    className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600 group-hover:text-red-500'}`} 
+                  />
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="p-2.5 rounded-full bg-white/80 backdrop-blur-md shadow-lg hover:bg-white transition-all transform hover:scale-110 group relative"
+                  title="Compartir perfil"
+                >
+                  {showShareFeedback ? (
+                    <Check size={20} className="text-green-600 animate-in zoom-in" />
+                  ) : (
+                    <Share2 size={20} className="text-gray-600 group-hover:text-indigo-600" />
+                  )}
+                  {showShareFeedback && (
+                    <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1.5 px-2.5 rounded-lg whitespace-nowrap animate-in fade-in slide-in-from-top-1 shadow-xl">
+                      ¡Enlace copiado!
+                    </span>
+                  )}
+                </button>
+              </div>
+
               {isVip && (
                 <div className="absolute top-4 right-4 bg-amber-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm z-10">
                   <ShieldCheck size={12} /> VIP

@@ -53,6 +53,7 @@ export interface User {
   createdAt?: any;
   isNewUser?: boolean;
   isAdmin?: boolean;
+  favoritos?: string[]; // Array of professional UIDs
   slug?: string;
   mpConnect?: {
     access_token: string;

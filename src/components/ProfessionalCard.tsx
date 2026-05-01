@@ -26,29 +26,46 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const navigate = useNavigate();
 
   useEffect(() => {
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    if (professional.uid) {
-      setIsFavorite(favorites.includes(professional.uid));
+    if (currentUser && currentUser.favoritos) {
+      setIsFavorite(currentUser.favoritos.includes(professional.uid));
+    } else {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      if (professional.uid) {
+        setIsFavorite(favorites.includes(professional.uid));
+      }
     }
-  }, [professional.uid]);
+  }, [professional.uid, currentUser?.favoritos]);
 
-  const toggleFavorite = (e: React.MouseEvent) => {
+  const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (!professional.uid) return;
 
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    let newFavorites;
-    
-    if (isFavorite) {
-      newFavorites = favorites.filter((id: string) => id !== professional.uid);
+    if (currentUser) {
+      try {
+        const userRef = doc(db, 'usuarios', currentUser.uid);
+        const newFavorites = isFavorite
+          ? (currentUser.favoritos || []).filter((id: string) => id !== professional.uid)
+          : [...(currentUser.favoritos || []), professional.uid];
+        
+        await updateDoc(userRef, { favoritos: newFavorites });
+      } catch (error) {
+        console.error("Error updating favorites in Firestore:", error);
+      }
     } else {
-      newFavorites = [...favorites, professional.uid];
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      let newFavorites;
+      
+      if (isFavorite) {
+        newFavorites = favorites.filter((id: string) => id !== professional.uid);
+      } else {
+        newFavorites = [...favorites, professional.uid];
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(newFavorites));
+      setIsFavorite(!isFavorite);
     }
-    
-    localStorage.setItem('favorites', JSON.stringify(newFavorites));
-    setIsFavorite(!isFavorite);
   };
 
   const handleShare = (e: React.MouseEvent) => {
