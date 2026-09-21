@@ -8,6 +8,7 @@ import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
+import { CachedImage } from './CachedImage';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -400,10 +401,11 @@ export const PublicProfile: React.FC = () => {
           <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border sticky top-24 transition-all ${isVip ? 'border-amber-300 dark:border-amber-500/50 shadow-amber-100/50 dark:shadow-none' : 'border-gray-100 dark:border-gray-700'}`}>
             <div className="h-48 bg-gray-200 relative overflow-hidden">
               {fotoPortada ? (
-                <img 
+                <CachedImage 
                   src={fotoPortada} 
                   alt={`Portada de ${nombre}`} 
                   className="w-full h-full object-cover"
+                  containerClassName="w-full h-full"
                 />
               ) : (
                 <div className={`w-full h-full ${isVip ? 'bg-slate-900 border-b-2 border-amber-400' : 'bg-slate-800'}`}></div>
@@ -451,10 +453,11 @@ export const PublicProfile: React.FC = () => {
             
             <div className="px-6 pb-6 relative">
               <div className="relative -mt-16 mb-4 flex justify-center">
-                <img 
+                <CachedImage 
                   src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                   alt={nombre} 
                   className={`w-32 h-32 rounded-full object-cover border-4 shadow-md bg-white transition-all ${isVip ? 'border-amber-400 ring-4 ring-amber-300/40' : 'border-white dark:border-gray-800'}`}
+                  containerClassName="rounded-full"
                 />
               </div>
 
@@ -725,10 +728,11 @@ export const PublicProfile: React.FC = () => {
                 {(fotosTrabajosDetalle || fotosTrabajos.map(url => ({ url, descripcion: '' }))).map((item, index) => (
                   <div key={index} className="flex flex-col gap-3 group">
                     <div className="aspect-video rounded-xl overflow-hidden cursor-pointer border border-gray-100 dark:border-gray-700 shadow-sm">
-                      <img 
+                      <CachedImage 
                         src={item.url} 
                         alt={item.descripcion || `Trabajo ${index + 1}`} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        containerClassName="w-full h-full"
                         onClick={() => window.open(item.url, '_blank')}
                       />
                     </div>
@@ -852,11 +856,12 @@ export const PublicProfile: React.FC = () => {
                     {review.fotos && review.fotos.length > 0 && (
                       <div className="flex gap-2 mt-3 pl-11 overflow-x-auto">
                         {review.fotos.map((foto, idx) => (
-                          <img 
+                          <CachedImage 
                             key={idx} 
                             src={foto} 
                             alt={`Foto de reseña ${idx + 1}`} 
                             className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity"
+                            containerClassName="h-20 w-20 shrink-0 rounded-lg"
                             onClick={() => window.open(foto, '_blank')}
                           />
                         ))}

@@ -10,6 +10,8 @@ import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from '
 import { ProfessionalCard } from './ProfessionalCard';
 import { Tag, ChevronLeft, ChevronRight, Briefcase as BriefcaseIcon, Building2, Handshake } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
+import { CachedImage } from './CachedImage';
+import { preloadImages } from '../utils/imageCache';
 
 export function Home() {
   const { currentUser } = useAuth();
@@ -95,7 +97,10 @@ export function Home() {
       try {
         const q = query(collection(db, 'ads'), where('active', '==', true), where('position', '==', 'home_carousel'));
         const snapshot = await getDocs(q);
-        setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
+        const fetchedAds = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad));
+        setAds(fetchedAds);
+        // Precargar imágenes de anuncios en caché
+        preloadImages(fetchedAds.map(a => a.imageUrl));
       } catch (error) {
         console.error("Error fetching ads:", error);
       }
@@ -127,7 +132,15 @@ export function Home() {
           return bReviews - aReviews;
         });
 
-        setFeaturedPros(sortedPros.slice(0, 8));
+        const selectedPros = sortedPros.slice(0, 8);
+        setFeaturedPros(selectedPros);
+        
+        // Precargar fotos de perfil y portadas en segundo plano
+        const imagesToWarm = selectedPros.flatMap(p => [
+          p.fotoUrl,
+          p.profesionalInfo?.fotoPortada
+        ]).filter(Boolean) as string[];
+        preloadImages(imagesToWarm);
       } catch (error) {
         console.error("Error fetching featured pros:", error);
       }
@@ -327,10 +340,11 @@ export function Home() {
                   >
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/80 dark:border-slate-800 overflow-hidden h-full flex flex-col transition-all duration-200">
                       <div className="relative h-44 overflow-hidden bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center p-4 border-b border-slate-100 dark:border-slate-800">
-                        <img 
+                        <CachedImage 
                           src={ad.imageUrl} 
                           alt={ad.title} 
                           className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
+                          containerClassName="w-full h-full flex items-center justify-center"
                           referrerPolicy="no-referrer" 
                           loading="lazy"
                         />

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar, User, ArrowRight, BookOpen, Clock, Tag, X, Search, 
@@ -6,12 +6,19 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BLOG_POSTS, BLOG_CATEGORIES, BlogPost } from '../data/blogData';
+import { CachedImage } from './CachedImage';
+import { preloadImages } from '../utils/imageCache';
 
 export const Blog: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Precargar imágenes del blog en caché para navegación instantánea
+  useEffect(() => {
+    preloadImages(BLOG_POSTS.map(p => p.imageUrl));
+  }, []);
 
   // Filter posts by category and search query
   const filteredPosts = useMemo(() => {
@@ -189,10 +196,11 @@ export const Blog: React.FC = () => {
               className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden lg:grid lg:grid-cols-12 cursor-pointer group hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
             >
               <div className="relative h-60 lg:h-full lg:col-span-5 overflow-hidden">
-                <img
+                <CachedImage
                   src={featuredPost.imageUrl}
                   alt={featuredPost.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  containerClassName="w-full h-full"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute top-4 left-4">
@@ -266,10 +274,11 @@ export const Blog: React.FC = () => {
               >
                 <div>
                   <div className="relative h-44 overflow-hidden">
-                    <img
+                    <CachedImage
                       src={post.imageUrl}
                       alt={post.title}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      containerClassName="w-full h-full"
                       loading="lazy"
                       referrerPolicy="no-referrer"
                     />
@@ -345,10 +354,11 @@ export const Blog: React.FC = () => {
 
                 {/* Hero image */}
                 <div className="h-56 sm:h-72 w-full relative overflow-hidden">
-                  <img
+                  <CachedImage
                     src={selectedPost.imageUrl}
                     alt={selectedPost.title}
                     className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>

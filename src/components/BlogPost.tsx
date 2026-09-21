@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, User, ArrowLeft, Clock, Tag, Share2, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { BLOG_POSTS } from '../data/blogData';
+import { CachedImage } from './CachedImage';
 
 export const BlogPost: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -86,10 +87,11 @@ export const BlogPost: React.FC = () => {
 
       {/* Main Image */}
       <div className="aspect-video w-full rounded-2xl overflow-hidden mb-10 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
-        <img 
+        <CachedImage 
           src={post.imageUrl} 
           alt={post.title} 
           className="w-full h-full object-cover"
+          containerClassName="w-full h-full"
           loading="lazy"
           referrerPolicy="no-referrer"
         />

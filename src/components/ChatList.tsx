@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { MessageSquare, User as UserIcon, Clock } from 'lucide-react';
+import { CachedImage } from './CachedImage';
 
 interface ChatPreview {
   id: string;
@@ -112,7 +113,12 @@ export const ChatList: React.FC = () => {
               >
                 <div className="relative">
                   {chat.otherUserFotoUrl ? (
-                    <img src={chat.otherUserFotoUrl} alt={otherName} className="w-12 h-12 rounded-full object-cover" />
+                    <CachedImage 
+                      src={chat.otherUserFotoUrl} 
+                      alt={otherName} 
+                      className="w-12 h-12 rounded-full object-cover" 
+                      containerClassName="w-12 h-12 rounded-full shrink-0" 
+                    />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                       <UserIcon size={24} />

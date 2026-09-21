@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RecentRequestedJobs } from './RecentRequestedJobs';
+import { CachedImage } from './CachedImage';
 
 const POPULAR_RUBROS = [
   'Electricista', 'Plomero', 'Gasista', 'Pintor', 'Albañil', 
@@ -1089,10 +1090,11 @@ export const TrabajosSolicitados: React.FC = () => {
                     >
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
                         <div className="flex items-center gap-3">
-                          <img
+                          <CachedImage
                             src={proposal.profesionalFoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(proposal.profesionalNombre)}`}
                             alt={proposal.profesionalNombre}
                             className={`w-12 h-12 rounded-full object-cover border-2 ${proposal.profesionalIsVip ? 'border-amber-400 ring-2 ring-amber-300/40' : 'border-gray-200'}`}
+                            containerClassName="rounded-full shrink-0"
                           />
                           <div>
                             <div className="flex items-center gap-2">

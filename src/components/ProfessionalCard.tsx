@@ -7,6 +7,7 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { PROFESSIONS } from '../constants';
 import { isVipActive } from '../utils/vipUtils';
+import { CachedImage } from './CachedImage';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -180,10 +181,11 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
         {/* Top Header / Subtle Neutral Banner */}
         <div className="relative h-14 bg-slate-100 dark:bg-slate-700/60 overflow-hidden">
           {fotoPortada && (
-            <img 
+            <CachedImage 
               src={fotoPortada} 
               alt={`Portada de ${nombre}`} 
               className="w-full h-full object-cover opacity-60 dark:opacity-40"
+              containerClassName="w-full h-full"
               loading="lazy"
             />
           )}
@@ -228,10 +230,11 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           {/* Identity & Status Pill */}
           <div className="flex items-end justify-between -mt-7 mb-2.5">
             <Link to={`/profesional/${professional.slug || uid}`} className="block relative group">
-              <img 
+              <CachedImage 
                 src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                 alt={nombre} 
                 className={`w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-800 bg-white dark:bg-slate-700 transition-transform group-hover:scale-105 ${isVip ? 'ring-1 ring-amber-400' : ''}`}
+                containerClassName="rounded-full"
                 loading="lazy"
               />
             </Link>
@@ -360,10 +363,11 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                 <X size={18} />
               </button>
               <div className="flex items-center gap-3.5">
-                <img 
+                <CachedImage 
                   src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                   alt={nombre} 
                   className="w-14 h-14 rounded-full object-cover border-2 border-white/30"
+                  containerClassName="rounded-full shrink-0"
                   loading="lazy"
                 />
                 <div>

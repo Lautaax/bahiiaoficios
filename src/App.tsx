@@ -28,6 +28,7 @@ import { Help } from './components/Help';
 import { TradeDiscounts } from './components/TradeDiscounts';
 import { PublicidadComercio } from './components/PublicidadComercio';
 import { NotificationListener } from './components/NotificationListener';
+import { CachedImage } from './components/CachedImage';
 import { ProfessionLanding } from './components/ProfessionLanding';
 import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 
@@ -118,7 +119,7 @@ function Navbar() {
               <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 <div className="relative">
                   {currentUser.fotoUrl ? (
-                    <img src={currentUser.fotoUrl} alt="Perfil" className="w-8 h-8 rounded-full object-cover" />
+                    <CachedImage src={currentUser.fotoUrl} alt="Perfil" className="w-8 h-8 rounded-full object-cover" containerClassName="w-8 h-8 rounded-full shrink-0" />
                   ) : (
                     <UserIcon size={20} />
                   )}
