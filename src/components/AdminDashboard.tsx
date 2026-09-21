@@ -9,7 +9,7 @@ import { Ad, TradeDiscount } from '../types';
 import { uploadToFirebase } from '../services/firebaseStorageService';
 import { AdminVipManagement } from './AdminVipManagement';
 import { ProfessionalPaymentHistoryModal } from './ProfessionalPaymentHistoryModal';
-import { AdminMetricsCharts } from './AdminMetricsCharts';
+import { AdminComprehensiveAnalytics } from './AdminComprehensiveAnalytics';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -380,7 +380,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {activeTab === 'metricas' && (
-        <AdminMetricsCharts 
+        <AdminComprehensiveAnalytics 
           users={users} 
           onRefreshData={fetchData} 
         />

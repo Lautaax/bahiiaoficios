@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase, Heart } from 'lucide-react';
+import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase, Heart, HelpCircle } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -35,6 +35,7 @@ import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 
 import { ChatBadge } from './components/ChatBadge';
 import { HelpChatbot } from './components/HelpChatbot';
+import { GuidedOnboarding, triggerOnboardingTour } from './components/GuidedOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { safeSessionStorage } from './utils/storage';
 import { useAnalytics } from './hooks/useAnalytics';
@@ -93,7 +94,7 @@ function Navbar() {
               <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Portal de Profesionales</p>
             </div>
           </Link>
-          <Link to="/trabajos" className="hidden sm:flex items-center gap-1.5 ml-4 sm:ml-6 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 px-3 py-1.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800 transition-colors">
+          <Link to="/trabajos" id="onboarding-nav-jobs" className="hidden sm:flex items-center gap-1.5 ml-4 sm:ml-6 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 px-3 py-1.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800 transition-colors">
             <Briefcase size={15} />
             <span>Trabajos Solicitados</span>
           </Link>
@@ -102,6 +103,17 @@ function Navbar() {
           </Link>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            type="button"
+            id="btn-nav-onboarding-tour"
+            onClick={triggerOnboardingTour}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 transition-colors"
+            title="Tutorial interactivo de bienvenida"
+          >
+            <HelpCircle size={14} className="text-indigo-600 dark:text-indigo-400" />
+            <span className="hidden sm:inline">¿Cómo funciona?</span>
+          </button>
+
           {showInstallBtn && (
             <button
               onClick={handleInstallClick}
@@ -237,6 +249,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         </ErrorBoundary>
       </main>
       <HelpChatbot />
+      <GuidedOnboarding />
       {/* Footer */}
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 mt-12 py-10 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
@@ -275,6 +288,7 @@ function AppContent() {
   return (
     <>
       <NotificationListener />
+      <GuidedOnboarding />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />

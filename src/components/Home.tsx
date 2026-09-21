@@ -237,11 +237,12 @@ export function Home() {
             </p>
             
             {/* Buscador Principal con Búsqueda Avanzada y Búsqueda por Voz */}
-            <div className="max-w-2xl mx-auto">
+            <div id="onboarding-search-step" className="max-w-2xl mx-auto">
               <div className="bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700 flex flex-col md:flex-row gap-2">
                 <div className="flex-1 flex items-center px-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl relative">
                   <Search className="text-slate-400 w-5 h-5 shrink-0" />
                   <input 
+                    id="onboarding-search-input"
                     type="text" 
                     placeholder="¿Qué servicio buscás? (ej. Electricista, Plomero)" 
                     className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder-slate-400 py-3 px-3 text-sm sm:text-base outline-none"
@@ -464,10 +465,11 @@ export function Home() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link 
                 to="/trabajos"
+                id="onboarding-quotes-step"
                 className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95"
               >
                 <Briefcase size={18} className="text-indigo-600" />
-                Trabajos Solicitados
+                Trabajos Solicitados (Pedir Presupuesto)
               </Link>
               <Link 
                 to="/dashboard?urgencias=true"
@@ -735,14 +737,18 @@ export function Home() {
               )}
             </div>
             
-            <div className="relative overflow-hidden">
+            <div id="onboarding-featured-pros" className="relative overflow-hidden">
               <motion.div 
                 className="flex"
                 animate={{ x: `-${currentProIndex * (100 / cardsPerPage)}%` }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                {featuredPros.map((pro) => (
-                  <div key={pro.uid} className="w-full sm:w-1/2 lg:w-1/4 flex-shrink-0 px-2.5">
+                {featuredPros.map((pro, index) => (
+                  <div 
+                    key={pro.uid} 
+                    id={index === 0 ? "onboarding-chat-step" : undefined}
+                    className="w-full sm:w-1/2 lg:w-1/4 flex-shrink-0 px-2.5"
+                  >
                     <ProfessionalCard professional={pro} />
                   </div>
                 ))}

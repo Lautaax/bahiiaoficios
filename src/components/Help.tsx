@@ -1,8 +1,9 @@
 import React from 'react';
-import { HelpCircle, ArrowLeft, Mail, MessageCircle, FileQuestion, Bot } from 'lucide-react';
+import { HelpCircle, ArrowLeft, Mail, MessageCircle, FileQuestion, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FAQ } from './FAQ';
 import { HelpChatbot } from './HelpChatbot';
+import { triggerOnboardingTour } from './GuidedOnboarding';
 
 export const Help: React.FC = () => {
   return (
@@ -18,6 +19,31 @@ export const Help: React.FC = () => {
             <HelpCircle className="text-amber-600 dark:text-amber-400" size={24} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Centro de Ayuda</h1>
+        </div>
+
+        {/* Banner Tutorial Guiado */}
+        <div className="mb-8 p-5 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Tutorial Guiado de Bienvenida
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                Aprendé en 1 minuto interactivo cómo buscar profesionales, solicitar presupuestos y chatear directo.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={triggerOnboardingTour}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 shrink-0"
+          >
+            <span>Iniciar Tutorial</span>
+            <ArrowRight size={15} />
+          </button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">

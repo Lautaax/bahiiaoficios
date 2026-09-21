@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { analyticsService } from '../services/analyticsService';
 
 export const useAnalytics = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check if gtag is available (it's loaded in index.html)
+    // 1. Google Analytics integration (if gtag loaded)
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'page_view', {
         page_path: location.pathname + location.search,
@@ -13,5 +14,9 @@ export const useAnalytics = () => {
         page_title: document.title,
       });
     }
-  }, [location]);
+
+    // 2. Bahia Oficios internal analytics engine
+    analyticsService.trackPageView(location.pathname, document.title);
+  }, [location.pathname, location.search]);
 };
+

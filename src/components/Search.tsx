@@ -9,6 +9,7 @@ import { SearchAutocomplete } from './SearchAutocomplete';
 import { collection, getDocs, query as firestoreQuery, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ZONAS } from '../constants';
+import { analyticsService } from '../services/analyticsService';
 
 export function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,6 +67,15 @@ export function Search() {
       try {
         const data = await searchProfessionals(query, categorySlug, selectedZona, minRating);
         setResults(data);
+
+        // Track search analytics
+        if (query.trim() || categorySlug) {
+          analyticsService.trackSearch(query.trim() || categorySlug, {
+            category: categorySlug,
+            zona: selectedZona,
+            resultsCount: data.length
+          });
+        }
       } catch (error) {
         console.error("Error searching professionals:", error);
       } finally {

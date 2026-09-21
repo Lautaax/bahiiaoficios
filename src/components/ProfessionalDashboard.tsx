@@ -15,6 +15,7 @@ import { NotificationsDropdown } from './NotificationsDropdown';
 import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { TrabajosSolicitados } from './TrabajosSolicitados';
 import { ProfessionalMyQuotes } from './ProfessionalMyQuotes';
+import { ProfessionalRequestsChart } from './ProfessionalRequestsChart';
 import { safeLocalStorage } from '../utils/storage';
 
 type TabType = 'resumen' | 'mis-presupuestos' | 'trabajos' | 'pedidos' | 'perfil' | 'estadisticas' | 'reseñas' | 'favoritos';
@@ -448,6 +449,12 @@ export const ProfessionalDashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Weekly Requests & Inquiries Chart (Recharts) */}
+              <ProfessionalRequestsChart 
+                professional={currentUser} 
+                onNavigateToQuotes={() => setActiveTab('pedidos')} 
+              />
+
               {/* Charts Section */}
               <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-8">
@@ -576,6 +583,11 @@ export const ProfessionalDashboard: React.FC = () => {
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Estadísticas Detalladas</h2>
               
+              <ProfessionalRequestsChart 
+                professional={currentUser} 
+                onNavigateToQuotes={() => setActiveTab('pedidos')} 
+              />
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700">
                   <h3 className="text-xl font-bold mb-6">Vistas vs Clics</h3>
