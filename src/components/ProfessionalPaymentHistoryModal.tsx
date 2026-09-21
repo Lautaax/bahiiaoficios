@@ -38,9 +38,11 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
   const [currentUserData, setCurrentUserData] = useState<User>(user);
 
   // Form state for manual payment registration
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [newMonths, setNewMonths] = useState(1);
   const [newAmount, setNewAmount] = useState(5000);
   const [newMethod, setNewMethod] = useState<'mercadopago' | 'transferencia' | 'efectivo' | 'bonificacion'>('transferencia');
+  const [calculatedExpDate, setCalculatedExpDate] = useState<string>('');
   const [newNotes, setNewNotes] = useState('');
 
   const pInfo = currentUserData.profesionalInfo;
@@ -48,6 +50,14 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
   const diffInfo = getVipDiffInfo(pInfo);
   const expirationDate = diffInfo.expirationDate;
   const today = new Date();
+
+  // Auto calculate expiration date whenever paymentDate or newMonths changes
+  useEffect(() => {
+    if (!paymentDate) return;
+    const base = new Date(`${paymentDate}T12:00:00`);
+    base.setMonth(base.getMonth() + Number(newMonths));
+    setCalculatedExpDate(base.toISOString().split('T')[0]);
+  }, [paymentDate, newMonths]);
 
   // Load payment records from Firestore
   useEffect(() => {
@@ -79,29 +89,37 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
     fetchPayments();
   }, [user.uid]);
 
-  // Handle immediate sync/expire if inconsistent
-  const handleForceExpire = async () => {
-    if (!window.confirm("¿Dar de baja la suscripción VIP de este usuario?")) return;
+  // Handle manual VIP removal
+  const handleRemoveVipManual = async () => {
+    if (!window.confirm(`¿Estás seguro de que deseas quitar el VIP a ${currentUserData.nombre} de forma manual?`)) return;
     try {
       await updateDoc(doc(db, 'usuarios', currentUserData.uid), {
         'profesionalInfo.isVip': false,
-        'profesionalInfo.vipExpiredAt': new Date()
+        'profesionalInfo.vipExpiredAt': new Date(),
+        'profesionalInfo.vipExpiration': null,
+        'updatedAt': Timestamp.now()
       });
       const updated = {
         ...currentUserData,
         profesionalInfo: {
           ...currentUserData.profesionalInfo,
           isVip: false,
-          vipExpiredAt: new Date()
+          vipExpiredAt: new Date(),
+          vipExpiration: null
         } as any
       };
       setCurrentUserData(updated);
       onUserUpdated?.(updated);
-      alert("Suscripción VIP dada de baja correctamente.");
+      alert("VIP quitado de forma manual exitosamente.");
     } catch (e) {
-      console.error("Error updating VIP status:", e);
-      alert("Error al actualizar el estado VIP.");
+      console.error("Error al quitar VIP:", e);
+      alert("Error al quitar el estado VIP.");
     }
+  };
+
+  // Handle immediate sync/expire if inconsistent
+  const handleForceExpire = async () => {
+    await handleRemoveVipManual();
   };
 
   // Handle manual extension or new payment
@@ -109,15 +127,10 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
     e.preventDefault();
     setSavingPayment(true);
     try {
-      // Calculate new expiration date
-      let baseDate = new Date();
-      // If currently active and not expired, extend from existing expiration
-      if (vipStatus === 'active' && expirationDate && expirationDate > baseDate) {
-        baseDate = new Date(expirationDate);
-      }
-
-      const newExp = new Date(baseDate);
-      newExp.setMonth(newExp.getMonth() + Number(newMonths));
+      const payDateObj = new Date(`${paymentDate}T12:00:00`);
+      const expDateObj = calculatedExpDate 
+        ? new Date(`${calculatedExpDate}T23:59:59`)
+        : new Date(new Date(payDateObj).setMonth(payDateObj.getMonth() + Number(newMonths)));
 
       // 1. Add payment record to Firestore
       const paymentDocData = {
@@ -128,8 +141,9 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
         status: 'approved',
         statementDescriptor: `Pago ${newMethod.toUpperCase()}`,
         planTitle: `Membresía VIP (${newMonths} mes${newMonths > 1 ? 'es' : ''}) - ${newMethod}`,
-        createdAt: Timestamp.now(),
-        expirationDate: Timestamp.fromDate(newExp),
+        createdAt: Timestamp.fromDate(payDateObj),
+        paymentDate: Timestamp.fromDate(payDateObj),
+        expirationDate: Timestamp.fromDate(expDateObj),
         notes: newNotes.trim() || `Registrado manualmente por administración (${newMethod})`
       };
 
@@ -138,7 +152,8 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
       // 2. Update user profile in Firestore
       await updateDoc(doc(db, 'usuarios', currentUserData.uid), {
         'profesionalInfo.isVip': true,
-        'profesionalInfo.vipExpiration': Timestamp.fromDate(newExp),
+        'profesionalInfo.vipExpiration': Timestamp.fromDate(expDateObj),
+        'profesionalInfo.lastPaymentDate': Timestamp.fromDate(payDateObj),
         'updatedAt': Timestamp.now()
       });
 
@@ -147,7 +162,7 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
         profesionalInfo: {
           ...currentUserData.profesionalInfo,
           isVip: true,
-          vipExpiration: newExp
+          vipExpiration: expDateObj
         } as any
       };
 
@@ -156,7 +171,7 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
       onUserUpdated?.(updatedUser);
       setShowAddPayment(false);
       setNewNotes('');
-      alert(`Membresía extendida exitosamente hasta el ${newExp.toLocaleDateString()}`);
+      alert(`Membresía VIP activada con éxito hasta el ${expDateObj.toLocaleDateString('es-AR')}`);
     } catch (err) {
       console.error("Error adding payment:", err);
       alert("Error al registrar el pago.");
@@ -265,12 +280,12 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                     <MessageCircle size={15} /> WhatsApp Comercial
                   </a>
                 )}
-                {pInfo?.isVip && vipStatus === 'expired' && (
+                {(vipStatus === 'active' || vipStatus === 'expiring_soon' || pInfo?.isVip) && (
                   <button 
-                    onClick={handleForceExpire}
-                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors"
+                    onClick={handleRemoveVipManual}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900 transition-colors shadow-xs"
                   >
-                    Actualizar a No-VIP
+                    <XCircle size={15} /> Quitar VIP Manualmente
                   </button>
                 )}
                 <button 
@@ -314,7 +329,7 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                   : 'bg-emerald-50/70 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900'
               }`}>
                 <span className="text-[11px] font-semibold uppercase flex items-center gap-1 text-gray-600 dark:text-gray-300">
-                  <HourglassIcon className="w-3.5 h-3.5" /> Diagnóstico de Vigencia
+                  <Clock className="w-3.5 h-3.5" /> Diagnóstico de Vigencia
                 </span>
                 <p className={`text-base font-bold mt-1 ${
                   diffInfo.isPast 
@@ -341,10 +356,25 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                 <CreditCard size={18} /> Registrar Cobro / Otorgar Membresía VIP
               </h4>
               <form onSubmit={handleAddPaymentSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Fecha de Pago */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">
-                      Período / Duración
+                      Fecha de Pago
+                    </label>
+                    <input 
+                      type="date"
+                      value={paymentDate}
+                      onChange={e => setPaymentDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  {/* Tipo de Suscripción */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">
+                      Tipo de Suscripción
                     </label>
                     <select 
                       value={newMonths} 
@@ -356,15 +386,16 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                         else if (m === 6) setNewAmount(25800);
                         else if (m === 12) setNewAmount(48000);
                       }}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
                     >
-                      <option value={1}>1 Mes ($5.000)</option>
-                      <option value={3}>3 Meses ($13.800)</option>
-                      <option value={6}>6 Meses ($25.800)</option>
-                      <option value={12}>12 Meses ($48.000)</option>
+                      <option value={1}>Mensual (1 Mes) - $5.000</option>
+                      <option value={3}>Trimestral (3 Meses) - $13.800</option>
+                      <option value={6}>Semestral (6 Meses) - $25.800</option>
+                      <option value={12}>Anual (12 Meses) - $48.000</option>
                     </select>
                   </div>
 
+                  {/* Monto */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">
                       Monto Pagado ($ ARS)
@@ -378,6 +409,7 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                     />
                   </div>
 
+                  {/* Método de Pago */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">
                       Método de Pago
@@ -392,6 +424,30 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                       <option value="efectivo">Efectivo</option>
                       <option value="bonificacion">Bonificación / Promo</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Resumen Calculado de Vencimiento */}
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase">
+                        Fecha de Vencimiento Calculada
+                      </span>
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        {newMonths} {newMonths === 1 ? 'mes' : 'meses'} a partir de la fecha de pago ({paymentDate})
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="date"
+                      value={calculatedExpDate}
+                      onChange={e => setCalculatedExpDate(e.target.value)}
+                      className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-lg text-sm font-bold text-gray-900 dark:text-white"
+                      required
+                    />
                   </div>
                 </div>
 

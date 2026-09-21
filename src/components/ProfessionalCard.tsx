@@ -39,15 +39,19 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     if (!professional.uid) return;
 
     if (currentUser) {
+      const nextState = !isFavorite;
+      setIsFavorite(nextState);
       try {
         const userRef = doc(db, 'usuarios', currentUser.uid);
-        const newFavorites = isFavorite
-          ? (currentUser.favoritos || []).filter((id: string) => id !== professional.uid)
-          : [...(currentUser.favoritos || []), professional.uid];
+        const currentFavs = currentUser.favoritos || [];
+        const newFavorites = nextState
+          ? [...currentFavs.filter((id: string) => id !== professional.uid), professional.uid]
+          : currentFavs.filter((id: string) => id !== professional.uid);
         
         await updateDoc(userRef, { favoritos: newFavorites });
       } catch (error) {
         console.error("Error updating favorites in Firestore:", error);
+        setIsFavorite(!nextState);
       }
     } else {
       const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');

@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { User } from '../types';
 import { 
   Crown, 
@@ -153,6 +155,24 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
       setSyncResult("Ocurrió un error al sincronizar las suscripciones.");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // Quitar VIP de forma manual
+  const handleRemoveVip = async (pro: User) => {
+    if (!window.confirm(`¿Estás seguro de que deseas quitar el VIP a ${pro.nombre} de forma manual?`)) return;
+    try {
+      const userRef = doc(db, 'usuarios', pro.uid);
+      await updateDoc(userRef, {
+        'profesionalInfo.isVip': false,
+        'profesionalInfo.vipExpiredAt': new Date(),
+        'profesionalInfo.vipExpiration': null
+      });
+      alert(`Se ha quitado la membresía VIP a ${pro.nombre} correctamente.`);
+      await onRefreshUsers();
+    } catch (err) {
+      console.error("Error al quitar VIP:", err);
+      alert("Error al quitar el estado VIP.");
     }
   };
 
@@ -593,6 +613,16 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
                             >
                               <MessageCircle size={16} />
                             </a>
+                          )}
+                          {(status === 'active' || status === 'expiring_soon' || pInfo?.isVip) && (
+                            <button
+                              onClick={() => handleRemoveVip(pro)}
+                              title="Quitar VIP de forma manual"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60 rounded-xl text-xs font-bold transition-colors"
+                            >
+                              <XCircle size={14} />
+                              Quitar VIP
+                            </button>
                           )}
                           <button
                             onClick={() => setSelectedUserForHistory(pro)}

@@ -5,14 +5,15 @@ import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { User as UserType, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings } from 'lucide-react';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings, Heart } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { motion } from 'motion/react';
+import { UserFavoritesSection } from './UserFavoritesSection';
 
 interface ProfileProps {
-  initialSection?: 'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
+  initialSection?: 'datos' | 'favoritos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
@@ -22,7 +23,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
-  const [activeSection, setActiveSection] = useState<'datos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias'>(initialSection || 'datos');
+  const [activeSection, setActiveSection] = useState<'datos' | 'favoritos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias'>(initialSection || 'datos');
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -462,6 +463,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
   const sections = [
     { id: 'datos', label: 'Datos Básicos', icon: User },
+    { id: 'favoritos', label: 'Mis Favoritos', icon: Heart },
     { id: 'profesional', label: 'Info Profesional', icon: Briefcase, hide: formData.rol !== 'profesional' },
     { id: 'portafolio', label: 'Portafolio', icon: IconImage, hide: formData.rol !== 'profesional' },
     { id: 'precios', label: 'Precios', icon: CreditCard, hide: formData.rol !== 'profesional' },
@@ -543,34 +545,38 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
         {/* Main Content Area */}
         <div className="flex-1 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {sections.find(s => s.id === activeSection)?.label}
-            </h2>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-              Guardar
-            </button>
-          </div>
+          {activeSection === 'favoritos' ? (
+            <UserFavoritesSection />
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {sections.find(s => s.id === activeSection)?.label}
+                </h2>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                  Guardar
+                </button>
+              </div>
 
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl flex items-center border border-green-100 dark:border-green-800">
-              <CheckCircle size={20} className="mr-3" /> Perfil actualizado correctamente.
-            </div>
-          )}
+              {success && (
+                <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl flex items-center border border-green-100 dark:border-green-800">
+                  <CheckCircle size={20} className="mr-3" /> Perfil actualizado correctamente.
+                </div>
+              )}
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl flex items-center border border-red-100 dark:border-red-800">
-              <AlertCircle size={20} className="mr-3" /> {error}
-            </div>
-          )}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl flex items-center border border-red-100 dark:border-red-800">
+                  <AlertCircle size={20} className="mr-3" /> {error}
+                </div>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {activeSection === 'datos' && (
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {activeSection === 'datos' && (
               <div className="space-y-8">
                 <div className="grid grid-cols-2 gap-4">
                   <div 
@@ -835,7 +841,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
               </div>
             )}
           </form>
-        </div>
+        </>
+      )}
+    </div>
       </div>
     </div>
   );

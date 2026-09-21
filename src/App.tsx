@@ -19,6 +19,7 @@ import { CompleteProfile } from './components/CompleteProfile';
 import { Chat } from './components/Chat';
 import { ChatList } from './components/ChatList';
 import { ProfessionalDashboard } from './components/ProfessionalDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
 import { QuoteRequestForm } from './components/QuoteRequestForm';
 import { Blog } from './components/Blog';
 import { BlogPost } from './components/BlogPost';
@@ -33,6 +34,7 @@ import { ProfessionLanding } from './components/ProfessionLanding';
 import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 
 import { ChatBadge } from './components/ChatBadge';
+import { HelpChatbot } from './components/HelpChatbot';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -159,9 +161,6 @@ function Navbar() {
     </header>
   );
 }
-
-import { AdminDashboard } from './components/AdminDashboard';
-import { HelpChatbot } from './components/HelpChatbot';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState({ users: 0, visits: 0 });

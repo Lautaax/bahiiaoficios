@@ -75,7 +75,34 @@ export const ChatList: React.FC = () => {
 
   if (!currentUser) return <div className="p-8 text-center text-gray-500">Por favor, inicia sesión para ver tus mensajes.</div>;
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Cargando mensajes...</div>;
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8 animate-in fade-in">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+          <div className="space-y-1.5">
+            <div className="h-6 w-40 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+            <div className="h-3 w-28 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
+              <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
+              <div className="flex-1 space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <div className="h-4 w-36 rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-3 w-16 rounded bg-slate-200 dark:bg-slate-700" />
+                </div>
+                <div className="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-700" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">

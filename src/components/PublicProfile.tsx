@@ -3,12 +3,13 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check, Crown } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check, Crown, Flag } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { CachedImage } from './CachedImage';
+import { ReportModal } from './ReportModal';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -20,6 +21,7 @@ export const PublicProfile: React.FC = () => {
   const [error, setError] = useState('');
   const { currentUser } = useAuth();
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
 
@@ -439,6 +441,13 @@ export const PublicProfile: React.FC = () => {
                     </span>
                   )}
                 </button>
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="p-2.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 transition-all transform hover:scale-105 group"
+                  title="Reportar perfil inapropiado o falso"
+                >
+                  <Flag size={18} />
+                </button>
               </div>
 
               {/* Badge VIP exclusivo: solo visible si la membresía está vigente */}
@@ -681,6 +690,14 @@ export const PublicProfile: React.FC = () => {
                   <MessageSquare size={18} />
                   Contactar por Chat
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(true)}
+                  className="w-full text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 text-xs py-2 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Flag size={13} />
+                  <span>Reportar perfil inapropiado o falso</span>
+                </button>
               </div>
             </div>
           </div>
@@ -882,6 +899,13 @@ export const PublicProfile: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {showReportModal && professional && (
+        <ReportModal
+          professional={professional}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
     </div>
   );
 };

@@ -3,17 +3,18 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff, Crown, CreditCard } from 'lucide-react';
+import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff, Crown, CreditCard, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Ad, TradeDiscount } from '../types';
 import { uploadToFirebase } from '../services/firebaseStorageService';
 import { AdminVipManagement } from './AdminVipManagement';
 import { ProfessionalPaymentHistoryModal } from './ProfessionalPaymentHistoryModal';
+import { AdminMetricsCharts } from './AdminMetricsCharts';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'metricas' | 'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos'>('metricas');
   const [users, setUsers] = useState<User[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [discounts, setDiscounts] = useState<TradeDiscount[]>([]);
@@ -332,29 +333,36 @@ export const AdminDashboard: React.FC = () => {
 
       <div className="flex flex-wrap gap-4 mb-8">
         <button 
+          onClick={() => setActiveTab('metricas')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'metricas' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
+        >
+          <BarChart3 size={20} />
+          Métricas y Tendencias
+        </button>
+        <button 
           onClick={() => setActiveTab('usuarios')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'usuarios' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'usuarios' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
         >
           <ShieldCheck size={20} />
           Usuarios
         </button>
         <button 
           onClick={() => setActiveTab('suscripciones')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'suscripciones' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'suscripciones' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
         >
           <Crown size={20} className={activeTab === 'suscripciones' ? 'text-amber-300' : 'text-amber-500'} />
           Suscripciones VIP
         </button>
         <button 
           onClick={() => setActiveTab('publicidad')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'publicidad' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'publicidad' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
         >
           <Megaphone size={20} />
           Publicidad
         </button>
         <button 
           onClick={() => setActiveTab('descuentos')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'descuentos' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'descuentos' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
         >
           <Tag size={20} />
           Descuentos Gremio
@@ -370,6 +378,13 @@ export const AdminDashboard: React.FC = () => {
           </button>
         )}
       </div>
+
+      {activeTab === 'metricas' && (
+        <AdminMetricsCharts 
+          users={users} 
+          onRefreshData={fetchData} 
+        />
+      )}
 
       {activeTab === 'usuarios' && (
         <div className="space-y-4">

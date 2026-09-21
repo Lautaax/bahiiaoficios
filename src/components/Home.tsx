@@ -77,8 +77,7 @@ export function Home() {
           }));
         }
       } catch (error) {
-        console.error("Error fetching popular rubros:", error);
-        // Fallback
+        // Fallback to default popular categories if stats collection is empty or restricted
         const defaults = ['Electricista', 'Plomero', 'Gasista', 'Albañil'];
         setCategories(defaults.map(name => {
           const profession = PROFESSIONS.find(prof => prof.name === name);
@@ -151,7 +150,8 @@ export function Home() {
   }, []);
 
   useEffect(() => {
-    if (ads.length > 0) {
+    // El carrusel de sponsors se activa solo si hay más de 4 sponsors
+    if (ads.length > 4) {
       const timer = setInterval(() => {
         setCurrentAdIndex((prev) => (prev + 1) % ads.length);
       }, 5000);
@@ -308,92 +308,156 @@ export function Home() {
                   Comercios, corralones y proveedores bahienses comprometidos con el gremio y la comunidad
                 </p>
               </div>
-              <div className="flex items-center gap-2 self-end sm:self-auto">
-                <button 
-                  onClick={() => setCurrentAdIndex((prev) => (prev - 1 + ads.length) % ads.length)}
-                  aria-label="Anterior"
-                  className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-sm active:scale-95"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button 
-                  onClick={() => setCurrentAdIndex((prev) => (prev + 1) % ads.length)}
-                  aria-label="Siguiente"
-                  className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-sm active:scale-95"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+              {ads.length > 4 && (
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <button 
+                    onClick={() => setCurrentAdIndex((prev) => (prev - 1 + ads.length) % ads.length)}
+                    aria-label="Anterior"
+                    className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-sm active:scale-95"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentAdIndex((prev) => (prev + 1) % ads.length)}
+                    aria-label="Siguiente"
+                    className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-sm active:scale-95"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="relative overflow-hidden">
-              <motion.div 
-                className="flex"
-                animate={{ x: `-${currentAdIndex * (100 / adsPerPage)}%` }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              >
-                {ads.map((ad) => (
-                  <motion.div 
-                    key={ad.id} 
-                    className="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 px-3 group"
-                    whileHover={{ y: -3 }}
-                  >
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/80 dark:border-slate-800 overflow-hidden h-full flex flex-col transition-all duration-200">
-                      <div className="relative h-44 overflow-hidden bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center p-4 border-b border-slate-100 dark:border-slate-800">
-                        <CachedImage 
-                          src={ad.imageUrl} 
-                          alt={ad.title} 
-                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
-                          containerClassName="w-full h-full flex items-center justify-center"
-                          referrerPolicy="no-referrer" 
-                          loading="lazy"
-                        />
-                        <div className="absolute top-3 right-3">
-                          <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                            <Handshake size={11} /> Aliado
-                          </span>
+            {ads.length > 4 ? (
+              <div className="relative overflow-hidden">
+                <motion.div 
+                  className="flex"
+                  animate={{ x: `-${currentAdIndex * (100 / adsPerPage)}%` }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
+                  {ads.map((ad) => (
+                    <motion.div 
+                      key={ad.id} 
+                      className="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 px-3 group"
+                      whileHover={{ y: -3 }}
+                    >
+                      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/80 dark:border-slate-800 overflow-hidden h-full flex flex-col transition-all duration-200">
+                        <div className="relative h-44 overflow-hidden bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center p-4 border-b border-slate-100 dark:border-slate-800">
+                          <CachedImage 
+                            src={ad.imageUrl} 
+                            alt={ad.title} 
+                            className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
+                            containerClassName="w-full h-full flex items-center justify-center"
+                            referrerPolicy="no-referrer" 
+                            loading="lazy"
+                          />
+                          <div className="absolute top-3 right-3">
+                            <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                              <Handshake size={11} /> Aliado
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="p-6 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                            {ad.title}
-                          </h3>
-                          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
-                            {ad.description}
-                          </p>
-                          
-                          {ad.offersTradeDiscount && (
-                            <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700">
-                              <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-bold text-xs mb-1">
-                                <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
-                                Beneficio Gremio: {ad.tradeDiscountDetails}
+                        <div className="p-6 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              {ad.title}
+                            </h3>
+                            <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
+                              {ad.description}
+                            </p>
+                            
+                            {ad.offersTradeDiscount && (
+                              <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700">
+                                <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-bold text-xs mb-1">
+                                  <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
+                                  Beneficio Gremio: {ad.tradeDiscountDetails}
+                                </div>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                                  * Presentá tu perfil en <strong>Bahía Oficios</strong> para acceder.
+                                </p>
                               </div>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                                * Presentá tu perfil en <strong>Bahía Oficios</strong> para acceder.
-                              </p>
+                            )}
+                          </div>
+
+                          {ad.link && (
+                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                              <a 
+                                href={ad.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                              >
+                                Conocer más sobre esta empresa <ArrowRight size={14} />
+                              </a>
                             </div>
                           )}
                         </div>
-
-                        {ad.link && (
-                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-auto">
-                            <a 
-                              href={ad.link} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                            >
-                              Conocer más sobre esta empresa <ArrowRight size={14} />
-                            </a>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {ads.map((ad) => (
+                  <div 
+                    key={ad.id} 
+                    className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/80 dark:border-slate-800 overflow-hidden h-full flex flex-col transition-all duration-200 group"
+                  >
+                    <div className="relative h-44 overflow-hidden bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center p-4 border-b border-slate-100 dark:border-slate-800">
+                      <CachedImage 
+                        src={ad.imageUrl} 
+                        alt={ad.title} 
+                        className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
+                        containerClassName="w-full h-full flex items-center justify-center"
+                        referrerPolicy="no-referrer" 
+                        loading="lazy"
+                      />
+                      <div className="absolute top-3 right-3">
+                        <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                          <Handshake size={11} /> Aliado
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {ad.title}
+                        </h3>
+                        <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
+                          {ad.description}
+                        </p>
+                        
+                        {ad.offersTradeDiscount && (
+                          <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700">
+                            <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-bold text-xs mb-1">
+                              <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
+                              Beneficio Gremio: {ad.tradeDiscountDetails}
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                              * Presentá tu perfil en <strong>Bahía Oficios</strong> para acceder.
+                            </p>
                           </div>
                         )}
                       </div>
+
+                      {ad.link && (
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                          <a 
+                            href={ad.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                          >
+                            Conocer más sobre esta empresa <ArrowRight size={14} />
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
