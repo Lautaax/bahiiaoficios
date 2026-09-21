@@ -40,6 +40,8 @@ export const NotificationListener: React.FC = () => {
           });
         }
       });
+    }, (error) => {
+      console.warn("Could not listen to notifications:", error);
     });
 
     return () => unsubscribe();
@@ -78,6 +80,8 @@ export const NotificationListener: React.FC = () => {
           }
         }
       });
+    }, (error) => {
+      console.warn("Could not listen to chat updates:", error);
     });
 
     return () => unsubscribe();

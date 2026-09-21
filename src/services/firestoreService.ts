@@ -18,7 +18,13 @@ import { isVipActive } from '../utils/vipUtils';
  * Aquí realizamos un filtrado en cliente para simplificar la demo sin índices complejos.
  */
 
-export const searchProfessionals = async (queryText: string, category: string) => {
+export const searchProfessionals = async (
+  queryText: string, 
+  category: string,
+  zona?: string,
+  minRating?: number,
+  maxRating?: number
+) => {
   try {
     // 1. Obtener todos los usuarios con rol 'profesional'
     const q = query(
@@ -37,22 +43,38 @@ export const searchProfessionals = async (queryText: string, category: string) =
     if (category) {
       results = results.filter(p => 
         p.profesionalInfo?.rubro?.toLowerCase() === category.toLowerCase() ||
-        p.profesionalInfo?.rubro?.toLowerCase().includes(category.toLowerCase())
+        p.profesionalInfo?.rubro?.toLowerCase().includes(category.toLowerCase()) ||
+        p.profesionalInfo?.rubros?.some(r => r.toLowerCase().includes(category.toLowerCase()))
       );
     }
 
-    // 3. Filtrar por texto de búsqueda
+    // 3. Filtrar por zona geográfica específica dentro de Bahía Blanca
+    if (zona && zona !== 'Todas') {
+      const zLower = zona.toLowerCase();
+      results = results.filter(p => p.zona?.toLowerCase().includes(zLower));
+    }
+
+    // 4. Filtrar por rango de calificación
+    if (minRating !== undefined && minRating > 0) {
+      results = results.filter(p => (p.profesionalInfo?.ratingAvg || 0) >= minRating);
+    }
+    if (maxRating !== undefined && maxRating > 0) {
+      results = results.filter(p => (p.profesionalInfo?.ratingAvg || 0) <= maxRating);
+    }
+
+    // 5. Filtrar por texto de búsqueda
     if (queryText) {
       const qText = queryText.toLowerCase();
       results = results.filter(p => 
         p.nombre?.toLowerCase().includes(qText) ||
         p.profesionalInfo?.rubro?.toLowerCase().includes(qText) ||
+        p.profesionalInfo?.rubros?.some(r => r.toLowerCase().includes(qText)) ||
         p.profesionalInfo?.descripcion?.toLowerCase().includes(qText) ||
         p.zona?.toLowerCase().includes(qText)
       );
     }
 
-    // 4. Ordenar por VIP y Rating
+    // 6. Ordenar por VIP y Rating
     return results.sort((a, b) => {
       // Primero VIP activo
       const isVipA = isVipActive(a.profesionalInfo);

@@ -24,16 +24,13 @@ export const ChatBadge: React.FC = () => {
       let count = 0;
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        // A message is unread if the last sender is NOT the current user AND it's marked as unread
-        // Wait, do we have an unread flag? If not, we can assume it's unread if lastMessageSenderId !== currentUser.uid
-        // and we haven't opened it. But wait, how do we mark it as read?
-        // Let's check if there's a `unread_clientId` or similar.
-        // For now, let's just use `lastMessageSenderId !== currentUser.uid` and a new field `hasUnread`
         if (data.lastMessageSenderId && data.lastMessageSenderId !== currentUser.uid && data.hasUnread !== false) {
           count++;
         }
       });
       setUnreadCount(count);
+    }, (error) => {
+      console.warn("Could not subscribe to chats:", error);
     });
 
     return () => unsubscribe();

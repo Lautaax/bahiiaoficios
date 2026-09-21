@@ -23,6 +23,14 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+let analyticsInstance: any = null;
+if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+  try {
+    analyticsInstance = getAnalytics(app);
+  } catch (err) {
+    console.warn("Firebase Analytics could not be initialized:", err);
+  }
+}
+export const analytics = analyticsInstance;
 export const googleProvider = new GoogleAuthProvider();
 export const appleProvider = new OAuthProvider('apple.com');

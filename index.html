@@ -45,13 +45,17 @@
   </head>
   <body>
     <script>
-      // Prevent "Cannot set property fetch of #<Window> which has only a getter" error
-      if (typeof window !== 'undefined' && window.fetch) {
-        Object.defineProperty(window, 'fetch', {
-          value: window.fetch,
-          writable: true,
-          configurable: true
-        });
+      // Prevent "Cannot set property fetch of #<Window> which has only a getter" error safely
+      try {
+        if (typeof window !== 'undefined' && window.fetch) {
+          Object.defineProperty(window, 'fetch', {
+            value: window.fetch,
+            writable: true,
+            configurable: true
+          });
+        }
+      } catch (e) {
+        // Ignore if fetch cannot be redefined in this environment
       }
     </script>
     <div id="root"></div>

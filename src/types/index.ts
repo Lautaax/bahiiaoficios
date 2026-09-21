@@ -49,6 +49,7 @@ export interface User {
   rol: Role;
   ciudad: string;
   zona: string; // e.g., 'Centro', 'Patagonia', 'Villa Mitre'
+  telefono?: string; // Optional phone number
   nombreNegocio?: string; // Optional business name
   profesionalInfo?: ProfesionalInfo; // Only if rol === 'profesional'
   createdAt?: any;

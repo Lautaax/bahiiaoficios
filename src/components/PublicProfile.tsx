@@ -10,6 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { CachedImage } from './CachedImage';
 import { ReportModal } from './ReportModal';
+import { safeLocalStorage } from '../utils/storage';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,8 +30,12 @@ export const PublicProfile: React.FC = () => {
     if (currentUser && currentUser.favoritos && professional) {
       setIsFavorite(currentUser.favoritos.includes(professional.uid));
     } else if (professional) {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      setIsFavorite(favorites.includes(professional.uid));
+      try {
+        const favorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
+        setIsFavorite(Array.isArray(favorites) && favorites.includes(professional.uid));
+      } catch {
+        setIsFavorite(false);
+      }
     }
   }, [professional, currentUser?.favoritos]);
 
@@ -38,28 +43,37 @@ export const PublicProfile: React.FC = () => {
     if (!professional) return;
 
     if (currentUser) {
+      const nextState = !isFavorite;
+      setIsFavorite(nextState);
       try {
         const userRef = doc(db, 'usuarios', currentUser.uid);
-        const newFavorites = isFavorite
-          ? (currentUser.favoritos || []).filter((id: string) => id !== professional.uid)
-          : [...(currentUser.favoritos || []), professional.uid];
+        const currentFavs = currentUser.favoritos || [];
+        const newFavorites = nextState
+          ? [...currentFavs.filter((id: string) => id !== professional.uid), professional.uid]
+          : currentFavs.filter((id: string) => id !== professional.uid);
         
         await updateDoc(userRef, { favoritos: newFavorites });
       } catch (error) {
         console.error("Error updating favorites in Firestore:", error);
+        setIsFavorite(!nextState);
       }
     } else {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      let newFavorites;
-      
-      if (isFavorite) {
-        newFavorites = favorites.filter((id: string) => id !== professional.uid);
-      } else {
-        newFavorites = [...favorites, professional.uid];
+      try {
+        const favorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
+        const favList = Array.isArray(favorites) ? favorites : [];
+        let newFavorites;
+        
+        if (isFavorite) {
+          newFavorites = favList.filter((id: string) => id !== professional.uid);
+        } else {
+          newFavorites = [...favList, professional.uid];
+        }
+        
+        safeLocalStorage.setItem('favorites', JSON.stringify(newFavorites));
+        setIsFavorite(!isFavorite);
+      } catch (err) {
+        console.warn("Could not save favorite locally:", err);
       }
-      
-      localStorage.setItem('favorites', JSON.stringify(newFavorites));
-      setIsFavorite(!isFavorite);
     }
   };
 

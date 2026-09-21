@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, update
 import { PROFESSIONS } from '../constants';
 import { isVipActive } from '../utils/vipUtils';
 import { CachedImage } from './CachedImage';
+import { safeLocalStorage } from '../utils/storage';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -25,9 +26,13 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     if (currentUser && currentUser.favoritos) {
       setIsFavorite(currentUser.favoritos.includes(professional.uid));
     } else {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      if (professional.uid) {
-        setIsFavorite(favorites.includes(professional.uid));
+      try {
+        const favorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
+        if (professional.uid && Array.isArray(favorites)) {
+          setIsFavorite(favorites.includes(professional.uid));
+        }
+      } catch {
+        setIsFavorite(false);
       }
     }
   }, [professional.uid, currentUser?.favoritos]);
@@ -54,17 +59,22 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
         setIsFavorite(!nextState);
       }
     } else {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      let newFavorites;
-      
-      if (isFavorite) {
-        newFavorites = favorites.filter((id: string) => id !== professional.uid);
-      } else {
-        newFavorites = [...favorites, professional.uid];
+      try {
+        const favorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
+        const favList = Array.isArray(favorites) ? favorites : [];
+        let newFavorites;
+        
+        if (isFavorite) {
+          newFavorites = favList.filter((id: string) => id !== professional.uid);
+        } else {
+          newFavorites = [...favList, professional.uid];
+        }
+        
+        safeLocalStorage.setItem('favorites', JSON.stringify(newFavorites));
+        setIsFavorite(!isFavorite);
+      } catch (err) {
+        console.warn("Could not save favorite locally:", err);
       }
-      
-      localStorage.setItem('favorites', JSON.stringify(newFavorites));
-      setIsFavorite(!isFavorite);
     }
   };
 
@@ -274,11 +284,12 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                 {nombre}
               </Link>
               {(matriculaVerified || isVerified) && (
-                <BadgeCheck 
-                  size={15} 
-                  className="text-emerald-600 dark:text-emerald-400 shrink-0" 
-                  title={matriculaVerified ? "Matrícula verificada" : "Identidad verificada"}
-                />
+                <span title={matriculaVerified ? "Matrícula verificada" : "Identidad verificada"} className="inline-flex shrink-0">
+                  <BadgeCheck 
+                    size={15} 
+                    className="text-emerald-600 dark:text-emerald-400" 
+                  />
+                </span>
               )}
             </div>
 

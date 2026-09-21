@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { motion } from 'motion/react';
 import { UserFavoritesSection } from './UserFavoritesSection';
+import { safeLocalStorage } from '../utils/storage';
 
 interface ProfileProps {
   initialSection?: 'datos' | 'favoritos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
@@ -72,28 +73,32 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [worksUploadProgress, setWorksUploadProgress] = useState<{ [key: number]: number }>({});
   const [isDragging, setIsDragging] = useState(false);
 
-  // Load draft from localStorage on mount
+  // Load draft from safeLocalStorage on mount
   useEffect(() => {
     if (currentUser) {
-      const savedDraft = localStorage.getItem(`profile_draft_${currentUser.uid}`);
-      if (savedDraft) {
-        try {
+      try {
+        const savedDraft = safeLocalStorage.getItem(`profile_draft_${currentUser.uid}`);
+        if (savedDraft) {
           const draft = JSON.parse(savedDraft);
           // Only apply draft if it exists and looks valid
           if (draft && typeof draft === 'object') {
             setFormData(prev => ({ ...prev, ...draft }));
           }
-        } catch (e) {
-          console.error("Error loading profile draft:", e);
         }
+      } catch (e) {
+        console.error("Error loading profile draft:", e);
       }
     }
   }, [currentUser?.uid]);
 
-  // Save draft to localStorage whenever formData changes
+  // Save draft to safeLocalStorage whenever formData changes
   useEffect(() => {
     if (currentUser && formData.nombre) { // Only save if at least name is present to avoid saving empty states
-      localStorage.setItem(`profile_draft_${currentUser.uid}`, JSON.stringify(formData));
+      try {
+        safeLocalStorage.setItem(`profile_draft_${currentUser.uid}`, JSON.stringify(formData));
+      } catch (e) {
+        // ignore
+      }
     }
   }, [formData, currentUser?.uid]);
 
@@ -425,7 +430,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
       await updateDoc(userRef, updateData);
       
       // Clear draft on successful save
-      localStorage.removeItem(`profile_draft_${currentUser.uid}`);
+      safeLocalStorage.removeItem(`profile_draft_${currentUser.uid}`);
       
       setNewWorkFiles([]);
       setNewWorkPreviews([]);
@@ -728,24 +733,27 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                       <button type="button" onClick={() => setFormData({...formData, fotoPortada: item.url})} className={`absolute bottom-1 right-1 p-1 rounded-full ${formData.fotoPortada === item.url ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 opacity-0 group-hover:opacity-100'}`}><Star size={12} fill={formData.fotoPortada === item.url ? "currentColor" : "none"} /></button>
                     </div>
                   ))}
-                  {newWorkPreviews.map((url, idx) => (
-                    <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border-2 border-indigo-500">
-                      <img src={url} className="w-full h-full object-cover" />
-                      {worksUploadProgress > 0 && worksUploadProgress < 100 && (
-                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-2">
-                          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-1">
-                            <motion.div 
-                              className="h-full bg-indigo-500"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${worksUploadProgress}%` }}
-                            />
+                  {newWorkPreviews.map((url, idx) => {
+                    const progress = worksUploadProgress[idx] || 0;
+                    return (
+                      <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border-2 border-indigo-500">
+                        <img src={url} className="w-full h-full object-cover" />
+                        {progress > 0 && progress < 100 && (
+                          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-2">
+                            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-1">
+                              <motion.div 
+                                className="h-full bg-indigo-500"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-bold">{Math.round(progress)}%</span>
                           </div>
-                          <span className="text-[10px] font-bold">{Math.round(worksUploadProgress)}%</span>
-                        </div>
-                      )}
-                      <button type="button" onClick={() => removeNewWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
-                    </div>
-                  ))}
+                        )}
+                        <button type="button" onClick={() => removeNewWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

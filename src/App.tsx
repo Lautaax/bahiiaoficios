@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase } from 'lucide-react';
+import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase, Heart } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -35,6 +35,9 @@ import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 
 import { ChatBadge } from './components/ChatBadge';
 import { HelpChatbot } from './components/HelpChatbot';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { safeSessionStorage } from './utils/storage';
+import { useAnalytics } from './hooks/useAnalytics';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -57,14 +60,19 @@ function Navbar() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
+    try {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      }
+    } catch (e) {
+      console.warn('Install prompt error:', e);
+    } finally {
+      setDeferredPrompt(null);
+      setShowInstallBtn(false);
     }
-    setDeferredPrompt(null);
-    setShowInstallBtn(false);
   };
 
   const handleLogout = async () => {
@@ -130,6 +138,18 @@ function Navbar() {
               </Link>
               
               <div className="flex items-center gap-1 sm:gap-2">
+                <Link
+                  to="/favoritos"
+                  className="p-2 text-gray-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 relative transition-colors"
+                  title="Mis Profesionales Favoritos"
+                >
+                  <Heart size={20} className={Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 ? "fill-rose-500 text-rose-500" : ""} />
+                  {Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 && (
+                    <span className="absolute top-1 right-1 bg-rose-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
+                      {currentUser.favoritos.length}
+                    </span>
+                  )}
+                </Link>
                 <NotificationsDropdown />
                 <ChatBadge />
                 <Link 
@@ -166,9 +186,10 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState({ users: 0, visits: 0 });
 
   useEffect(() => {
+    let isMounted = true;
     const fetchStats = async () => {
       try {
-        // Increment site visits
+        // Increment site visits safely
         const statsRef = doc(db, 'siteStats', 'global');
         const statsDoc = await getDoc(statsRef);
         
@@ -177,35 +198,43 @@ function Layout({ children }: { children: React.ReactNode }) {
           await setDoc(statsRef, { visits: 1 });
           currentVisits = 1;
         } else {
-          // Only increment once per session to avoid spamming
-          if (!sessionStorage.getItem('siteVisited')) {
+          const statsData = statsDoc.data() || {};
+          const prevVisits = typeof statsData.visits === 'number' ? statsData.visits : 0;
+          if (!safeSessionStorage.getItem('siteVisited')) {
             await updateDoc(statsRef, { visits: increment(1) });
-            currentVisits = statsDoc.data().visits + 1;
-            sessionStorage.setItem('siteVisited', 'true');
+            currentVisits = prevVisits + 1;
+            safeSessionStorage.setItem('siteVisited', 'true');
           } else {
-            currentVisits = statsDoc.data().visits;
+            currentVisits = prevVisits;
           }
         }
 
-        // Get user count
+        // Get user count safely
         const coll = collection(db, 'usuarios');
         const snapshot = await getCountFromServer(coll);
         const userCount = snapshot.data().count;
 
-        setStats({ users: userCount, visits: currentVisits });
+        if (isMounted) {
+          setStats({ users: userCount, visits: currentVisits });
+        }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        console.warn("Notice: could not load site stats:", error);
       }
     };
 
     fetchStats();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 overflow-x-hidden flex flex-col">
       <Navbar />
       <main className="flex-1">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
       <HelpChatbot />
       {/* Footer */}
@@ -240,164 +269,175 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-import { useAnalytics } from './hooks/useAnalytics';
-
 function AppContent() {
   useAnalytics();
   
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <NotificationListener />
-        <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            
-            <Route path="/complete-profile" element={
-              <PrivateRoute allowNewUser={true}>
-                <CompleteProfile />
-              </PrivateRoute>
-            } />
+    <>
+      <NotificationListener />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        
+        <Route path="/complete-profile" element={
+          <PrivateRoute allowNewUser={true}>
+            <CompleteProfile />
+          </PrivateRoute>
+        } />
 
-            <Route path="/" element={
-              <Layout>
-                <Home />
-              </Layout>
-            } />
+        <Route path="/" element={
+          <Layout>
+            <Home />
+          </Layout>
+        } />
 
-            <Route path="/search" element={
-              <Layout>
-                <Search />
-              </Layout>
-            } />
+        <Route path="/search" element={
+          <Layout>
+            <Search />
+          </Layout>
+        } />
 
-            <Route path="/profesional/:slug" element={
-              <Layout>
-                <PublicProfile />
-              </Layout>
-            } />
+        <Route path="/profesional/:slug" element={
+          <Layout>
+            <PublicProfile />
+          </Layout>
+        } />
 
-            <Route path="/professions/:profession" element={
-              <Layout>
-                <ProfessionLanding />
-              </Layout>
-            } />
+        <Route path="/professions/:profession" element={
+          <Layout>
+            <ProfessionLanding />
+          </Layout>
+        } />
 
-            <Route path="/dashboard" element={
-              <Layout>
-                <Dashboard />
-              </Layout>
-            } />
-            
-            <Route path="/terms" element={
-              <Layout>
-                <Terms />
-              </Layout>
-            } />
+        <Route path="/dashboard" element={
+          <Layout>
+            <Dashboard />
+          </Layout>
+        } />
+        
+        <Route path="/terms" element={
+          <Layout>
+            <Terms />
+          </Layout>
+        } />
 
-            <Route path="/privacy" element={
-              <Layout>
-                <Privacy />
-              </Layout>
-            } />
+        <Route path="/privacy" element={
+          <Layout>
+            <Privacy />
+          </Layout>
+        } />
 
-            <Route path="/help" element={
-              <Layout>
-                <Help />
-              </Layout>
-            } />
+        <Route path="/help" element={
+          <Layout>
+            <Help />
+          </Layout>
+        } />
 
-            <Route path="/profile" element={
-              <PrivateRoute>
-                <Layout>
-                  <div className="max-w-7xl mx-auto px-4 py-8">
-                    <Profile />
-                  </div>
-                </Layout>
-              </PrivateRoute>
-            } />
+        <Route path="/profile" element={
+          <PrivateRoute>
+            <Layout>
+              <div className="max-w-7xl mx-auto px-4 py-8">
+                <Profile />
+              </div>
+            </Layout>
+          </PrivateRoute>
+        } />
 
-            <Route path="/chats" element={
-              <PrivateRoute>
-                <Layout>
-                  <ChatList />
-                </Layout>
-              </PrivateRoute>
-            } />
+        <Route path="/favoritos" element={
+          <PrivateRoute>
+            <Layout>
+              <div className="max-w-7xl mx-auto px-4 py-8">
+                <Profile initialSection="favoritos" />
+              </div>
+            </Layout>
+          </PrivateRoute>
+        } />
 
-            <Route path="/chat/:chatId" element={
-              <PrivateRoute>
-                <Layout>
-                  <Chat />
-                </Layout>
-              </PrivateRoute>
-            } />
-            
-            {/* Placeholder for professional dashboard */}
-            <Route path="/dashboard-profesional" element={
-              <PrivateRoute>
-                <Layout>
-                  <ProfessionalDashboard />
-                </Layout>
-              </PrivateRoute>
-            } />
-            
-            <Route path="/admin" element={
-              <PrivateRoute>
-                <Layout>
-                  <AdminDashboard />
-                </Layout>
-              </PrivateRoute>
-            } />
-            
-            <Route path="/solicitar-presupuesto" element={
-              <Layout>
-                <div className="py-8">
-                  <QuoteRequestForm />
-                </div>
-              </Layout>
-            } />
-            
-            <Route path="/blog" element={
-              <Layout>
-                <Blog />
-              </Layout>
-            } />
-            
-            <Route path="/blog/:id" element={
-              <Layout>
-                <BlogPost />
-              </Layout>
-            } />
-            
-            <Route path="/beneficios" element={
-              <Layout>
-                <TradeDiscounts />
-              </Layout>
-            } />
-            
-            <Route path="/publicitar" element={
-              <Layout>
-                <PublicidadComercio />
-              </Layout>
-            } />
+        <Route path="/chats" element={
+          <PrivateRoute>
+            <Layout>
+              <ChatList />
+            </Layout>
+          </PrivateRoute>
+        } />
 
-            <Route path="/trabajos" element={
-              <Layout>
-                <TrabajosSolicitados />
-              </Layout>
-            } />
-          </Routes>
-        </ThemeProvider>
-      </AuthProvider>
+        <Route path="/chat/:chatId" element={
+          <PrivateRoute>
+            <Layout>
+              <Chat />
+            </Layout>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/dashboard-profesional" element={
+          <PrivateRoute>
+            <Layout>
+              <ProfessionalDashboard />
+            </Layout>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/admin" element={
+          <PrivateRoute>
+            <Layout>
+              <AdminDashboard />
+            </Layout>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/solicitar-presupuesto" element={
+          <Layout>
+            <div className="py-8">
+              <QuoteRequestForm />
+            </div>
+          </Layout>
+        } />
+        
+        <Route path="/blog" element={
+          <Layout>
+            <Blog />
+          </Layout>
+        } />
+        
+        <Route path="/blog/:id" element={
+          <Layout>
+            <BlogPost />
+          </Layout>
+        } />
+        
+        <Route path="/beneficios" element={
+          <Layout>
+            <TradeDiscounts />
+          </Layout>
+        } />
+        
+        <Route path="/publicitar" element={
+          <Layout>
+            <PublicidadComercio />
+          </Layout>
+        } />
+
+        <Route path="/trabajos" element={
+          <Layout>
+            <TrabajosSolicitados />
+          </Layout>
+        } />
+      </Routes>
+    </>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -32,7 +32,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let unsubscribeFirestore: () => void;
 
+    // Safety timeout: if onAuthStateChanged hangs, don't leave the screen blank forever
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3500);
+
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      clearTimeout(safetyTimer);
       if (unsubscribeFirestore) {
         unsubscribeFirestore();
       }
@@ -108,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

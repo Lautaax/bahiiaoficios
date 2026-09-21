@@ -7,10 +7,12 @@ import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
 import { EmpresasColaboradoras } from './EmpresasColaboradoras';
 import { Skeleton } from './ui/Skeleton';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star, Briefcase, Clock, ExternalLink, CheckCircle2, DollarSign, Building2, Handshake, ChevronLeft, ChevronRight, Award } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star, Briefcase, Clock, ExternalLink, CheckCircle2, DollarSign, Building2, Handshake, ChevronLeft, ChevronRight, Award, Mic, MicOff } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { api } from '../services/api';
 import { isVipActive } from '../utils/vipUtils';
+import { useVoiceSearch } from '../hooks/useVoiceSearch';
+import { safeLocalStorage, safeSessionStorage } from '../utils/storage';
 
 // Helper to normalize strings (remove accents)
 const normalizeString = (str: string) => {
@@ -39,6 +41,14 @@ export const Dashboard: React.FC = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const professionalsPerPage = 12;
+
+  const { isListening, speechFeedback, toggleListening } = useVoiceSearch({
+    onResult: (transcript) => {
+      setSearchTerm(transcript);
+      setSelectedRubro('Todos');
+      api.trackSearch(transcript);
+    }
+  });
 
   // Update URL when filters change
   useEffect(() => {
@@ -75,10 +85,10 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (currentUser?.rol === 'profesional' && currentUser?.profesionalInfo?.isVip) {
       // Check if we've already shown this message in this session
-      const hasSeenVipMessage = sessionStorage.getItem('hasSeenVipMessage');
+      const hasSeenVipMessage = safeSessionStorage.getItem('hasSeenVipMessage');
       if (!hasSeenVipMessage) {
         setShowVipWelcome(true);
-        sessionStorage.setItem('hasSeenVipMessage', 'true');
+        safeSessionStorage.setItem('hasSeenVipMessage', 'true');
       }
     }
   }, [currentUser]);
@@ -174,8 +184,12 @@ export const Dashboard: React.FC = () => {
         if (currentUser && currentUser.favoritos) {
           isFav = currentUser.favoritos.includes(p.uid);
         } else {
-          const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-          isFav = favorites.includes(p.uid);
+          try {
+            const favorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
+            isFav = Array.isArray(favorites) && favorites.includes(p.uid);
+          } catch {
+            isFav = false;
+          }
         }
       }
       const matchesFavorites = !showFavoritesOnly || isFav;
@@ -331,14 +345,14 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
-            {/* Buscador */}
+            {/* Buscador con Búsqueda por Voz */}
             <div className="relative flex-grow">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 type="text"
-                className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-xs"
+                className="block w-full pl-10 pr-20 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-xs"
                 placeholder="Buscar por nombre, rubro o servicio..."
                 value={searchTerm}
                 onChange={(e) => {
@@ -349,6 +363,49 @@ export const Dashboard: React.FC = () => {
                   }
                 }}
               />
+
+              <div className="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+                    title="Borrar búsqueda"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+
+                {/* Botón de Búsqueda por Voz */}
+                <button
+                  type="button"
+                  onClick={toggleListening}
+                  title={isListening ? "Detener dictado por voz" : "Búsqueda por voz (dictar)"}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    isListening
+                      ? 'bg-rose-500 text-white animate-pulse shadow-sm shadow-rose-500/30'
+                      : 'text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Mic size={16} className={isListening ? 'animate-bounce' : ''} />
+                </button>
+              </div>
+
+              {/* Feedback de voz */}
+              {speechFeedback && (
+                <div 
+                  className={`absolute left-0 -bottom-8 z-20 px-3 py-1 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 shadow-md ${
+                    isListening
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-white animate-ping' : 'bg-indigo-400'}`}></span>
+                  <span>{speechFeedback}</span>
+                </div>
+              )}
             </div>
 
             {/* Filtros */}

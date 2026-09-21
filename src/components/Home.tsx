@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase, MessageSquare, CheckCircle, Megaphone, AlertCircle } from 'lucide-react';
+import { 
+  Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase, 
+  MessageSquare, CheckCircle, Megaphone, AlertCircle, Mic, MicOff, 
+  SlidersHorizontal, Filter, X, Tag, ChevronLeft, ChevronRight, 
+  Building2, Handshake 
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Category, User, Ad } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Tag, ChevronLeft, ChevronRight, Briefcase as BriefcaseIcon, Building2, Handshake } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { CachedImage } from './CachedImage';
 import { preloadImages } from '../utils/imageCache';
+import { useVoiceSearch } from '../hooks/useVoiceSearch';
 
 export function Home() {
   const { currentUser } = useAuth();
@@ -42,7 +47,26 @@ export function Home() {
   }, []);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedZona, setSelectedZona] = useState('Todas');
+  const [minRating, setMinRating] = useState<number>(0);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(false);
+  const [haceUrgencias, setHaceUrgencias] = useState(false);
   const navigate = useNavigate();
+
+  const { isListening, speechFeedback, toggleListening } = useVoiceSearch({
+    onResult: (transcript) => {
+      setSearchTerm(transcript);
+      api.trackSearch(transcript);
+      const params = new URLSearchParams();
+      params.set('search', transcript);
+      if (selectedZona && selectedZona !== 'Todas') params.set('zona', selectedZona);
+      if (minRating > 0) params.set('rating', minRating.toString());
+      if (disponibilidadInmediata) params.set('disponibilidad', 'true');
+      if (haceUrgencias) params.set('urgencias', 'true');
+      navigate(`/dashboard?${params.toString()}`);
+    }
+  });
 
   useEffect(() => {
     const fetchPopularRubros = async () => {
@@ -61,7 +85,7 @@ export function Home() {
             return {
               id: p.name,
               name: p.name,
-              icon: profession?.icon || BriefcaseIcon
+              icon: profession?.icon || Briefcase
             };
           }));
         } else {
@@ -72,7 +96,7 @@ export function Home() {
             return {
               id: name,
               name: name,
-              icon: profession?.icon || BriefcaseIcon
+              icon: profession?.icon || Briefcase
             };
           }));
         }
@@ -84,7 +108,7 @@ export function Home() {
           return {
             id: name,
             name: name,
-            icon: profession?.icon || BriefcaseIcon
+            icon: profession?.icon || Briefcase
           };
         }));
       }
@@ -160,10 +184,26 @@ export function Home() {
   }, [ads]);
 
   const handleSearch = () => {
+    const params = new URLSearchParams();
     if (searchTerm.trim()) {
       api.trackSearch(searchTerm.trim());
-      navigate(`/dashboard?search=${encodeURIComponent(searchTerm.trim())}`);
+      params.set('search', searchTerm.trim());
     }
+    if (selectedZona && selectedZona !== 'Todas') {
+      params.set('zona', selectedZona);
+    }
+    if (minRating > 0) {
+      params.set('rating', minRating.toString());
+    }
+    if (disponibilidadInmediata) {
+      params.set('disponibilidad', 'true');
+    }
+    if (haceUrgencias) {
+      params.set('urgencias', 'true');
+    }
+
+    const qs = params.toString();
+    navigate(qs ? `/dashboard?${qs}` : '/dashboard');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -196,24 +236,218 @@ export function Home() {
               La red más confiable de oficios y servicios verificados. Plomeros, electricistas, albañiles y especialistas calificados a tu alcance.
             </p>
             
-            <div className="bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700 flex flex-col md:flex-row gap-2 max-w-2xl mx-auto">
-              <div className="flex-1 flex items-center px-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl">
-                <Search className="text-slate-400 w-5 h-5 shrink-0" />
-                <input 
-                  type="text" 
-                  placeholder="¿Qué servicio buscás? (ej. Electricista, Plomero)" 
-                  className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder-slate-400 py-3 px-3 text-sm sm:text-base outline-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
+            {/* Buscador Principal con Búsqueda Avanzada y Búsqueda por Voz */}
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700 flex flex-col md:flex-row gap-2">
+                <div className="flex-1 flex items-center px-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl relative">
+                  <Search className="text-slate-400 w-5 h-5 shrink-0" />
+                  <input 
+                    type="text" 
+                    placeholder="¿Qué servicio buscás? (ej. Electricista, Plomero)" 
+                    className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder-slate-400 py-3 px-3 text-sm sm:text-base outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                  />
+
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 mr-1"
+                      title="Borrar texto"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+
+                  {/* Botón de Búsqueda por Voz */}
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    title={isListening ? "Detener búsqueda por voz" : "Búsqueda por voz (dictar búsqueda)"}
+                    className={`p-2 rounded-xl transition-all shrink-0 flex items-center gap-1 text-xs font-semibold ${
+                      isListening
+                        ? 'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <Mic size={18} className={isListening ? 'animate-bounce' : ''} />
+                    {isListening && <span className="hidden sm:inline">Escuchando...</span>}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Botón Filtros / Búsqueda Avanzada */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                    className={`px-4 py-3.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 border ${
+                      showAdvancedSearch || selectedZona !== 'Todas' || minRating > 0 || disponibilidadInmediata || haceUrgencias
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'
+                        : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                    title="Filtros por zona y calificación"
+                  >
+                    <SlidersHorizontal size={17} />
+                    <span className="hidden sm:inline">Filtros</span>
+                    {(selectedZona !== 'Todas' || minRating > 0 || disponibilidadInmediata || haceUrgencias) && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
+                    )}
+                  </button>
+
+                  <button 
+                    onClick={handleSearch}
+                    className="flex-1 md:flex-initial bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-8 py-3.5 rounded-xl font-bold text-base transition-colors flex items-center justify-center shrink-0 shadow-sm"
+                  >
+                    Buscar
+                  </button>
+                </div>
               </div>
-              <button 
-                onClick={handleSearch}
-                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-8 py-3.5 rounded-xl font-bold text-base transition-colors flex items-center justify-center shrink-0 shadow-sm"
-              >
-                Buscar
-              </button>
+
+              {/* Feedback de voz */}
+              {speechFeedback && (
+                <div 
+                  className={`mt-2.5 px-4 py-2 rounded-xl text-xs font-medium inline-flex items-center gap-2 shadow-sm text-left ${
+                    isListening
+                      ? 'bg-rose-500/20 border border-rose-500/40 text-rose-200'
+                      : 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-rose-400 animate-ping' : 'bg-indigo-400'}`}></span>
+                  <span>{speechFeedback}</span>
+                </div>
+              )}
+
+              {/* Panel de Búsqueda Avanzada */}
+              <AnimatePresence>
+                {showAdvancedSearch && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -8 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="mt-3 bg-white dark:bg-slate-800/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-2xl text-left overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-700">
+                      <div className="flex items-center gap-2">
+                        <SlidersHorizontal size={16} className="text-indigo-500" />
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">Búsqueda Avanzada en Bahía Blanca</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedSearch(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Zona Geográfica específica en Bahía Blanca */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                          <MapPin size={14} className="text-indigo-500" />
+                          Zona Geográfica (Bahía Blanca)
+                        </label>
+                        <select
+                          value={selectedZona}
+                          onChange={(e) => setSelectedZona(e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="Todas">Toda Bahía Blanca</option>
+                          {ZONAS.map((z) => (
+                            <option key={z} value={z}>{z}</option>
+                          ))}
+                        </select>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Filtrá según el barrio o sector de Bahía Blanca
+                        </p>
+                      </div>
+
+                      {/* Rango de Calificación de los profesionales */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                          <Star size={14} className="text-amber-500 fill-amber-400" />
+                          Rango de Calificación
+                        </label>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[
+                            { label: 'Todas', val: 0 },
+                            { label: '3.0+ ★', val: 3 },
+                            { label: '4.0+ ★', val: 4 },
+                            { label: '4.5+ ★', val: 4.5 },
+                          ].map((opt) => (
+                            <button
+                              key={opt.val}
+                              type="button"
+                              onClick={() => setMinRating(minRating === opt.val ? 0 : opt.val)}
+                              className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all border ${
+                                minRating === opt.val
+                                  ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-300 shadow-xs'
+                                  : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          {minRating === 0 ? 'Sin límite de calificación' : `Profesionales con mínimo ${minRating} estrellas`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Filtros adicionales */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={disponibilidadInmediata}
+                            onChange={(e) => setDisponibilidadInmediata(e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                          />
+                          <span>Disponible Ahora</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={haceUrgencias}
+                            onChange={(e) => setHaceUrgencias(e.target.checked)}
+                            className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500"
+                          />
+                          <span>Urgencias 24h</span>
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-auto">
+                        {(selectedZona !== 'Todas' || minRating > 0 || disponibilidadInmediata || haceUrgencias) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedZona('Todas');
+                              setMinRating(0);
+                              setDisponibilidadInmediata(false);
+                              setHaceUrgencias(false);
+                            }}
+                            className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1"
+                          >
+                            Limpiar
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleSearch}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                        >
+                          Aplicar y Buscar
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
             <div className="mt-8 flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-slate-400">

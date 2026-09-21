@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { safeLocalStorage } from '../utils/storage';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -16,47 +17,83 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
+const getSystemPreference = (): 'light' | 'dark' => {
+  try {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+  } catch {
+    // fallback
+  }
+  return 'light';
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme') as Theme;
-    return saved || 'system';
+    try {
+      const saved = safeLocalStorage.getItem('theme') as Theme;
+      return saved || 'system';
+    } catch {
+      return 'system';
+    }
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    localStorage.setItem('theme', theme);
+    try {
+      safeLocalStorage.setItem('theme', theme);
+    } catch {
+      // ignore
+    }
 
-    const root = window.document.documentElement;
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    const newResolvedTheme = theme === 'system' ? systemTheme : theme;
+    try {
+      const systemTheme = getSystemPreference();
+      const newResolvedTheme = theme === 'system' ? systemTheme : theme;
+      setResolvedTheme(newResolvedTheme);
 
-    setResolvedTheme(newResolvedTheme);
-
-    if (newResolvedTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+      if (typeof document !== 'undefined') {
+        const root = document.documentElement;
+        if (newResolvedTheme === 'dark') {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      }
+    } catch (err) {
+      console.warn("Theme application warning:", err);
     }
   }, [theme]);
 
-  // Listen for system changes
+  // Listen for system theme changes
   useEffect(() => {
     if (theme !== 'system') return;
+    if (typeof window === 'undefined' || !window.matchMedia) return;
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      const newResolvedTheme = mediaQuery.matches ? 'dark' : 'light';
-      setResolvedTheme(newResolvedTheme);
-      if (newResolvedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
+    try {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => {
+        const newResolvedTheme = mediaQuery.matches ? 'dark' : 'light';
+        setResolvedTheme(newResolvedTheme);
+        if (typeof document !== 'undefined') {
+          if (newResolvedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }
+      };
+
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+      } else if (typeof (mediaQuery as any).addListener === 'function') {
+        (mediaQuery as any).addListener(handleChange);
+        return () => (mediaQuery as any).removeListener(handleChange);
       }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    } catch (err) {
+      console.warn("Could not attach theme change listener:", err);
+    }
   }, [theme]);
 
   return (

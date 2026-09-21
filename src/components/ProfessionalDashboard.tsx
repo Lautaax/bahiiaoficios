@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { doc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, limit, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag, Crown, AlertTriangle } from 'lucide-react';
+import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag, Crown, AlertTriangle, Heart } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { ProfessionalOnboarding } from './ProfessionalOnboarding';
 import { Profile } from './Profile';
+import { UserFavoritesSection } from './UserFavoritesSection';
 import { Skeleton } from './ui/Skeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -14,8 +15,9 @@ import { NotificationsDropdown } from './NotificationsDropdown';
 import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { TrabajosSolicitados } from './TrabajosSolicitados';
 import { ProfessionalMyQuotes } from './ProfessionalMyQuotes';
+import { safeLocalStorage } from '../utils/storage';
 
-type TabType = 'resumen' | 'mis-presupuestos' | 'trabajos' | 'pedidos' | 'perfil' | 'estadisticas' | 'reseñas';
+type TabType = 'resumen' | 'mis-presupuestos' | 'trabajos' | 'pedidos' | 'perfil' | 'estadisticas' | 'reseñas' | 'favoritos';
 
 export const ProfessionalDashboard: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -87,7 +89,7 @@ export const ProfessionalDashboard: React.FC = () => {
       // Si vence en 7 días o menos y no es fecha pasada
       if (status === 'expiring_soon' && !diff.isPast && diff.days <= 7) {
         const notifKey = `vip_exp_warn_${currentUser.uid}_${diff.days}d`;
-        if (!localStorage.getItem(notifKey)) {
+        if (!safeLocalStorage.getItem(notifKey)) {
           try {
             await addDoc(collection(db, 'notificaciones'), {
               userId: currentUser.uid,
@@ -98,7 +100,7 @@ export const ProfessionalDashboard: React.FC = () => {
               fecha: serverTimestamp(),
               referenciaId: 'vip_renovacion'
             });
-            localStorage.setItem(notifKey, new Date().toISOString());
+            safeLocalStorage.setItem(notifKey, new Date().toISOString());
           } catch (err) {
             console.error("Error al registrar notificación de VIP próximo a vencer:", err);
           }
@@ -152,6 +154,7 @@ export const ProfessionalDashboard: React.FC = () => {
     },
     { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
     { id: 'reseñas', label: 'Reseñas', icon: Star },
+    { id: 'favoritos', label: 'Mis Favoritos', icon: Heart },
   ];
 
   const handleLogout = async () => {
@@ -655,6 +658,12 @@ export const ProfessionalDashboard: React.FC = () => {
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Tus Reseñas</h2>
               <ReviewsList />
+            </div>
+          )}
+
+          {activeTab === 'favoritos' && (
+            <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 animate-in fade-in slide-in-from-right-4 duration-500">
+              <UserFavoritesSection />
             </div>
           )}
         </main>
