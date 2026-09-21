@@ -474,8 +474,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Profile Header */}
-      <div className="relative mb-8 rounded-3xl overflow-hidden bg-indigo-600 h-32 sm:h-48 shadow-lg">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-90"></div>
+      <div className="relative mb-8 rounded-2xl overflow-hidden bg-slate-900 h-32 sm:h-48 border border-slate-800 shadow-sm">
+        <div className="absolute inset-0 bg-slate-900"></div>
         <div className="absolute inset-0 flex items-end p-6 sm:p-8">
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="relative">
@@ -490,7 +490,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
             </div>
             <div className="text-white">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{formData.nombre || 'Tu Perfil'}</h1>
-              <p className="text-indigo-100 text-sm sm:text-base font-medium opacity-90">
+              <p className="text-slate-300 text-sm sm:text-base font-medium">
                 {formData.rol === 'profesional' ? (formData.rubros[0] || 'Profesional') : 'Cliente'} • {formData.zona || 'Bahía Blanca'}
               </p>
             </div>

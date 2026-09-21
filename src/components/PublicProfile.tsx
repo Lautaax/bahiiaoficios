@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check, Crown } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
+import { checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -67,11 +68,11 @@ export const PublicProfile: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchProfessional = async () => {
-      if (!slug) return;
-      
+    if (!slug) return;
+    let unsubscribeSnapshot: (() => void) | null = null;
+    
+    const fetchAndSubscribeProfessional = async () => {
       try {
-        let userData: User | null = null;
         let docId = '';
 
         // First try to find by slug
@@ -79,57 +80,80 @@ export const PublicProfile: React.FC = () => {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          userData = querySnapshot.docs[0].data() as User;
           docId = querySnapshot.docs[0].id;
         } else {
           // Fallback to ID
           const docRef = doc(db, 'usuarios', slug);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            userData = docSnap.data() as User;
             docId = docSnap.id;
           }
         }
         
-        if (userData) {
-          if (userData.rol === 'profesional') {
-            setProfessional({ ...userData, uid: docId });
-            
-            // Increment profile views if not the owner
-            if (currentUser?.uid !== docId) {
-              try {
-                // Total views
-                await updateDoc(doc(db, 'usuarios', docId), {
-                  'profesionalInfo.profileViews': increment(1)
-                });
+        if (docId) {
+          // Increment profile views if not the owner (once per visit)
+          if (currentUser?.uid !== docId) {
+            try {
+              await updateDoc(doc(db, 'usuarios', docId), {
+                'profesionalInfo.profileViews': increment(1)
+              });
 
-                // Daily views for stats
-                const today = new Date().toISOString().split('T')[0];
-                const statsRef = doc(db, 'usuarios', docId, 'stats', today);
-                await setDoc(statsRef, {
-                  views: increment(1),
-                  date: today
-                }, { merge: true });
-              } catch (e) {
-                console.error("Error updating profile views", e);
-              }
+              const today = new Date().toISOString().split('T')[0];
+              const statsRef = doc(db, 'usuarios', docId, 'stats', today);
+              await setDoc(statsRef, {
+                views: increment(1),
+                date: today
+              }, { merge: true });
+            } catch (e) {
+              console.error("Error updating profile views", e);
             }
-          } else {
-            setError('El usuario no es un perfil profesional.');
           }
+
+          // Real-time listener for user document to ensure live VIP and profile sync
+          unsubscribeSnapshot = onSnapshot(doc(db, 'usuarios', docId), (docSnap) => {
+            if (docSnap.exists()) {
+              const userData = docSnap.data() as User;
+              if (userData.rol === 'profesional') {
+                // Verificar en tiempo real si el VIP expiró
+                if (userData.profesionalInfo?.isVip && !isVipActive(userData.profesionalInfo)) {
+                  checkAndExpireUserVip(docId, userData.profesionalInfo);
+                  if (userData.profesionalInfo) {
+                    userData.profesionalInfo.isVip = false;
+                  }
+                }
+                setProfessional({ ...userData, uid: docId });
+                setError('');
+              } else {
+                setError('El usuario no es un perfil profesional.');
+              }
+            } else {
+              setError('Profesional no encontrado.');
+            }
+            setLoading(false);
+          }, (err) => {
+            console.error("Error in real-time profile listener:", err);
+            setError('Error al conectar con el perfil.');
+            setLoading(false);
+          });
         } else {
           setError('Profesional no encontrado.');
+          setLoading(false);
         }
       } catch (err) {
         console.error("Error fetching professional:", err);
         setError('Error al cargar el perfil.');
-      } finally {
         setLoading(false);
       }
     };
 
-    fetchProfessional();
-  }, [slug]);
+    fetchAndSubscribeProfessional();
+
+    return () => {
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
+  }, [slug, currentUser?.uid]);
 
   const fetchReviews = async () => {
     if (!professional?.uid) return;
@@ -333,7 +357,10 @@ export const PublicProfile: React.FC = () => {
   }
 
   const { nombre, zona, fotoUrl } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada, diasDisponibilidad } = professional.profesionalInfo;
+  const { rubro, descripcion, ratingAvg, reviewCount, isVip: _rawVip, telefono, contactEmail, direccion, cuit, haceFactura, tipoFactura, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotosTrabajosDetalle, fotosTrabajos, fotoPortada, diasDisponibilidad } = professional.profesionalInfo;
+  
+  // Verificación estricta en tiempo real de membresía VIP
+  const isVip = isVipActive(professional.profesionalInfo);
 
   const todayIndex = new Date().getDay();
   const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
@@ -370,7 +397,7 @@ export const PublicProfile: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Info Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700 sticky top-24">
+          <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border sticky top-24 transition-all ${isVip ? 'border-amber-300 dark:border-amber-500/50 shadow-amber-100/50 dark:shadow-none' : 'border-gray-100 dark:border-gray-700'}`}>
             <div className="h-48 bg-gray-200 relative overflow-hidden">
               {fotoPortada ? (
                 <img 
@@ -379,42 +406,44 @@ export const PublicProfile: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+                <div className={`w-full h-full ${isVip ? 'bg-slate-900 border-b-2 border-amber-400' : 'bg-slate-800'}`}></div>
               )}
               
               {/* Profile Actions */}
               <div className="absolute top-4 left-4 z-20 flex gap-2">
                 <button
                   onClick={toggleFavorite}
-                  className="p-2.5 rounded-full bg-white/80 backdrop-blur-md shadow-lg hover:bg-white transition-all transform hover:scale-110 group"
+                  className="p-2.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-all transform hover:scale-105 group"
                   title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
                 >
                   <Heart 
-                    size={20} 
-                    className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600 group-hover:text-red-500'}`} 
+                    size={18} 
+                    className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-200 group-hover:text-red-500'}`} 
                   />
                 </button>
                 <button
                   onClick={handleShare}
-                  className="p-2.5 rounded-full bg-white/80 backdrop-blur-md shadow-lg hover:bg-white transition-all transform hover:scale-110 group relative"
+                  className="p-2.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-all transform hover:scale-105 group relative"
                   title="Compartir perfil"
                 >
                   {showShareFeedback ? (
-                    <Check size={20} className="text-green-600 animate-in zoom-in" />
+                    <Check size={18} className="text-emerald-600 animate-in zoom-in" />
                   ) : (
-                    <Share2 size={20} className="text-gray-600 group-hover:text-indigo-600" />
+                    <Share2 size={18} className="text-slate-700 dark:text-slate-200 group-hover:text-indigo-600" />
                   )}
                   {showShareFeedback && (
-                    <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1.5 px-2.5 rounded-lg whitespace-nowrap animate-in fade-in slide-in-from-top-1 shadow-xl">
+                    <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1.5 px-2.5 rounded-lg whitespace-nowrap animate-in fade-in slide-in-from-top-1 shadow-xl">
                       ¡Enlace copiado!
                     </span>
                   )}
                 </button>
               </div>
 
+              {/* Badge VIP exclusivo: solo visible si la membresía está vigente */}
               {isVip && (
-                <div className="absolute top-4 right-4 bg-amber-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm z-10">
-                  <ShieldCheck size={12} /> VIP
+                <div className="absolute top-4 right-4 bg-amber-500 text-slate-950 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm z-10 border border-amber-300 animate-in fade-in zoom-in">
+                  <Crown size={14} className="fill-slate-950" />
+                  <span>VIP</span>
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
@@ -425,7 +454,7 @@ export const PublicProfile: React.FC = () => {
                 <img 
                   src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                   alt={nombre} 
-                  className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-md bg-white"
+                  className={`w-32 h-32 rounded-full object-cover border-4 shadow-md bg-white transition-all ${isVip ? 'border-amber-400 ring-4 ring-amber-300/40' : 'border-white dark:border-gray-800'}`}
                 />
               </div>
 

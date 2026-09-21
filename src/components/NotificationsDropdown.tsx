@@ -143,9 +143,37 @@ export const NotificationsDropdown: React.FC = () => {
                       {notif.tipo === 'nueva_solicitud' && (
                         <Link 
                           to="/dashboard-profesional" 
+                          onClick={() => setIsOpen(false)}
                           className="inline-flex items-center text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 transition-colors"
                         >
                           Ver solicitud →
+                        </Link>
+                      )}
+                      {(notif.tipo === 'nueva_oferta_trabajo' || notif.tipo === 'nuevo_presupuesto') && (
+                        <Link 
+                          to="/trabajos" 
+                          onClick={() => setIsOpen(false)}
+                          className="inline-flex items-center text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 transition-colors"
+                        >
+                          Ver presupuestos recibidos →
+                        </Link>
+                      )}
+                      {notif.tipo === 'estado_oferta_actualizado' && (
+                        <Link 
+                          to="/dashboard-profesional" 
+                          onClick={() => setIsOpen(false)}
+                          className="inline-flex items-center text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 transition-colors"
+                        >
+                          Ver mis presupuestos →
+                        </Link>
+                      )}
+                      {notif.tipo === 'nuevo_trabajo_publicado' && (
+                        <Link 
+                          to="/trabajos" 
+                          onClick={() => setIsOpen(false)}
+                          className="inline-flex items-center text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 transition-colors"
+                        >
+                          Ver trabajo y cotizar →
                         </Link>
                       )}
                     </div>

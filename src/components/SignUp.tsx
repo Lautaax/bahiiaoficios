@@ -5,7 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { Role } from '../types';
-import { Upload, User, Briefcase, AlertCircle } from 'lucide-react';
+import { Upload, User, Briefcase, AlertCircle, Scale, ShieldAlert, ChevronDown, ChevronUp, FileText, CheckCircle2 } from 'lucide-react';
 import { ZONAS, PROFESSIONS } from '../constants';
 
 export const SignUp: React.FC = () => {
@@ -29,6 +29,9 @@ export const SignUp: React.FC = () => {
   const [matriculado, setMatriculado] = useState(false);
   const [preciosReferencia, setPreciosReferencia] = useState<{ servicio: string; precio: string }[]>([]);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptDisclaimer, setAcceptDisclaimer] = useState(false);
+  const [acceptProDeclaration, setAcceptProDeclaration] = useState(false);
+  const [showLegalDetails, setShowLegalDetails] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   
   const [step, setStep] = useState(1);
@@ -102,7 +105,17 @@ export const SignUp: React.FC = () => {
     }
 
     if (!acceptTerms) {
-      setError('Debes aceptar los términos y condiciones.');
+      setError('Debes aceptar los Términos y Condiciones y la Política de Privacidad.');
+      return;
+    }
+
+    if (!acceptDisclaimer) {
+      setError('Debes aceptar expresamente el Deslinde de Responsabilidad Legal para continuar.');
+      return;
+    }
+
+    if (role === 'profesional' && !acceptProDeclaration) {
+      setError('Debes aceptar la Declaración Jurada de idoneidad y responsabilidad profesional.');
       return;
     }
 
@@ -117,6 +130,11 @@ export const SignUp: React.FC = () => {
     if (e) e.preventDefault();
     setError('');
     
+    if (!acceptTerms || !acceptDisclaimer || (role === 'profesional' && !acceptProDeclaration)) {
+      setError('Debes aceptar los Términos, el Deslinde de Responsabilidad y la Declaración Jurada.');
+      return;
+    }
+
     if (role === 'profesional' && rubrosSeleccionados.length === 0) {
       setError('Debes seleccionar al menos un rubro.');
       return;
@@ -156,6 +174,11 @@ export const SignUp: React.FC = () => {
         zona,
         createdAt: serverTimestamp(),
         fotoUrl,
+        aceptoTerminos: true,
+        aceptoDeslindeLegal: true,
+        declaracionJuradaProfesional: role === 'profesional',
+        versionTerminos: '2026-03-v2',
+        fechaAceptacionTerminos: serverTimestamp(),
       };
 
       // Add professional specific fields if applicable
@@ -486,25 +509,106 @@ export const SignUp: React.FC = () => {
             </div>
           )}
 
-          <div>
-            <div className="flex items-start gap-2 mb-4">
-              <input
-                id="acceptTerms"
-                type="checkbox"
-                className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
-              />
-              <label htmlFor="acceptTerms" className="text-xs text-gray-600">
-                Acepto los <Link to="/terms" className="text-indigo-600 hover:underline">Términos y Condiciones</Link> y la <Link to="/privacy" className="text-indigo-600 hover:underline">Política de Privacidad</Link>.
-              </label>
+          {/* Bloque Obligatorio de Términos, Privacidad y Deslinde Legal */}
+          <div className="space-y-3 pt-2">
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Scale size={15} className="text-indigo-600 dark:text-indigo-400" />
+                  <span>Acuerdos Legales y Deslinde Obligatorio</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowLegalDetails(!showLegalDetails)}
+                  className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5"
+                >
+                  {showLegalDetails ? (
+                    <>Ocultar detalles <ChevronUp size={12} /></>
+                  ) : (
+                    <>Ver resumen legal <ChevronDown size={12} /></>
+                  )}
+                </button>
+              </div>
+
+              {/* Acordeón explicativo con los 5 puntos clave de deslinde legal */}
+              {showLegalDetails && (
+                <div className="mb-3 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200/80 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-300 space-y-2 leading-relaxed">
+                  <div className="flex items-start gap-1.5 text-amber-700 dark:text-amber-400 font-bold">
+                    <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+                    <span>Resumen de Exención de Responsabilidad (Bahía Blanca):</span>
+                  </div>
+                  <p>
+                    <strong>1. Mero Tablón de Contacto:</strong> Bahía Oficios y su desarrollador actúan únicamente como directorio pasivo. No intervienen en presupuestos, tarifas, pagos ni ejecución de trabajos.
+                  </p>
+                  <p>
+                    <strong>2. Exención por Daños y Siniestros:</strong> La plataforma queda totalmente liberada de responsabilidad civil o penal ante roturas, fugas de gas, incendios, electrocuciones, vicios de obra o accidentes corporales.
+                  </p>
+                  <p>
+                    <strong>3. Transacciones y Señas:</strong> La plataforma no maneja dinero ni comisiones. Cualquier anticipo o pago es a exclusivo riesgo entre cliente y profesional.
+                  </p>
+                  <p>
+                    <strong>4. Verificación de Matrículas:</strong> El cliente tiene el deber inexcusable de solicitar la matrícula oficial en mano (Camuzzi, EDES, colegios) antes de contratar.
+                  </p>
+                  <p>
+                    <strong>5. Jurisdicción:</strong> Se fija competencia exclusiva en los Tribunales Ordinarios de Bahía Blanca.
+                  </p>
+                </div>
+              )}
+
+              {/* Checkbox 1: Términos y Privacidad */}
+              <div className="flex items-start gap-2.5 mb-2.5">
+                <input
+                  id="acceptTerms"
+                  type="checkbox"
+                  required
+                  className="mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 rounded shrink-0 cursor-pointer"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                />
+                <label htmlFor="acceptTerms" className="text-xs text-slate-700 dark:text-slate-300 leading-snug cursor-pointer select-none">
+                  Acepto los <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Términos y Condiciones</Link> y la <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Política de Privacidad</Link>.
+                </label>
+              </div>
+
+              {/* Checkbox 2: Deslinde Legal de Responsabilidad */}
+              <div className="flex items-start gap-2.5 mb-2.5">
+                <input
+                  id="acceptDisclaimer"
+                  type="checkbox"
+                  required
+                  className="mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 rounded shrink-0 cursor-pointer"
+                  checked={acceptDisclaimer}
+                  onChange={(e) => setAcceptDisclaimer(e.target.checked)}
+                />
+                <label htmlFor="acceptDisclaimer" className="text-xs text-slate-700 dark:text-slate-300 leading-snug cursor-pointer select-none">
+                  <span className="font-semibold text-slate-900 dark:text-white">Deslinde Legal:</span> Eximo expresamente a Bahía Oficios, a sus creadores y administradores de toda responsabilidad civil, penal, laboral o patrimonial por siniestros, daños, vicios de obra, estafas o pagos entre las partes.
+                </label>
+              </div>
+
+              {/* Checkbox 3: Declaración Jurada Profesional (si rol es profesional) */}
+              {role === 'profesional' && (
+                <div className="flex items-start gap-2.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <input
+                    id="acceptProDeclaration"
+                    type="checkbox"
+                    required
+                    className="mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 rounded shrink-0 cursor-pointer"
+                    checked={acceptProDeclaration}
+                    onChange={(e) => setAcceptProDeclaration(e.target.checked)}
+                  />
+                  <label htmlFor="acceptProDeclaration" className="text-xs text-slate-700 dark:text-slate-300 leading-snug cursor-pointer select-none">
+                    <span className="font-semibold text-slate-900 dark:text-white">Declaración Jurada Profesional:</span> Declaro que mis datos y matrículas son verídicos, asumiendo total y exclusiva responsabilidad legal y civil por mis prestaciones y presupuestos.
+                  </label>
+                </div>
+              )}
             </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-xs sm:text-sm font-bold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors shadow-xs"
             >
-              {loading ? 'Procesando...' : (step === 1 && role === 'profesional' ? 'Siguiente' : 'Registrarse')}
+              {loading ? 'Procesando...' : (step === 1 && role === 'profesional' ? 'Siguiente paso' : 'Aceptar términos y Registrarme')}
             </button>
           </div>
           

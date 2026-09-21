@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck } from 'lucide-react';
+import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -29,6 +29,7 @@ import { TradeDiscounts } from './components/TradeDiscounts';
 import { PublicidadComercio } from './components/PublicidadComercio';
 import { NotificationListener } from './components/NotificationListener';
 import { ProfessionLanding } from './components/ProfessionLanding';
+import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 
 import { ChatBadge } from './components/ChatBadge';
 
@@ -69,7 +70,7 @@ function Navbar() {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-200">
+    <header className="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
@@ -81,7 +82,11 @@ function Navbar() {
               <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Portal de Profesionales</p>
             </div>
           </Link>
-          <Link to="/blog" className="hidden md:block ml-6 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+          <Link to="/trabajos" className="hidden sm:flex items-center gap-1.5 ml-4 sm:ml-6 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 px-3 py-1.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800 transition-colors">
+            <Briefcase size={15} />
+            <span>Trabajos Solicitados</span>
+          </Link>
+          <Link to="/blog" className="hidden md:block ml-3 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
             Blog y Consejos
           </Link>
         </div>
@@ -197,14 +202,14 @@ function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 overflow-x-hidden">
       <Navbar />
       <main className="flex-1">
         {children}
       </main>
       <HelpChatbot />
       {/* Footer */}
-      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-12 py-8 transition-colors duration-200">
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 mt-12 py-10 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
           <div className="flex justify-center gap-8 mb-6">
             <div className="flex flex-col items-center">
@@ -374,6 +379,12 @@ function AppContent() {
             <Route path="/publicitar" element={
               <Layout>
                 <PublicidadComercio />
+              </Layout>
+            } />
+
+            <Route path="/trabajos" element={
+              <Layout>
+                <TrabajosSolicitados />
               </Layout>
             } />
           </Routes>

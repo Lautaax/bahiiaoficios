@@ -3,15 +3,17 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff, Crown, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Ad, TradeDiscount } from '../types';
 import { uploadToFirebase } from '../services/firebaseStorageService';
+import { AdminVipManagement } from './AdminVipManagement';
+import { ProfessionalPaymentHistoryModal } from './ProfessionalPaymentHistoryModal';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'publicidad' | 'descuentos'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos'>('usuarios');
   const [users, setUsers] = useState<User[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [discounts, setDiscounts] = useState<TradeDiscount[]>([]);
@@ -21,6 +23,7 @@ export const AdminDashboard: React.FC = () => {
   const [viewingDni, setViewingDni] = useState<User | null>(null);
   const [viewingMatricula, setViewingMatricula] = useState<User | null>(null);
   const [managingBadges, setManagingBadges] = useState<User | null>(null);
+  const [viewingPaymentHistory, setViewingPaymentHistory] = useState<User | null>(null);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userDateFilter, setUserDateFilter] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState<'todos' | 'clientes' | 'profesionales'>('todos');
@@ -33,29 +36,29 @@ export const AdminDashboard: React.FC = () => {
   const [newDiscount, setNewDiscount] = useState<Partial<TradeDiscount>>({ active: true });
   const [uploading, setUploading] = useState(false);
 
+  const fetchData = async () => {
+    try {
+      const [usersSnap, adsSnap, discountsSnap] = await Promise.all([
+        getDocs(collection(db, 'usuarios')),
+        getDocs(collection(db, 'ads')),
+        getDocs(collection(db, 'tradeDiscounts'))
+      ]);
+
+      setUsers(usersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
+      setAds(adsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Ad)));
+      setDiscounts(discountsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as TradeDiscount)));
+    } catch (error) {
+      console.error("Error fetching admin data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!currentUser?.isAdmin) {
       navigate('/');
       return;
     }
-
-    const fetchData = async () => {
-      try {
-        const [usersSnap, adsSnap, discountsSnap] = await Promise.all([
-          getDocs(collection(db, 'usuarios')),
-          getDocs(collection(db, 'ads')),
-          getDocs(collection(db, 'tradeDiscounts'))
-        ]);
-
-        setUsers(usersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
-        setAds(adsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Ad)));
-        setDiscounts(discountsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as TradeDiscount)));
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchData();
   }, [currentUser, navigate]);
@@ -336,6 +339,13 @@ export const AdminDashboard: React.FC = () => {
           Usuarios
         </button>
         <button 
+          onClick={() => setActiveTab('suscripciones')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'suscripciones' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+        >
+          <Crown size={20} className={activeTab === 'suscripciones' ? 'text-amber-300' : 'text-amber-500'} />
+          Suscripciones VIP
+        </button>
+        <button 
           onClick={() => setActiveTab('publicidad')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'publicidad' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
         >
@@ -519,6 +529,15 @@ export const AdminDashboard: React.FC = () => {
                           )}
                           {user.rol === 'profesional' && (
                             <button 
+                              onClick={() => setViewingPaymentHistory(user)}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Historial de Pagos y Suscripción VIP"
+                            >
+                              <CreditCard size={18} />
+                            </button>
+                          )}
+                          {user.rol === 'profesional' && (
+                            <button 
                               onClick={() => setManagingBadges(user)}
                               className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                               title="Gestionar Insignias"
@@ -556,6 +575,13 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'suscripciones' && (
+        <AdminVipManagement 
+          users={users} 
+          onRefreshUsers={fetchData} 
+        />
       )}
 
       {activeTab === 'publicidad' && (
@@ -1072,6 +1098,17 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {viewingPaymentHistory && (
+        <ProfessionalPaymentHistoryModal 
+          user={viewingPaymentHistory}
+          onClose={() => setViewingPaymentHistory(null)}
+          onUserUpdated={async (updated) => {
+            setViewingPaymentHistory(updated);
+            await fetchData();
+          }}
+        />
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import {
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { User } from '../types';
+import { checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -44,6 +45,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data() as Omit<User, 'uid'>;
             const isSuperAdmin = firebaseUser.email === 'lautaroj.aguilera@gmail.com';
+
+            // Auto-verificación de suscripción VIP al iniciar sesión o cargar perfil
+            if (userData.profesionalInfo?.isVip) {
+              const active = isVipActive(userData.profesionalInfo);
+              if (!active) {
+                // Si la membresía venció, actualizamos Firestore inmediatamente
+                checkAndExpireUserVip(firebaseUser.uid, userData.profesionalInfo);
+                userData.profesionalInfo.isVip = false;
+              }
+            }
+
             setCurrentUser({ uid: firebaseUser.uid, ...userData, isNewUser: false, isAdmin: userData.isAdmin || isSuperAdmin });
           } else {
             // User exists in Auth but not in Firestore (New User)

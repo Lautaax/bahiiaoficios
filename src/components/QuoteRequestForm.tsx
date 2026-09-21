@@ -156,9 +156,9 @@ export const QuoteRequestForm: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white text-center">
-        <h2 className="text-2xl font-bold mb-2">Solicitar Presupuesto Múltiple</h2>
-        <p className="text-indigo-100">Describe tu problema una vez y recibe hasta 3 presupuestos de profesionales calificados.</p>
+      <div className="bg-slate-900 p-8 text-white text-center border-b border-slate-800">
+        <h2 className="text-2xl font-bold mb-2">Publicar Trabajo Solicitado</h2>
+        <p className="text-slate-300 text-sm">Describí tu necesidad y recibí propuestas directas de profesionales verificados de Bahía Blanca.</p>
       </div>
       
       <form onSubmit={handleSubmit} className="p-8 space-y-6">

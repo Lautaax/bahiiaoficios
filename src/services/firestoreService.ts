@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User } from '../types';
+import { isVipActive } from '../utils/vipUtils';
 
 /**
  * SERVICIO DE FIRESTORE
@@ -53,9 +54,11 @@ export const searchProfessionals = async (queryText: string, category: string) =
 
     // 4. Ordenar por VIP y Rating
     return results.sort((a, b) => {
-      // Primero VIP
-      if (a.profesionalInfo?.isVip && !b.profesionalInfo?.isVip) return -1;
-      if (!a.profesionalInfo?.isVip && b.profesionalInfo?.isVip) return 1;
+      // Primero VIP activo
+      const isVipA = isVipActive(a.profesionalInfo);
+      const isVipB = isVipActive(b.profesionalInfo);
+      if (isVipA && !isVipB) return -1;
+      if (!isVipA && isVipB) return 1;
       
       // Luego por Rating
       return (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0);

@@ -167,7 +167,7 @@ export const VipButton: React.FC = () => {
           
           <button
             onClick={openModal}
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white px-6 py-3 rounded-lg font-bold shadow-md transition-all transform hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-6 py-3 rounded-xl font-bold shadow-sm transition-all active:scale-95"
           >
             <CreditCard size={20} />
             Activar Destacado

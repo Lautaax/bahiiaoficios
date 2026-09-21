@@ -1,23 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, MessageSquare, MessageCircle, Mail, X, ChevronDown, ChevronUp, Briefcase, Heart, AlertCircle, Eye, Share2, Check, BadgeCheck } from 'lucide-react';
-import { ReviewForm } from './ReviewForm';
+import { User } from '../types';
+import { Star, MapPin, Phone, MessageSquare, MessageCircle, Mail, X, Briefcase, Heart, Share2, Check, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { PROFESSIONS } from '../constants';
+import { isVipActive } from '../utils/vipUtils';
 
 interface ProfessionalCardProps {
   professional: User;
 }
 
 export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => {
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [showReviews, setShowReviews] = useState(false);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [latestReview, setLatestReview] = useState<Review | null>(null);
-  const [loadingReviews, setLoadingReviews] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
@@ -72,131 +67,56 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     e.preventDefault();
     e.stopPropagation();
     
-    const profileUrl = `${window.location.origin}/profesional/${professional.slug || uid}`;
+    const profileUrl = `${window.location.origin}/profesional/${professional.slug || professional.uid}`;
     navigator.clipboard.writeText(profileUrl).then(() => {
       setShowShareFeedback(true);
       setTimeout(() => setShowShareFeedback(false), 2000);
     });
   };
 
-  useEffect(() => {
-    const fetchLatestReview = async () => {
-      if (!professional.uid) return;
-      
-      try {
-        // Try optimal query first
-        const q = query(
-          collection(db, 'resenas'),
-          where('profesionalId', '==', professional.uid),
-          orderBy('fecha', 'desc'),
-          limit(1)
-        );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const doc = querySnapshot.docs[0];
-          setLatestReview({
-            id: doc.id,
-            ...doc.data(),
-            fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
-          } as Review);
-        }
-      } catch (error: any) {
-        // Fallback for missing index
-        if (error.code === 'failed-precondition') {
-           // Suppress error log for known missing index issue, as we have a fallback
-           console.warn("Index missing for latest review query, using fallback.");
-           try {
-             const simpleQ = query(
-               collection(db, 'resenas'),
-               where('profesionalId', '==', professional.uid),
-               limit(10) // Fetch a few to sort client-side
-             );
-             const querySnapshot = await getDocs(simpleQ);
-             if (!querySnapshot.empty) {
-                const reviews = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
-                } as Review));
-                
-                // Sort client-side
-                reviews.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
-                setLatestReview(reviews[0]);
-             }
-           } catch (fallbackError) {
-             console.error("Error in fallback fetch:", fallbackError);
-           }
-        }
-      }
-    };
-
-    fetchLatestReview();
-  }, [professional.uid]);
-
   if (professional.rol !== 'profesional' || !professional.profesionalInfo) {
     return null;
   }
 
   const { nombre, zona, fotoUrl, uid } = professional;
-  const { rubro, descripcion, ratingAvg, reviewCount, isVip, telefono, contactEmail, direccion, haceUrgencias, disponibilidadInmediata, isVerified, matriculado, matriculaVerified, preciosReferencia, fotoPortada, diasDisponibilidad } = professional.profesionalInfo;
+  const { 
+    rubro, 
+    descripcion, 
+    ratingAvg, 
+    reviewCount, 
+    telefono, 
+    contactEmail, 
+    direccion, 
+    haceUrgencias, 
+    disponibilidadInmediata, 
+    isVerified, 
+    matriculado, 
+    matriculaVerified, 
+    preciosReferencia, 
+    fotoPortada, 
+    diasDisponibilidad 
+  } = professional.profesionalInfo;
+
+  const isVip = isVipActive(professional.profesionalInfo);
 
   const todayIndex = new Date().getDay();
   const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
-
-  const isClient = currentUser?.rol === 'cliente';
 
   // Find profession icon
   const professionData = PROFESSIONS.find(p => p.name === rubro);
   const ProfessionIcon = professionData?.icon || Briefcase;
 
-  const handleShowReviews = async () => {
-    if (!showReviews && reviews.length === 0) {
-      setLoadingReviews(true);
-      try {
-        // Try optimal query first
-        const q = query(
-          collection(db, 'resenas'),
-          where('profesionalId', '==', uid),
-          orderBy('fecha', 'desc'),
-          limit(5)
-        );
-        const querySnapshot = await getDocs(q);
-        const fetchedReviews = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
-        })) as Review[];
-        setReviews(fetchedReviews);
-      } catch (error: any) {
-        // Fallback for missing index
-        if (error.code === 'failed-precondition') {
-            console.warn("Index missing for reviews query, using fallback.");
-            try {
-                const simpleQ = query(
-                    collection(db, 'resenas'),
-                    where('profesionalId', '==', uid),
-                    limit(20) // Fetch more to sort client-side
-                );
-                const querySnapshot = await getDocs(simpleQ);
-                const fetchedReviews = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    fecha: doc.data().fecha?.toDate ? doc.data().fecha.toDate() : new Date(doc.data().fecha)
-                })) as Review[];
-                
-                // Sort client-side
-                fetchedReviews.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
-                setReviews(fetchedReviews.slice(0, 5));
-            } catch (fallbackError) {
-                console.error("Error in fallback fetch reviews:", fallbackError);
-            }
-        }
-      } finally {
-        setLoadingReviews(false);
-      }
+  // Calculate lowest reference price if available
+  const minPrice = useMemo(() => {
+    if (!preciosReferencia || preciosReferencia.length === 0) return null;
+    const numbers = preciosReferencia
+      .map(p => parseInt(p.precio.replace(/\D/g, '')) || 0)
+      .filter(n => n > 0);
+    if (numbers.length > 0) {
+      return Math.min(...numbers);
     }
-    setShowReviews(!showReviews);
-  };
+    return null;
+  }, [preciosReferencia]);
 
   const handleWhatsAppClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -251,498 +171,264 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     <>
       <div 
         className={`
-          relative flex flex-col bg-white rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1
-          ${isVip ? 'border-2 border-amber-400 shadow-lg shadow-amber-100/50' : 'border border-gray-200 shadow-sm'}
+          relative flex flex-col justify-between h-full bg-white dark:bg-slate-800 rounded-2xl overflow-hidden transition-colors
+          ${isVip 
+            ? 'border border-amber-300/80 dark:border-amber-500/50' 
+            : 'border border-slate-200/70 dark:border-slate-700/70 hover:border-slate-300 dark:hover:border-slate-600'}
         `}
       >
-        {/* Cover Image */}
-        <div className="relative h-24 overflow-hidden bg-gray-200">
-          {fotoPortada ? (
+        {/* Top Header / Subtle Neutral Banner */}
+        <div className="relative h-14 bg-slate-100 dark:bg-slate-700/60 overflow-hidden">
+          {fotoPortada && (
             <img 
               src={fotoPortada} 
               alt={`Portada de ${nombre}`} 
-              className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
+              className="w-full h-full object-cover opacity-60 dark:opacity-40"
               loading="lazy"
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center opacity-80">
-              <ProfessionIcon size={40} className="text-white/30" />
+          )}
+
+          {/* VIP Badge */}
+          {isVip && (
+            <div className="absolute top-2 right-2 z-10">
+              <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                <Star size={10} className="fill-amber-500 text-amber-500" /> VIP
+              </span>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+          {/* Quick Actions (Favorite & Share) */}
+          <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
+            <button
+              onClick={toggleFavorite}
+              aria-label={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+              className="p-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs text-slate-400 hover:text-rose-500 transition-colors"
+              title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+            >
+              <Heart size={14} className={isFavorite ? 'fill-rose-500 text-rose-500' : ''} />
+            </button>
+            <button
+              onClick={handleShare}
+              aria-label="Compartir perfil"
+              className="p-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs text-slate-400 hover:text-indigo-600 transition-colors relative"
+              title="Compartir perfil"
+            >
+              {showShareFeedback ? <Check size={14} className="text-emerald-600" /> : <Share2 size={14} />}
+              {showShareFeedback && (
+                <span className="absolute left-full ml-1.5 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap">
+                  ¡Copiado!
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* VIP Badge - Enhanced Style */}
-        {isVip && (
-          <div className="absolute top-0 right-0 z-10">
-            <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl shadow-md flex items-center gap-1.5 animate-pulse-slow">
-              <ShieldCheck size={14} className="fill-white" />
-              <span className="tracking-wide">DESTACADO</span>
-            </div>
-          </div>
-        )}
-
-        {/* Favorite Button */}
-        <button
-          onClick={toggleFavorite}
-          className="absolute top-3 left-3 z-20 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all hover:scale-110 group"
-          title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
-        >
-          <Heart 
-            size={20} 
-            className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 group-hover:text-red-400'}`} 
-          />
-        </button>
-
-        {/* Share Button */}
-        <button
-          onClick={handleShare}
-          className="absolute top-3 left-14 z-20 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all hover:scale-110 group"
-          title="Compartir perfil"
-        >
-          {showShareFeedback ? (
-            <Check size={20} className="text-green-600 animate-in zoom-in" />
-          ) : (
-            <Share2 size={20} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
-          )}
-          {showShareFeedback && (
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap animate-in fade-in slide-in-from-top-1">
-              ¡Copiado!
-            </span>
-          )}
-        </button>
-
-        <div className="p-4 pt-0 flex flex-col h-full relative">
-          {/* Header */}
-          <div className="flex items-start gap-3 mb-3 -mt-6">
-            <div className="relative">
+        {/* Card Body */}
+        <div className="p-4 pt-0 flex flex-col flex-1">
+          {/* Identity & Status Pill */}
+          <div className="flex items-end justify-between -mt-7 mb-2.5">
+            <Link to={`/profesional/${professional.slug || uid}`} className="block relative group">
               <img 
                 src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                 alt={nombre} 
-                className={`w-16 h-16 rounded-full object-cover border-4 border-white shadow-md ${isVip ? 'ring-4 ring-amber-100' : ''}`}
+                className={`w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-800 bg-white dark:bg-slate-700 transition-transform group-hover:scale-105 ${isVip ? 'ring-1 ring-amber-400' : ''}`}
                 loading="lazy"
               />
-              {isVip && (
-                <div className="absolute -bottom-1 -right-1 bg-amber-400 rounded-full p-1 border-2 border-white shadow-sm">
-                  <Star size={10} className="text-white fill-white" />
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1 min-w-0 pt-1">
-              <div className="flex items-center gap-1.5 mb-1">
-                <h3 className="font-bold text-base text-white truncate drop-shadow-md">{nombre}</h3>
-              </div>
-              
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {isVerified && (
-                  <div className="flex items-center gap-1 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm" title="Identidad Verificada">
-                    <ShieldCheck size={10} className="fill-white" />
-                    <span className="tracking-tighter">VERIFICADO</span>
-                  </div>
-                )}
-                {matriculaVerified && (
-                  <div className="flex items-center gap-1 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm" title="Matrícula Profesional Verificada">
-                    <BadgeCheck size={10} className="fill-white" />
-                    <span className="tracking-tighter">MATRICULADO</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex flex-wrap gap-1 mb-1.5">
-                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 0 ? (
-                  professional.profesionalInfo.rubros.slice(0, 2).map((r, idx) => {
-                    const pData = PROFESSIONS.find(p => p.name === r);
-                    const Icon = pData?.icon || Briefcase;
-                    return (
-                      <span key={idx} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-indigo-100">
-                        <Icon size={10} />
-                        {r}
-                      </span>
-                    );
-                  })
-                ) : (
-                  <div className="flex items-center gap-1 text-indigo-600 font-bold text-xs uppercase tracking-wide">
-                    <ProfessionIcon size={14} />
-                    <span>{rubro}</span>
-                  </div>
-                )}
-                {professional.profesionalInfo.rubros && professional.profesionalInfo.rubros.length > 2 && (
-                  <span className="text-[10px] text-gray-500 flex items-center">+{professional.profesionalInfo.rubros.length - 2}</span>
-                )}
-              </div>
+            </Link>
 
-              {/* Badges Row */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                {(ratingAvg || 0) >= 4.5 && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100" title="Puntualidad">
-                    <Star size={10} className="fill-amber-100" />
-                    <span className="text-[9px] font-bold uppercase tracking-tight">Puntual</span>
-                  </div>
-                )}
-                {(reviewCount || 0) >= 10 && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-100" title="Experiencia">
-                    <Briefcase size={10} />
-                    <span className="text-[9px] font-bold uppercase tracking-tight">Experto</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center text-gray-500 text-[10px] gap-1">
-                <MapPin size={10} />
-                <span>{zona}, Bahía Blanca</span>
-              </div>
-              
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {haceUrgencias && (
-                  <div className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-red-100">
-                    <AlertCircle size={10} />
-                    <span>Urgencias</span>
-                  </div>
-                )}
-                {worksToday ? (
-                  <div className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-green-100">
-                    <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span>
-                    <span>{disponibilidadInmediata ? 'Disponible' : 'Atiende Hoy'}</span>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-gray-200">
-                    <span className="w-1 h-1 rounded-full bg-gray-400"></span>
-                    <span>Cerrado</span>
-                  </div>
-                )}
-              </div>
+            {/* Single clean priority status pill in neutral style */}
+            <div>
+              {haceUrgencias ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  Urgencias
+                </span>
+              ) : disponibilidadInmediata || worksToday ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Disponible
+                </span>
+              ) : matriculado ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                  <BadgeCheck size={12} className="text-slate-500 dark:text-slate-400" />
+                  Matriculado
+                </span>
+              ) : null}
             </div>
           </div>
 
-          {/* Description */}
-          <p className="text-gray-600 text-xs mb-2 line-clamp-2 flex-grow leading-relaxed">
-            {descripcion}
-          </p>
-
-          {/* Starting Price Highlight */}
-          {preciosReferencia && preciosReferencia.length > 0 && (
-            <div className="mb-3 flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Desde</span>
-              <span className="text-xs font-bold text-indigo-600">
-                {preciosReferencia.reduce((min, p) => {
-                  const price = parseInt(p.precio.replace(/\D/g, '')) || 0;
-                  return (min === 0 || (price > 0 && price < min)) ? price : min;
-                }, 0) > 0 
-                  ? `$${preciosReferencia.reduce((min, p) => {
-                      const price = parseInt(p.precio.replace(/\D/g, '')) || 0;
-                      return (min === 0 || (price > 0 && price < min)) ? price : min;
-                    }, 0)}`
-                  : preciosReferencia[0].precio}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium ml-auto">{preciosReferencia[0].servicio}</span>
-            </div>
-          )}
-
-          {/* Stats & Footer */}
-          <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+          {/* Name, Verification & Category */}
+          <div className="mb-2">
             <div className="flex items-center gap-1.5">
-              <button 
-                onClick={handleShowReviews}
-                className="flex items-center bg-gray-50 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
-              >
-                <Star size={14} className="text-amber-400 fill-amber-400 mr-1" />
-                <span className="font-bold text-gray-900 text-xs">{ratingAvg ? ratingAvg.toFixed(1) : 'N/A'}</span>
-                <span className="text-gray-500 text-[10px] ml-1 font-medium">({reviewCount || 0})</span>
-                {showReviews ? <ChevronUp size={12} className="ml-1 text-gray-400" /> : <ChevronDown size={12} className="ml-1 text-gray-400" />}
-              </button>
-            </div>
-            
-            <div className="flex gap-1.5">
               <Link 
                 to={`/profesional/${professional.slug || uid}`}
-                className="px-3 py-2 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200"
+                className="font-extrabold text-base text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate"
               >
-                Ver
+                {nombre}
               </Link>
-              {isClient && (
-                <button 
-                  onClick={() => setShowReviewForm(!showReviewForm)}
-                  className={`p-2 rounded-lg transition-colors border ${showReviewForm ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 border-transparent'}`}
-                  title="Dejar reseña"
-                >
-                  <MessageSquare size={16} />
-                </button>
-              )}
-              {telefono ? (
-                <a 
-                  href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${nombre}, vi tu perfil en Bahía Oficios y necesito presupuesto para un servicio de ${rubro}.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`
-                    flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-95
-                    ${isVip 
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'}
-                  `}
-                  onClick={handleWhatsAppClick}
-                >
-                  <MessageSquare size={14} />
-                  WhatsApp
-                </a>
-              ) : (
-                <button 
-                  onClick={() => setShowContactModal(true)}
-                  className={`
-                    px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-95
-                    ${isVip 
-                      ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'}
-                  `}
-                >
-                  Contactar
-                </button>
+              {(matriculaVerified || isVerified) && (
+                <BadgeCheck 
+                  size={15} 
+                  className="text-emerald-600 dark:text-emerald-400 shrink-0" 
+                  title={matriculaVerified ? "Matrícula verificada" : "Identidad verificada"}
+                />
               )}
             </div>
-            
-            {/* Solicitar Presupuesto Button */}
-            <div className="mt-3">
-              <Link
-                to={`/solicitar-presupuesto?profesionalId=${uid}`}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md active:scale-95"
-              >
-                <MessageCircle size={14} />
-                Solicitar Presupuesto
-              </Link>
+
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                <ProfessionIcon size={12} className="shrink-0 text-slate-400" />
+                {rubro}
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-0.5 truncate">
+                <MapPin size={11} className="shrink-0 text-slate-400" />
+                {zona}
+              </span>
             </div>
           </div>
 
-          {/* Latest Review Highlight (when list is hidden) */}
-          {!showReviews && latestReview && (
-            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in">
-              <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100">
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded uppercase tracking-wide">
-                      Última reseña
-                    </span>
-                    <span className="text-xs font-semibold text-gray-700">
-                      {latestReview.clienteNombre || 'Usuario'}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        size={10} 
-                        className={`${i < latestReview.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} 
-                      />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-gray-600 text-xs italic line-clamp-2">"{latestReview.comentario}"</p>
-              </div>
+          {/* Rating & Pricing Line */}
+          <div className="flex items-center justify-between text-xs my-2 py-1.5 border-y border-slate-100 dark:border-slate-700/60 text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1">
+              <Star size={13} className="text-amber-400 fill-amber-400" />
+              <span className="font-bold text-slate-900 dark:text-white">
+                {ratingAvg ? ratingAvg.toFixed(1) : 'Nuevo'}
+              </span>
+              <span className="text-slate-400 text-[11px]">
+                ({reviewCount || 0})
+              </span>
             </div>
-          )}
 
-          {/* Reviews Section */}
-          {showReviews && (
-            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <MessageSquare size={14} className="text-gray-400" />
-                Últimas Reseñas
-              </h4>
-              {loadingReviews ? (
-                <div className="space-y-3">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="bg-gray-50 p-3 rounded-lg border border-gray-100 animate-pulse">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                        <div className="flex gap-1">
-                          {[...Array(5)].map((_, j) => (
-                            <div key={j} className="w-2.5 h-2.5 bg-gray-200 rounded-full"></div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="h-2.5 bg-gray-200 rounded w-full"></div>
-                        <div className="h-2.5 bg-gray-200 rounded w-5/6"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : reviews.length > 0 ? (
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="bg-gray-50 p-3 rounded-lg text-sm border border-gray-100">
-                      <div className="flex justify-between items-start mb-1.5">
-                        <span className="font-semibold text-gray-800 text-xs">{review.clienteNombre || 'Usuario'}</span>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              size={10} 
-                              className={`${i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} 
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-gray-600 text-xs italic leading-relaxed">"{review.comentario}"</p>
-                      {review.badges && review.badges.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {review.badges.map((badge, idx) => (
-                            <span key={idx} className="bg-indigo-50 text-indigo-600 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-indigo-100">
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="text-right mt-1.5">
-                        <span className="text-[10px] text-gray-400 font-medium">
-                          {review.fecha ? new Date(review.fecha).toLocaleDateString() : ''}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                  <p className="text-gray-500 text-xs italic">No hay reseñas todavía.</p>
-                  {isClient && (
-                    <button 
-                      onClick={() => setShowReviewForm(true)}
-                      className="mt-2 text-indigo-600 text-xs font-medium hover:underline"
-                    >
-                      ¡Sé el primero en opinar!
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+            {minPrice ? (
+              <span className="text-[11px] font-medium">
+                Desde <strong className="text-slate-900 dark:text-white font-semibold">${minPrice.toLocaleString('es-AR')}</strong>
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-400">A convenir</span>
+            )}
+          </div>
 
-          {/* Review Form Expandable */}
-          {showReviewForm && (
-            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
-              <ReviewForm 
-                profesionalId={uid} 
-                profesionalNombre={nombre}
-                onReviewSubmitted={() => {
-                  setShowReviewForm(false);
-                  // Refresh reviews if they are shown
-                  if (showReviews) {
-                    setReviews([]); // Clear to force refetch
-                    handleShowReviews();
-                  }
-                }}
-              />
-            </div>
-          )}
+          {/* Description snippet */}
+          <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed mb-4 flex-1">
+            {descripcion || 'Profesional verificado en Bahía Blanca para presupuestos y trabajos.'}
+          </p>
+
+          {/* Action Buttons: Primary action 'Ver Perfil' gets the color accent, secondary action remains neutral */}
+          <div className="mt-auto pt-1 flex items-center gap-2">
+            <Link 
+              to={`/profesional/${professional.slug || uid}`}
+              className="flex-1 text-center py-2 px-2.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+            >
+              Ver Perfil
+            </Link>
+
+            {telefono ? (
+              <a 
+                href={`https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${nombre}, vi tu perfil en Bahía Oficios y necesito presupuesto para un servicio de ${rubro}.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleWhatsAppClick}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-600 transition-colors"
+              >
+                <MessageSquare size={13} />
+                WhatsApp
+              </a>
+            ) : (
+              <button 
+                onClick={() => setShowContactModal(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-600 transition-colors"
+              >
+                <MessageCircle size={13} />
+                Contactar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Contact Modal */}
+      {/* Contact Modal (Fallback when no phone is available) */}
       {showContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-indigo-600 p-6 text-white relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200">
+            <div className="bg-indigo-600 p-5 text-white relative">
               <button 
                 onClick={() => setShowContactModal(false)}
                 className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/10 rounded-full p-1 transition-colors"
+                aria-label="Cerrar"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3.5">
                 <img 
                   src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                   alt={nombre} 
-                  className="w-16 h-16 rounded-full object-cover border-4 border-white/20"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-white/30"
                   loading="lazy"
                 />
                 <div>
-                  <h3 className="font-bold text-xl">{nombre}</h3>
-                  <div className="flex items-center gap-1.5 text-indigo-100 text-sm">
-                    <ProfessionIcon size={14} />
+                  <h3 className="font-bold text-lg">{nombre}</h3>
+                  <div className="flex items-center gap-1.5 text-indigo-100 text-xs">
+                    <ProfessionIcon size={13} />
                     <span>{rubro}</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="p-6 space-y-4">
-              <h4 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Información de Contacto</h4>
+            <div className="p-5 space-y-3">
+              <h4 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Canales de Contacto</h4>
               
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {telefono ? (
                   <a 
                     href={`tel:${telefono}`}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100 group"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border border-slate-200 dark:border-slate-700"
                   >
-                    <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
-                      <Phone size={20} className="text-green-600" />
+                    <div className="bg-emerald-50 dark:bg-emerald-950/60 p-2.5 rounded-full text-emerald-600 dark:text-emerald-400">
+                      <Phone size={18} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Teléfono</p>
-                      <p className="text-gray-900 font-semibold">{telefono}</p>
+                      <p className="text-[11px] text-slate-400 font-medium">Teléfono / Llamada</p>
+                      <p className="text-slate-900 dark:text-white text-xs font-semibold">{telefono}</p>
                     </div>
                   </a>
-                ) : (
-                  <div className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 opacity-60">
-                    <div className="bg-gray-100 p-3 rounded-full">
-                      <Phone size={20} className="text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Teléfono</p>
-                      <p className="text-gray-400 italic">No disponible</p>
-                    </div>
-                  </div>
-                )}
+                ) : null}
                 
                 {contactEmail ? (
                   <a 
                     href={`mailto:${contactEmail}`}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100 group"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border border-slate-200 dark:border-slate-700"
                   >
-                    <div className="bg-blue-100 p-3 rounded-full group-hover:bg-blue-200 transition-colors">
-                      <Mail size={20} className="text-blue-600" />
+                    <div className="bg-blue-50 dark:bg-blue-950/60 p-2.5 rounded-full text-blue-600 dark:text-blue-400">
+                      <Mail size={18} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Email</p>
-                      <p className="text-gray-900 font-semibold break-all">{contactEmail}</p>
+                      <p className="text-[11px] text-slate-400 font-medium">Correo Electrónico</p>
+                      <p className="text-slate-900 dark:text-white text-xs font-semibold break-all">{contactEmail}</p>
                     </div>
                   </a>
-                ) : (
-                  <div className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 opacity-60">
-                    <div className="bg-gray-100 p-3 rounded-full">
-                      <Mail size={20} className="text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Email</p>
-                      <p className="text-gray-400 italic">No disponible</p>
-                    </div>
-                  </div>
-                )}
+                ) : null}
 
                 {direccion && (
-                  <div className="flex items-center gap-4 p-3 rounded-xl border border-gray-100">
-                    <div className="bg-gray-100 p-3 rounded-full">
-                      <MapPin size={20} className="text-gray-600" />
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="bg-slate-100 dark:bg-slate-700 p-2.5 rounded-full text-slate-500">
+                      <MapPin size={18} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Dirección</p>
-                      <p className="text-gray-900 font-semibold">{direccion}</p>
+                      <p className="text-[11px] text-slate-400 font-medium">Dirección / Taller</p>
+                      <p className="text-slate-900 dark:text-white text-xs font-semibold">{direccion}</p>
                     </div>
                   </div>
                 )}
 
                 <button
                   onClick={handleContactClick}
-                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors font-medium shadow-sm"
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors text-xs font-bold shadow-xs mt-2"
                 >
-                  <MessageSquare size={20} />
-                  Contactar por Chat
+                  <MessageSquare size={16} />
+                  Enviar mensaje por Chat Interno
                 </button>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-                <p className="text-xs text-gray-400">
-                  Al contactar, menciona que lo viste en <span className="font-bold text-indigo-600">Portal de Oficios</span>.
-                </p>
               </div>
             </div>
           </div>

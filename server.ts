@@ -383,7 +383,21 @@ async function startServer() {
                   'updatedAt': admin.firestore.FieldValue.serverTimestamp()
                 });
                 
-                console.log(`User ${user_id} upgraded/extended VIP until ${expirationDate}`);
+                // Registrar comprobante en historial de pagos
+                await db.collection('pagos').add({
+                  userId: user_id,
+                  paymentId: id,
+                  type: 'vip_subscription',
+                  months: Number(months),
+                  amount: (payment as any).transaction_amount || 0,
+                  status: 'approved',
+                  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                  expirationDate: admin.firestore.Timestamp.fromDate(expirationDate),
+                  statementDescriptor: (payment as any).statement_descriptor || 'TodoServicios VIP',
+                  planTitle: `Membresía VIP (${months} mes${Number(months) > 1 ? 'es' : ''})`
+                });
+
+                console.log(`User ${user_id} upgraded/extended VIP until ${expirationDate} and logged to pagos`);
               }
             } catch (dbError) {
               console.error("Error updating Firestore:", dbError);
@@ -401,6 +415,90 @@ async function startServer() {
     } catch (error) {
       console.error("Webhook error:", error);
       res.status(500).send("Error");
+    }
+  });
+
+  // Endpoint para verificar y sincronizar el estado VIP de un usuario
+  app.post("/api/verify-vip-status", async (req, res) => {
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ error: "Falta uid" });
+
+    try {
+      const db = admin.firestore();
+      const userRef = db.collection('usuarios').doc(uid);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      const userData = userDoc.data();
+      const info = userData?.profesionalInfo || {};
+
+      if (!info.isVip) {
+        return res.json({ isVip: false, status: 'none' });
+      }
+
+      let expDate: Date | null = null;
+      if (info.vipExpiration) {
+        if (info.vipExpiration.toDate) expDate = info.vipExpiration.toDate();
+        else if (info.vipExpiration.seconds) expDate = new Date(info.vipExpiration.seconds * 1000);
+        else expDate = new Date(info.vipExpiration);
+      }
+
+      const now = new Date();
+      if (!expDate || expDate.getTime() <= now.getTime()) {
+        await userRef.update({
+          'profesionalInfo.isVip': false,
+          'profesionalInfo.vipExpiredAt': admin.firestore.FieldValue.serverTimestamp()
+        });
+        return res.json({ isVip: false, expired: true, expirationDate: expDate });
+      }
+
+      return res.json({ isVip: true, expired: false, expirationDate: expDate });
+    } catch (error: any) {
+      console.error("Error en verify-vip-status:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint para depurar y sincronizar masivamente todos los VIPs caducados
+  app.post("/api/sync-vips", async (req, res) => {
+    try {
+      const db = admin.firestore();
+      const snapshot = await db.collection('usuarios')
+        .where('profesionalInfo.isVip', '==', true)
+        .get();
+
+      const now = new Date();
+      let expiredCount = 0;
+      const updatedList: any[] = [];
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const expRaw = data.profesionalInfo?.vipExpiration;
+        let expDate: Date | null = null;
+
+        if (expRaw) {
+          if (expRaw.toDate) expDate = expRaw.toDate();
+          else if (expRaw.seconds) expDate = new Date(expRaw.seconds * 1000);
+          else expDate = new Date(expRaw);
+        }
+
+        if (!expDate || expDate.getTime() <= now.getTime()) {
+          await doc.ref.update({
+            'profesionalInfo.isVip': false,
+            'profesionalInfo.vipExpiredAt': admin.firestore.FieldValue.serverTimestamp()
+          });
+          expiredCount++;
+          updatedList.push({ uid: doc.id, nombre: data.nombre, expDate });
+        }
+      }
+
+      res.json({ success: true, expiredCount, updatedList });
+    } catch (error: any) {
+      console.error("Error en sync-vips:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

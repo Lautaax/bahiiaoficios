@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
-import { doc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, limit } from 'firebase/firestore';
-import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag } from 'lucide-react';
+import { doc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag, Crown, AlertTriangle } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { ProfessionalOnboarding } from './ProfessionalOnboarding';
@@ -10,8 +10,12 @@ import { Profile } from './Profile';
 import { Skeleton } from './ui/Skeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { QRCodeCanvas } from 'qrcode.react';
+import { NotificationsDropdown } from './NotificationsDropdown';
+import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
+import { TrabajosSolicitados } from './TrabajosSolicitados';
+import { ProfessionalMyQuotes } from './ProfessionalMyQuotes';
 
-type TabType = 'resumen' | 'perfil' | 'estadisticas' | 'pedidos' | 'reseñas';
+type TabType = 'resumen' | 'mis-presupuestos' | 'trabajos' | 'pedidos' | 'perfil' | 'estadisticas' | 'reseñas';
 
 export const ProfessionalDashboard: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -64,12 +68,56 @@ export const ProfessionalDashboard: React.FC = () => {
     fetchStats();
   }, [currentUser]);
 
+  // Sistema de verificación en tiempo real y alertas de vencimiento VIP (7 días antes)
+  useEffect(() => {
+    const checkVipStatusAndNotify = async () => {
+      if (!currentUser || currentUser.rol !== 'profesional') return;
+      const info = currentUser.profesionalInfo;
+      if (!info) return;
+
+      // Si el VIP ya caducó en la fecha, marcarlo como expirado en Firestore
+      if (info.isVip && !isVipActive(info)) {
+        await checkAndExpireUserVip(currentUser.uid, info);
+        return;
+      }
+
+      const status = getVipStatus(info);
+      const diff = getVipDiffInfo(info);
+
+      // Si vence en 7 días o menos y no es fecha pasada
+      if (status === 'expiring_soon' && !diff.isPast && diff.days <= 7) {
+        const notifKey = `vip_exp_warn_${currentUser.uid}_${diff.days}d`;
+        if (!localStorage.getItem(notifKey)) {
+          try {
+            await addDoc(collection(db, 'notificaciones'), {
+              userId: currentUser.uid,
+              tipo: 'vip_expirando',
+              titulo: `⚠️ Tu Membresía VIP vence en ${diff.days} ${diff.days === 1 ? 'día' : 'días'}`,
+              mensaje: `Tu suscripción VIP caduca el ${diff.expirationDate?.toLocaleDateString('es-AR')}. Renová hoy mismo para no perder tu posición destacada en los resultados de Bahía Blanca y mantener tu insignia dorada activa.`,
+              leida: false,
+              fecha: serverTimestamp(),
+              referenciaId: 'vip_renovacion'
+            });
+            localStorage.setItem(notifKey, new Date().toISOString());
+          } catch (err) {
+            console.error("Error al registrar notificación de VIP próximo a vencer:", err);
+          }
+        }
+      }
+    };
+
+    checkVipStatusAndNotify();
+  }, [currentUser]);
+
   if (!currentUser || currentUser.rol !== 'profesional') {
     return <div className="p-8 text-center text-gray-500">Acceso denegado.</div>;
   }
 
   const { profesionalInfo } = currentUser;
   const isAvailable = profesionalInfo?.disponibilidadInmediata || false;
+
+  const vipStatus = getVipStatus(profesionalInfo);
+  const vipDiff = getVipDiffInfo(profesionalInfo);
 
   const toggleAvailability = async () => {
     setUpdating(true);
@@ -87,6 +135,9 @@ export const ProfessionalDashboard: React.FC = () => {
 
   const menuItems = [
     { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
+    { id: 'mis-presupuestos', label: 'Mis Presupuestos', icon: Tag },
+    { id: 'trabajos', label: 'Tablón de Trabajos', icon: Briefcase },
+    { id: 'pedidos', label: 'Presupuestos Directos', icon: ClipboardList },
     { 
       id: 'perfil', 
       label: 'Mi Perfil', 
@@ -100,7 +151,6 @@ export const ProfessionalDashboard: React.FC = () => {
       ]
     },
     { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
-    { id: 'pedidos', label: 'Pedidos', icon: ClipboardList },
     { id: 'reseñas', label: 'Reseñas', icon: Star },
   ];
 
@@ -120,8 +170,8 @@ export const ProfessionalDashboard: React.FC = () => {
           <span className="font-bold text-gray-900 dark:text-white">Panel Profesional</span>
         </div>
         <div className="flex items-center gap-2">
-          <Bell size={20} className="text-gray-500" />
-          <img src={currentUser.fotoUrl} alt="Perfil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+          <NotificationsDropdown />
+          <img src={currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nombre)}`} alt="Perfil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
         </div>
       </div>
 
@@ -231,6 +281,65 @@ export const ProfessionalDashboard: React.FC = () => {
           {!profesionalInfo?.onboardingCompleted && (
             <div className="mb-8">
               <ProfessionalOnboarding userId={currentUser.uid} />
+            </div>
+          )}
+
+          {/* Banner de Aviso de Vencimiento VIP (7 días antes o expirado) */}
+          {vipStatus === 'expiring_soon' && (
+            <div className="mb-8 bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 p-6 rounded-2xl border border-amber-200 dark:border-amber-800/80 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-500 text-slate-950 rounded-xl flex-shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-amber-200/80 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                      Aviso de Renovación VIP
+                    </span>
+                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                      Vence el {vipDiff.expirationDate?.toLocaleDateString('es-AR')}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold leading-tight">
+                    ¡Tu membresía VIP vence en {vipDiff.days} {vipDiff.days === 1 ? 'día' : 'días'}!
+                  </h3>
+                  <p className="text-xs sm:text-sm text-amber-900/90 dark:text-amber-200/80 mt-1 max-w-2xl font-medium leading-relaxed">
+                    Al vencer, tu perfil perderá automáticamente el badge de <strong>VIP</strong> y la posición preferencial en los resultados de Bahía Blanca. Renová para mantener tu visibilidad prioritaria.
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0 w-full md:w-auto">
+                <VipButton />
+              </div>
+            </div>
+          )}
+
+          {vipStatus === 'expired' && (
+            <div className="mb-8 bg-rose-50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 p-6 rounded-2xl border border-rose-200 dark:border-rose-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-rose-500 text-white rounded-xl flex-shrink-0">
+                  <Crown size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                      Membresía Expirada
+                    </span>
+                    {vipDiff.expirationDate && (
+                      <span className="text-xs text-rose-700 dark:text-rose-300">
+                        Caducó el {vipDiff.expirationDate.toLocaleDateString('es-AR')}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold">Tu membresía VIP ha finalizado</h3>
+                  <p className="text-xs sm:text-sm text-rose-900/80 dark:text-rose-200/80 mt-1 max-w-2xl leading-relaxed">
+                    Tu perfil volvió al estado estándar. Reactivá tu suscripción VIP para volver a estar en el tope de tu rubro y recibir más contactos directos.
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0 w-full md:w-auto">
+                <VipButton />
+              </div>
             </div>
           )}
 
@@ -403,12 +512,17 @@ export const ProfessionalDashboard: React.FC = () => {
 
               {/* VIP Promotion */}
               {!profesionalInfo?.isVip && (
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl shadow-indigo-200 dark:shadow-none">
+                <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800 shadow-sm">
                   <div className="text-center md:text-left">
-                    <h3 className="text-2xl font-bold mb-2">¡Llegá a más clientes con VIP! 🚀</h3>
-                    <p className="text-indigo-100">Aparecé en los primeros resultados y destacá tu perfil con una medalla especial.</p>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 bg-slate-800 px-3 py-1 rounded-full mb-2 border border-slate-700">
+                      <Crown size={14} /> Membresía VIP Bahía Blanca
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold mb-1">Destacá tu perfil profesional</h3>
+                    <p className="text-slate-300 text-sm max-w-xl">Aparecé en los primeros resultados de búsqueda de Bahía Blanca y multiplicá tus contactos directos por WhatsApp.</p>
                   </div>
-                  <VipButton />
+                  <div className="shrink-0">
+                    <VipButton />
+                  </div>
                 </div>
               )}
 
@@ -515,6 +629,18 @@ export const ProfessionalDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'mis-presupuestos' && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+              <ProfessionalMyQuotes />
+            </div>
+          )}
+
+          {activeTab === 'trabajos' && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+              <TrabajosSolicitados />
             </div>
           )}
 

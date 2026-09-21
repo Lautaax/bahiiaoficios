@@ -16,6 +16,7 @@ export interface ProfesionalInfo {
   reviewCount: number;
   fotosTrabajos: string[];
   vipExpiration?: any;
+  vipExpiredAt?: any;
   telefono?: string;
   direccion?: string;
   fotoDni?: string;
@@ -121,4 +122,83 @@ export interface TradeDiscount {
   link?: string;
   active: boolean;
   createdAt: any;
+}
+
+export interface PaymentRecord {
+  id?: string;
+  userId: string;
+  paymentId?: string;
+  type: 'vip_subscription' | 'ad_payment' | 'deposit';
+  months?: number;
+  amount?: number;
+  status: 'approved' | 'pending' | 'rejected' | 'refunded' | 'expired';
+  createdAt: any;
+  expirationDate?: any;
+  statementDescriptor?: string;
+  planTitle?: string;
+  notes?: string;
+}
+
+export interface JobBudgetProposal {
+  id: string;
+  profesionalId: string;
+  profesionalNombre: string;
+  profesionalFoto?: string;
+  profesionalRubro?: string;
+  profesionalTelefono?: string;
+  profesionalIsVip?: boolean;
+  profesionalRating?: number;
+  profesionalSlug?: string;
+  montoEstimado: number | string;
+  tiempoEstimado: string;
+  mensaje: string;
+  incluyeMateriales?: boolean;
+  requiereVisitaPrevia?: boolean;
+  fecha: any;
+  estado?: 'pendiente' | 'enviado' | 'aceptado' | 'rechazado';
+}
+
+export interface JobOfferRecord {
+  id?: string;
+  trabajoId: string;
+  trabajoTitulo: string;
+  trabajoRubro: string;
+  trabajoZona: string;
+  clienteId: string;
+  clienteNombre: string;
+  clienteTelefono?: string;
+  profesionalId: string;
+  profesionalNombre: string;
+  profesionalFoto?: string;
+  profesionalRubro?: string;
+  profesionalTelefono?: string;
+  profesionalIsVip?: boolean;
+  profesionalRating?: number;
+  montoEstimado: number | string;
+  tiempoEstimado: string;
+  mensaje: string;
+  incluyeMateriales?: boolean;
+  requiereVisitaPrevia?: boolean;
+  estado: 'pendiente' | 'aceptado' | 'rechazado';
+  fechaEnvio: any;
+  fechaActualizacion?: any;
+}
+
+export interface JobPost {
+  id?: string;
+  titulo: string;
+  descripcion: string;
+  rubro: string;
+  zona: string;
+  urgencia: 'urgente' | 'esta_semana' | 'flexible';
+  presupuestoAproximado?: string;
+  clienteId: string;
+  clienteNombre: string;
+  clienteEmail?: string;
+  clienteTelefono?: string;
+  clienteFoto?: string;
+  fotos?: string[];
+  fechaCreacion: any;
+  estado: 'abierto' | 'en_progreso' | 'completado' | 'cancelado';
+  presupuestos: JobBudgetProposal[];
 }

@@ -147,3 +147,147 @@ exports.webhookMP = onRequest(async (req, res) => {
     res.status(500).send("Error en webhook");
   }
 });
+
+// 4. Función para verificar si la suscripción VIP sigue vigente al iniciar sesión o cargar perfil
+// Endpoint: /verifyVipStatus?uid=USER_UID o POST con { uid: "USER_UID" }
+exports.verifyVipStatus = onRequest(async (req, res) => {
+  // Habilitar CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+
+  const uid = req.query.uid || req.body?.uid || req.body?.data?.uid;
+
+  if (!uid) {
+    return res.status(400).json({ error: "Parámetro uid requerido" });
+  }
+
+  try {
+    const userRef = db.collection("usuarios").doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userData = userDoc.data();
+    const profesionalInfo = userData.profesionalInfo || {};
+
+    // Si no está registrado como VIP, retornamos estado no VIP
+    if (!profesionalInfo.isVip) {
+      return res.json({
+        uid,
+        isVip: false,
+        message: "El usuario no es VIP actualmente"
+      });
+    }
+
+    // Parsear fecha de expiración
+    let expirationDate = null;
+    const rawExpiration = profesionalInfo.vipExpiration;
+
+    if (rawExpiration) {
+      if (typeof rawExpiration.toDate === 'function') {
+        expirationDate = rawExpiration.toDate();
+      } else if (rawExpiration.seconds) {
+        expirationDate = new Date(rawExpiration.seconds * 1000);
+      } else if (rawExpiration._seconds) {
+        expirationDate = new Date(rawExpiration._seconds * 1000);
+      } else {
+        expirationDate = new Date(rawExpiration);
+      }
+    }
+
+    const now = new Date();
+
+    // Si la fecha de vencimiento ya pasó (o no existe fecha pero figuraba VIP)
+    if (!expirationDate || expirationDate.getTime() <= now.getTime()) {
+      await userRef.update({
+        "profesionalInfo.isVip": false,
+        "profesionalInfo.vipExpiredAt": now
+      });
+
+      console.log(`[Cloud Function] Membresía VIP expirada para ${uid}. Caducó: ${expirationDate}. Se actualizó a isVip: false.`);
+
+      return res.json({
+        uid,
+        isVip: false,
+        expired: true,
+        expirationDate: expirationDate ? expirationDate.toISOString() : null,
+        message: "Suscripción VIP expirada. Se actualizó el estado a no-VIP."
+      });
+    }
+
+    // Membresía vigente
+    const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    return res.json({
+      uid,
+      isVip: true,
+      expired: false,
+      expirationDate: expirationDate.toISOString(),
+      daysRemaining,
+      message: `Suscripción VIP vigente. Quedan ${daysRemaining} días.`
+    });
+  } catch (error) {
+    console.error("Error verificando estado VIP:", error);
+    res.status(500).json({ error: "Error interno verificando estado VIP" });
+  }
+});
+
+// 5. Función masiva para depurar todos los VIPs expirados en la base de datos
+exports.cleanExpiredVips = onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  try {
+    const snapshot = await db.collection("usuarios")
+      .where("profesionalInfo.isVip", "==", true)
+      .get();
+
+    const now = new Date();
+    let updatedCount = 0;
+    const updatedUsers = [];
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const rawExp = data.profesionalInfo?.vipExpiration;
+      let expDate = null;
+
+      if (rawExp) {
+        if (typeof rawExp.toDate === 'function') expDate = rawExp.toDate();
+        else if (rawExp.seconds) expDate = new Date(rawExp.seconds * 1000);
+        else if (rawExp._seconds) expDate = new Date(rawExp._seconds * 1000);
+        else expDate = new Date(rawExp);
+      }
+
+      if (!expDate || expDate.getTime() <= now.getTime()) {
+        await doc.ref.update({
+          "profesionalInfo.isVip": false,
+          "profesionalInfo.vipExpiredAt": now
+        });
+        updatedCount++;
+        updatedUsers.push({
+          uid: doc.id,
+          nombre: data.nombre,
+          expiredDate: expDate ? expDate.toISOString() : null
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      updatedCount,
+      updatedUsers,
+      timestamp: now.toISOString()
+    });
+  } catch (error) {
+    console.error("Error depurando VIPs:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+

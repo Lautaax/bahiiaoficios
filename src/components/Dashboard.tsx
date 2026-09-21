@@ -5,10 +5,12 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
+import { EmpresasColaboradoras } from './EmpresasColaboradoras';
 import { Skeleton } from './ui/Skeleton';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star } from 'lucide-react';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star, Briefcase, Clock, ExternalLink, CheckCircle2, DollarSign, Building2, Handshake, ChevronLeft, ChevronRight, Award } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { api } from '../services/api';
+import { isVipActive } from '../utils/vipUtils';
 
 // Helper to normalize strings (remove accents)
 const normalizeString = (str: string) => {
@@ -35,8 +37,6 @@ export const Dashboard: React.FC = () => {
   const [showVipWelcome, setShowVipWelcome] = useState(false);
   const [isRubroOpen, setIsRubroOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [ads, setAds] = useState<any[]>([]);
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const professionalsPerPage = 12;
 
@@ -71,28 +71,6 @@ export const Dashboard: React.FC = () => {
     setSearchParams(params, { replace: true });
     setCurrentPage(1); // Reset to first page on filter change
   }, [selectedRubro, selectedZona, searchTerm, haceUrgencias, disponibilidadInmediata, showFavoritesOnly, minRating]);
-
-  useEffect(() => {
-    const fetchAds = async () => {
-      try {
-        const q = query(collection(db, 'ads'), where('active', '==', true), where('position', '==', 'sidebar'));
-        const snapshot = await getDocs(q);
-        setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) {
-        console.error("Error fetching dashboard ads:", error);
-      }
-    };
-    fetchAds();
-  }, []);
-
-  useEffect(() => {
-    if (ads.length > 0) {
-      const timer = setInterval(() => {
-        setCurrentAdIndex((prev) => (prev + 1) % ads.length);
-      }, 6000);
-      return () => clearInterval(timer);
-    }
-  }, [ads]);
 
   useEffect(() => {
     if (currentUser?.rol === 'profesional' && currentUser?.profesionalInfo?.isVip) {
@@ -140,8 +118,8 @@ export const Dashboard: React.FC = () => {
              
              // Client-side sort
              docs = docs.sort((a, b) => {
-                const isVipA = !!a.profesionalInfo?.isVip;
-                const isVipB = !!b.profesionalInfo?.isVip;
+                const isVipA = isVipActive(a.profesionalInfo);
+                const isVipB = isVipActive(b.profesionalInfo);
 
                 if (isVipA && !isVipB) return -1;
                 if (!isVipA && isVipB) return 1;
@@ -211,8 +189,10 @@ export const Dashboard: React.FC = () => {
   const sortedProfessionals = useMemo(() => {
     return [...filteredProfessionals].sort((a, b) => {
       // VIP always first
-      if (a.profesionalInfo?.isVip && !b.profesionalInfo?.isVip) return -1;
-      if (!a.profesionalInfo?.isVip && b.profesionalInfo?.isVip) return 1;
+      const isVipA = isVipActive(a.profesionalInfo);
+      const isVipB = isVipActive(b.profesionalInfo);
+      if (isVipA && !isVipB) return -1;
+      if (!isVipA && isVipB) return 1;
 
       if (sortBy === 'rating') {
         const diff = (b.profesionalInfo?.ratingAvg || 0) - (a.profesionalInfo?.ratingAvg || 0);
@@ -304,7 +284,7 @@ export const Dashboard: React.FC = () => {
   const zonas = ['Todas', ...ZONAS];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+    <div className="min-h-screen bg-transparent font-sans text-slate-900 dark:text-slate-100">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Client Quote Requests */}
         {currentUser?.rol === 'cliente' && (
@@ -313,22 +293,21 @@ export const Dashboard: React.FC = () => {
 
         {/* VIP Welcome Message */}
         {showVipWelcome && (
-          <div className="mb-8 bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-200 rounded-xl p-6 relative shadow-sm">
+          <div className="mb-8 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-2xl p-6 relative shadow-sm">
             <button 
               onClick={() => setShowVipWelcome(false)}
-              className="absolute top-4 right-4 text-amber-800 hover:text-amber-900"
+              className="absolute top-4 right-4 text-amber-800 hover:text-amber-900 dark:text-amber-300"
             >
               <X size={20} />
             </button>
             <div className="flex items-start gap-4">
-              <div className="bg-amber-400 p-3 rounded-full text-white shadow-md">
-                <Crown size={32} />
+              <div className="bg-amber-500 p-3 rounded-2xl text-slate-950 shadow-sm">
+                <Crown size={28} />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-amber-900 mb-2">¡Bienvenido al Club VIP! 🌟</h3>
-                <p className="text-amber-800">
-                  Tu perfil ahora está destacado y aparecerá en los primeros resultados de búsqueda. 
-                  ¡Prepárate para recibir más clientes!
+                <h3 className="text-lg font-bold text-amber-950 dark:text-amber-200 mb-1">¡Bienvenido al Club VIP!</h3>
+                <p className="text-sm text-amber-900 dark:text-amber-300/90 leading-relaxed">
+                  Tu perfil ahora está destacado y aparecerá con máxima prioridad en los resultados de búsqueda de Bahía Blanca.
                 </p>
               </div>
             </div>
@@ -336,23 +315,31 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Hero / Search Section */}
-        <div className="mb-8 space-y-4">
-          <h2 className="text-3xl font-bold text-gray-900">Encontrá al experto que necesitás</h2>
-          <p className="text-gray-600 max-w-2xl">
-            Conectamos clientes con los mejores profesionales de oficios en Bahía Blanca. 
-            Electricistas, gasistas, plomeros y más, calificados por la comunidad.
-          </p>
+        <div className="mb-10 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm p-5 sm:p-6 space-y-5">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 px-3 py-1 rounded-full mb-2 border border-indigo-100 dark:border-indigo-900">
+              <Sparkles size={13} className="text-indigo-600 dark:text-indigo-400" />
+              <span>Directorio Profesional Verificado • Bahía Blanca</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Encontrá al experto que necesitás
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+              Conectamos vecinos con los mejores profesionales de oficios en Bahía Blanca. 
+              Electricistas, gasistas, plomeros y más, calificados por la comunidad.
+            </p>
+          </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 mt-6">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
             {/* Buscador */}
             <div className="relative flex-grow">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
-                placeholder="Buscar por nombre, zona o servicio..."
+                className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-xs"
+                placeholder="Buscar por nombre, rubro o servicio..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -365,32 +352,32 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Filtros */}
-            <div className="flex gap-4">
+            <div className="flex flex-wrap sm:flex-nowrap gap-3">
                 {/* Filtro Rubro */}
-                <div className="relative min-w-[220px]">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                    <Filter className="h-5 w-5 text-gray-400" />
+                <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+                    <Filter className="h-4 w-4 text-slate-400" />
                   </div>
                   
                   <button
                     onClick={() => setIsRubroOpen(!isRubroOpen)}
-                    className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm flex items-center justify-between"
+                    className="w-full bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-xs flex items-center justify-between text-slate-900 dark:text-white"
                   >
                     <div className="flex items-center gap-2 truncate">
                       {selectedRubro === 'Todos' ? (
-                        <span className="text-gray-700">Todos los Rubros</span>
+                        <span className="text-slate-600 dark:text-slate-300">Todos los Rubros</span>
                       ) : (
                         <>
                           {(() => {
                             const p = PROFESSIONS.find(p => p.name === selectedRubro);
                             const Icon = p?.icon;
-                            return Icon ? <Icon size={16} className="text-indigo-600 shrink-0" /> : null;
+                            return Icon ? <Icon size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" /> : null;
                           })()}
-                          <span className="text-gray-900 font-medium truncate">{selectedRubro}</span>
+                          <span className="text-slate-900 dark:text-white font-medium truncate">{selectedRubro}</span>
                         </>
                       )}
                     </div>
-                    <ChevronDown size={16} className={`text-gray-400 transition-transform ${isRubroOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={15} className={`text-slate-400 transition-transform ${isRubroOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {isRubroOpen && (
@@ -399,16 +386,16 @@ export const Dashboard: React.FC = () => {
                         className="fixed inset-0 z-10" 
                         onClick={() => setIsRubroOpen(false)}
                       ></div>
-                      <div className="absolute z-20 mt-1 w-full bg-white shadow-xl max-h-80 rounded-xl py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm custom-scrollbar">
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 shadow-xl max-h-80 rounded-xl py-1 text-sm border border-slate-200 dark:border-slate-700 overflow-auto focus:outline-none custom-scrollbar">
                         <div
-                          className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-indigo-50 transition-colors ${selectedRubro === 'Todos' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-900'}`}
+                          className={`cursor-pointer select-none relative py-2.5 pl-3 pr-4 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${selectedRubro === 'Todos' ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold' : 'text-slate-900 dark:text-slate-100'}`}
                           onClick={() => {
                             setSelectedRubro('Todos');
                             setIsRubroOpen(false);
                             setSearchTerm('');
                           }}
                         >
-                          <span className="block truncate ml-8">Todos los Rubros</span>
+                          <span className="block truncate ml-7">Todos los Rubros</span>
                         </div>
                         {Object.entries(
                           PROFESSIONS.reduce((acc, profession) => {
@@ -419,13 +406,13 @@ export const Dashboard: React.FC = () => {
                           }, {} as Record<string, typeof PROFESSIONS>)
                         ).map(([category, professions]) => (
                           <div key={category}>
-                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50">
+                            <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-700/50">
                               {category}
                             </div>
                             {professions.map((profession) => (
                               <div
                                 key={profession.name}
-                                className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-indigo-50 transition-colors flex items-center gap-3 ${selectedRubro === profession.name ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-900'}`}
+                                className={`cursor-pointer select-none relative py-2.5 pl-3 pr-4 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2.5 ${selectedRubro === profession.name ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold' : 'text-slate-800 dark:text-slate-200'}`}
                                 onClick={() => {
                                   setSelectedRubro(profession.name);
                                   setIsRubroOpen(false);
@@ -433,7 +420,7 @@ export const Dashboard: React.FC = () => {
                                   api.trackSearch(profession.name);
                                 }}
                               >
-                                <profession.icon size={18} className={`${selectedRubro === profession.name ? 'text-indigo-600' : 'text-gray-400'}`} />
+                                <profession.icon size={16} className={`${selectedRubro === profession.name ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
                                 <span className="block truncate">
                                   {profession.name}
                                 </span>
@@ -447,16 +434,16 @@ export const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Filtro Zona */}
-                <div className="relative min-w-[180px]">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <MapPin className="h-5 w-5 text-gray-400" />
+                <div className="relative min-w-[170px] flex-1 sm:flex-initial">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <MapPin className="h-4 w-4 text-slate-400" />
                   </div>
                   <input
                       type="text"
                       value={selectedZona}
                       onChange={(e) => setSelectedZona(e.target.value)}
                       placeholder="Zona o Barrio"
-                      className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
+                      className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-xs"
                       list="dashboard-zonas-list"
                   />
                   <datalist id="dashboard-zonas-list">
@@ -467,126 +454,126 @@ export const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Ordenar por */}
-                <div className="relative min-w-[160px]">
+                <div className="relative min-w-[150px] flex-1 sm:flex-initial">
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="block w-full pl-4 pr-10 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm appearance-none"
+                    className="block w-full pl-3.5 pr-9 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-xs appearance-none"
                   >
                     <option value="score">Recomendados</option>
                     <option value="rating">Mejor Calificados</option>
                     <option value="reviews">Más Reseñas</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <ChevronDown size={16} className="text-gray-400" />
+                    <ChevronDown size={15} className="text-slate-400" />
                   </div>
                 </div>
 
                 <button
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className={`px-4 py-3 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
                     showAdvancedFilters || disponibilidadInmediata || haceUrgencias
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/70 dark:border-indigo-800 dark:text-indigo-300'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
                   }`}
                 >
-                  <Filter size={18} />
-                  Filtros Avanzados
+                  <Filter size={16} />
+                  <span>Filtros</span>
                 </button>
             </div>
           </div>
 
           {/* Quick Filters */}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/80">
             <button
               onClick={() => setDisponibilidadInmediata(!disponibilidadInmediata)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 disponibilidadInmediata
-                  ? 'bg-green-100 text-green-800 border border-green-200'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/60 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-200'
               }`}
             >
-              <div className={`w-2 h-2 rounded-full ${disponibilidadInmediata ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+              <div className={`w-1.5 h-1.5 rounded-full ${disponibilidadInmediata ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
               Disponible Ahora
             </button>
             <button
               onClick={() => setHaceUrgencias(!haceUrgencias)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 haceUrgencias
-                  ? 'bg-red-100 text-red-800 border border-red-200'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/60 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-200'
               }`}
             >
-              <div className={`w-2 h-2 rounded-full ${haceUrgencias ? 'bg-red-500' : 'bg-gray-400'}`}></div>
+              <div className={`w-1.5 h-1.5 rounded-full ${haceUrgencias ? 'bg-rose-500' : 'bg-slate-400'}`}></div>
               Urgencias 24h
             </button>
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 showFavoritesOnly
-                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/60 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-200'
               }`}
             >
-              <Heart size={14} className={showFavoritesOnly ? 'fill-rose-500 text-rose-500' : 'text-gray-400'} />
+              <Heart size={13} className={showFavoritesOnly ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
               Mis Guardados
             </button>
             
             {selectedRubro !== 'Todos' && (
               <button
                 onClick={() => setSelectedRubro('Todos')}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-2 hover:bg-indigo-200 transition-colors"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800 flex items-center gap-1 hover:bg-indigo-100 transition-colors"
               >
-                {selectedRubro}
-                <X size={14} />
+                <span>{selectedRubro}</span>
+                <X size={13} />
               </button>
             )}
             
             {selectedZona !== 'Todas' && (
               <button
                 onClick={() => setSelectedZona('Todas')}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-2 hover:bg-indigo-200 transition-colors"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800 flex items-center gap-1 hover:bg-indigo-100 transition-colors"
               >
-                {selectedZona}
-                <X size={14} />
+                <span>{selectedZona}</span>
+                <X size={13} />
               </button>
             )}
           </div>
 
           {/* Advanced Filters Panel */}
           {showAdvancedFilters && (
-            <div className="mt-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">Filtros Avanzados</h3>
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+            <div className="p-4 bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs animate-in fade-in slide-in-from-top-2">
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-3">Filtros Avanzados</h3>
+              <div className="flex flex-wrap gap-4 items-center">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={disponibilidadInmediata}
                     onChange={(e) => setDisponibilidadInmediata(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
                   />
-                  <span className="text-sm text-gray-700">Disponibilidad Inmediata</span>
+                  <span>Disponibilidad Inmediata</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={haceUrgencias}
                     onChange={(e) => setHaceUrgencias(e.target.checked)}
-                    className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                    className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500"
                   />
-                  <span className="text-sm text-gray-700">Atención de Urgencias 24h</span>
+                  <span>Atención de Urgencias 24h</span>
                 </label>
                 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">Rating mínimo:</span>
+                <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                  <span>Rating mínimo:</span>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         onClick={() => setMinRating(minRating === star ? 0 : star)}
-                        className={`p-1 transition-colors ${minRating >= star ? 'text-amber-400' : 'text-gray-300 hover:text-amber-200'}`}
+                        className={`p-0.5 transition-colors ${minRating >= star ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600 hover:text-amber-200'}`}
                       >
-                        <Star size={20} className={minRating >= star ? 'fill-current' : ''} />
+                        <Star size={16} className={minRating >= star ? 'fill-current' : ''} />
                       </button>
                     ))}
                   </div>
@@ -597,66 +584,13 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Security Banner */}
-        <div className="mb-8 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-          <ShieldCheck className="text-indigo-600 shrink-0 mt-0.5" size={20} />
+        <div className="mb-10 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-4 sm:p-5 flex items-start gap-3 shadow-none">
+          <ShieldCheck className="text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" size={20} />
           <div>
-            <h4 className="text-sm font-bold text-indigo-900 mb-1">Tips para una contratación segura</h4>
-            <p className="text-xs text-indigo-700 leading-relaxed">
+            <h4 className="text-sm font-bold text-indigo-950 dark:text-indigo-200 mb-1">Tips para una contratación segura</h4>
+            <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
               Pide siempre un presupuesto detallado por escrito. Revisa las reseñas de otros bahienses en el perfil del profesional. Para trabajos de gas o electricidad, verifica que el profesional esté matriculado (busca la insignia verde).
             </p>
-          </div>
-        </div>
-
-        {/* Categories Grid */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Sectores Populares</h3>
-            <button 
-              onClick={() => setIsRubroOpen(true)}
-              className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-            >
-              Ver todos los rubros
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {popularCategories.map((category) => {
-              const categoryIcons: Record<string, any> = {
-                'Hogar y Construcción': House,
-                'Servicios Generales': Wrench,
-                'Automotor': Car,
-                'Digital y Diseño': Megaphone,
-                'Servicios Profesionales': Scale,
-                'Estética y Salud': Scissors,
-                'Otros': Sparkles
-              };
-              const CategoryIcon = categoryIcons[category] || Sparkles;
-
-              return (
-                <button
-                  key={category}
-                  onClick={() => {
-                    setSelectedRubro(category === selectedRubro ? 'Todos' : category);
-                    setSearchTerm('');
-                  }}
-                  className={`group flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
-                    selectedRubro === category
-                      ? 'bg-indigo-50 border-indigo-200 shadow-sm ring-1 ring-indigo-200'
-                      : 'bg-white border-gray-200 hover:border-indigo-200 hover:shadow-sm'
-                  }`}
-                >
-                  <div className={`p-3 rounded-full mb-3 transition-colors ${
-                    selectedRubro === category ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-50 text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'
-                  }`}>
-                    <CategoryIcon size={24} />
-                  </div>
-                  <span className={`text-sm font-medium text-center ${
-                    selectedRubro === category ? 'text-indigo-700' : 'text-gray-700'
-                  }`}>
-                    {category}
-                  </span>
-                </button>
-              );
-            })}
           </div>
         </div>
 
@@ -684,106 +618,56 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Ads Carousel Section */}
-        {ads.length > 0 && (
-          <div className="mb-8 overflow-hidden rounded-2xl shadow-sm border border-gray-100 bg-white">
-            <div className="flex items-center justify-between p-4 border-b border-gray-50">
-              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                <Megaphone size={16} className="text-indigo-600" />
-                Sponsors y Ofertas
-              </h3>
-              <div className="flex gap-1">
-                <button 
-                  onClick={() => setCurrentAdIndex((prev) => (prev - 1 + ads.length) % ads.length)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <ChevronDown size={16} className="rotate-90" />
-                </button>
-                <button 
-                  onClick={() => setCurrentAdIndex((prev) => (prev + 1) % ads.length)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <ChevronDown size={16} className="-rotate-90" />
-                </button>
-              </div>
-            </div>
-            <div className="relative h-32 sm:h-40 overflow-hidden">
-              <div 
-                className="flex transition-transform duration-500 ease-out h-full"
-                style={{ transform: `translateX(-${currentAdIndex * 100}%)` }}
-              >
-                {ads.map((ad) => (
-                  <div key={ad.id} className="min-w-full h-full flex flex-col sm:flex-row items-center gap-4 p-4">
-                    <img 
-                      src={ad.imageUrl} 
-                      alt={ad.title} 
-                      className="w-24 h-24 sm:w-32 sm:h-32 object-contain rounded-xl shadow-sm bg-gray-50" 
-                      referrerPolicy="no-referrer" 
-                      loading="lazy"
-                    />
-                    <div className="flex-1 text-center sm:text-left">
-                      <h4 className="font-bold text-gray-900 text-lg line-clamp-1">{ad.title}</h4>
-                      <p className="text-gray-600 text-sm line-clamp-2 mb-2">{ad.description}</p>
-                      
-                      {ad.offersTradeDiscount && (
-                        <div className="mb-2 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
-                          <div className="flex items-center gap-1 text-indigo-700 font-bold text-[10px] mb-0.5">
-                            <Tag size={10} />
-                            Beneficio Gremio: {ad.tradeDiscountDetails}
-                          </div>
-                          <p className="text-[8px] text-indigo-500 leading-tight">
-                            * Presentá tu perfil de <strong>Bahía Oficios</strong>.
-                          </p>
-                        </div>
-                      )}
-
-                      {ad.link && (
-                        <a 
-                          href={ad.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-indigo-600 font-bold text-xs hover:underline"
-                        >
-                          Ver más
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Results Grid */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Results Grid Header with enhanced style for Profesionales Destacados */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 shadow-sm">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              {sortedProfessionals.length} Profesionales encontrados
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 px-3 py-1 rounded-full mb-1.5 border border-indigo-100 dark:border-indigo-900">
+              <Award size={13} className="text-indigo-600 dark:text-indigo-400" />
+              Guía Oficial de Prestadores
+            </div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              Profesionales en Bahía Blanca
+              <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full">
+                {sortedProfessionals.length}
+              </span>
             </h3>
-            <span className="text-sm text-gray-500">Ordenado por: Destacados y Calificación</span>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Priorizando perfiles <strong className="text-amber-600 dark:text-amber-400">Destacados VIP</strong>, verificación de matrícula y mejores calificaciones
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+            <span className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-700/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <Star size={13} className="text-amber-500 fill-amber-500" />
+              {sortBy === 'score' ? 'Orden: Destacados y Calificación' : sortBy === 'rating' ? 'Orden: Mejor Calificados' : 'Orden: Más Reseñas'}
+            </span>
           </div>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 auto-rows-fr">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-3xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
-                <Skeleton className="w-full h-48 rounded-2xl" />
-                <div className="space-y-2">
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+              <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-700/80 shadow-xs flex flex-col justify-between h-full space-y-3">
+                <Skeleton className="w-full h-16 rounded-xl" />
+                <div className="flex items-end justify-between -mt-8 px-1">
+                  <Skeleton className="w-14 h-14 rounded-full border-2 border-white dark:border-slate-800" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
                 </div>
-                <div className="flex gap-2">
-                  <Skeleton className="h-8 w-20 rounded-full" />
-                  <Skeleton className="h-8 w-20 rounded-full" />
+                <div className="space-y-1.5 pt-1">
+                  <Skeleton className="h-4 w-3/4 rounded-md" />
+                  <Skeleton className="h-3 w-1/2 rounded-md" />
+                </div>
+                <Skeleton className="h-8 w-full rounded-md" />
+                <Skeleton className="h-8 w-full rounded-md" />
+                <div className="flex gap-2 pt-2 mt-auto">
+                  <Skeleton className="h-8 flex-1 rounded-xl" />
+                  <Skeleton className="h-8 flex-1 rounded-xl" />
                 </div>
               </div>
             ))}
           </div>
         ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 auto-rows-fr">
                 {currentProfessionals.map(prof => (
                     <ProfessionalCard key={prof.uid} professional={prof} />
                 ))}
@@ -791,15 +675,16 @@ export const Dashboard: React.FC = () => {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="mt-12 flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-2">
+                <div className="mt-12 flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                       title="Anterior"
+                      aria-label="Página anterior"
                     >
-                      <ChevronDown size={20} className="rotate-90" />
+                      <ChevronDown size={18} className="rotate-90" />
                     </button>
                     
                     <div className="flex items-center gap-1">
@@ -808,11 +693,11 @@ export const Dashboard: React.FC = () => {
                         <>
                           <button
                             onClick={() => handlePageChange(1)}
-                            className="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                            className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                           >
                             1
                           </button>
-                          {currentPage > 3 && <span className="px-1 text-gray-400">...</span>}
+                          {currentPage > 3 && <span className="px-1.5 text-slate-400 text-xs">...</span>}
                         </>
                       )}
 
@@ -822,10 +707,10 @@ export const Dashboard: React.FC = () => {
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg border font-medium transition-all ${
+                            className={`w-10 h-10 rounded-xl border font-semibold text-xs transition-all ${
                               currentPage === page
-                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
-                                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
                             }`}
                           >
                             {page}
@@ -835,10 +720,10 @@ export const Dashboard: React.FC = () => {
                       {/* Last Page */}
                       {currentPage < totalPages - 1 && (
                         <>
-                          {currentPage < totalPages - 2 && <span className="px-1 text-gray-400">...</span>}
+                          {currentPage < totalPages - 2 && <span className="px-1.5 text-slate-400 text-xs">...</span>}
                           <button
                             onClick={() => handlePageChange(totalPages)}
-                            className="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                            className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                           >
                             {totalPages}
                           </button>
@@ -849,13 +734,14 @@ export const Dashboard: React.FC = () => {
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                       title="Siguiente"
+                      aria-label="Página siguiente"
                     >
-                      <ChevronDown size={20} className="-rotate-90" />
+                      <ChevronDown size={18} className="-rotate-90" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Página {currentPage} de {totalPages}
                   </p>
                 </div>
@@ -864,10 +750,21 @@ export const Dashboard: React.FC = () => {
         )}
 
         {!loading && sortedProfessionals.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No se encontraron profesionales con esos criterios.</p>
+          <div className="text-center py-16 px-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
+            <Briefcase size={36} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+            <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">
+              No se encontraron profesionales
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              Probá ajustando los términos de búsqueda, cambiando la zona o seleccionando "Todos los Rubros".
+            </p>
           </div>
         )}
+
+        {/* Empresas Colaboradoras al final de la página */}
+        <div className="mt-14">
+          <EmpresasColaboradoras />
+        </div>
       </main>
     </div>
   );
@@ -876,6 +773,7 @@ export const Dashboard: React.FC = () => {
 const ClientQuoteRequests: React.FC = () => {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
+  const [trabajos, setTrabajos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState<string | null>(null);
 
@@ -917,94 +815,252 @@ const ClientQuoteRequests: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchRequestsAndJobs = async () => {
       if (!currentUser) return;
       try {
-        const q = query(
+        // 1. Direct quote requests
+        const qDirect = query(
           collection(db, 'quoteRequests'),
           where('clienteId', '==', currentUser.uid)
         );
-        const snapshot = await getDocs(q);
-        const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Sort client-side by fecha desc
+        const snapDirect = await getDocs(qDirect);
+        const reqs = snapDirect.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         reqs.sort((a: any, b: any) => {
           const dateA = a.fecha?.toDate?.() || new Date(0);
           const dateB = b.fecha?.toDate?.() || new Date(0);
           return dateB.getTime() - dateA.getTime();
         });
         setRequests(reqs);
+
+        // 2. Trabajos solicitados múltiples
+        const qJobs = query(
+          collection(db, 'trabajosSolicitados'),
+          where('clienteId', '==', currentUser.uid)
+        );
+        const snapJobs = await getDocs(qJobs);
+        const jobsList = snapJobs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        jobsList.sort((a: any, b: any) => {
+          const dateA = a.fechaCreacion?.toDate?.() || new Date(0);
+          const dateB = b.fechaCreacion?.toDate?.() || new Date(0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setTrabajos(jobsList);
       } catch (error) {
-        console.error("Error fetching client quote requests:", error);
+        console.error("Error fetching client quote requests & jobs:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchRequests();
+    fetchRequestsAndJobs();
   }, [currentUser]);
 
   if (loading) return null;
-  if (requests.length === 0) return null;
+  if (requests.length === 0 && trabajos.length === 0) return null;
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus Solicitudes de Presupuesto</h2>
-      <div className="space-y-4">
-        {requests.map(req => (
-          <div key={req.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">Solicitud de {req.rubro}</h3>
-                <p className="text-sm text-gray-500">{req.zona} • {new Date(req.fecha?.toDate()).toLocaleDateString()}</p>
-              </div>
-              <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full font-medium">
-                {req.respuestas?.length || 0}/3 Respuestas
-              </span>
+    <div className="mb-10 space-y-8 animate-in fade-in">
+      {/* Sección Trabajos Solicitados y Presupuestos Recibidos */}
+      {trabajos.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Briefcase size={20} className="text-indigo-600 dark:text-indigo-400" />
+                Tus Trabajos Publicados y Presupuestos Recibidos
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Propuestas de profesionales de Bahía Blanca para tus pedidos
+              </p>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">{req.descripcion}</p>
-            
-            {req.respuestas && req.respuestas.length > 0 && (
-              <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Respuestas de Profesionales:</h4>
-                <div className="space-y-3">
-                  {req.respuestas.map((resp: any, idx: number) => (
-                    <div key={idx} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl">
-                      <div className="flex justify-between items-center mb-2">
-                        <Link to={`/profesional/${resp.profesionalId}`} className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                          {resp.profesionalNombre}
-                        </Link>
-                        <span className="font-bold text-green-600 dark:text-green-400">${resp.precio}</span>
+            <Link
+              to="/trabajos"
+              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+            >
+              Ir al Tablón de Trabajos <ExternalLink size={13} />
+            </Link>
+          </div>
+
+          <div className="space-y-4">
+            {trabajos.map(trabajo => {
+              const proposals = trabajo.presupuestos || [];
+              return (
+                <div key={trabajo.id} className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80 dark:border-slate-700">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800">
+                          {trabajo.rubro}
+                        </span>
+                        <span className="text-xs text-slate-400">• {trabajo.zona}</span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{resp.mensaje}</p>
-                      <div className="mt-3 flex justify-end gap-2">
-                        {resp.requiresDeposit && !resp.depositPaid && (
-                          <button
-                            onClick={() => handleDepositPayment(req.id, resp.profesionalId)}
-                            disabled={paying === req.id}
-                            className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-1 disabled:opacity-50"
-                          >
-                            {paying === req.id ? 'Procesando...' : 'Pagar Seña ($10.000)'}
-                          </button>
-                        )}
-                        {resp.requiresDeposit && resp.depositPaid && (
-                          <span className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
-                            <CheckCircle size={14} /> Seña Pagada
-                          </span>
-                        )}
-                        <Link 
-                          to={`/profesional/${resp.profesionalId}`}
-                          className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-200 transition-colors flex items-center gap-1"
-                        >
-                          <MessageSquare size={14} /> Contactar
-                        </Link>
+                      <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white mt-1">
+                        {trabajo.titulo}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900">
+                        {proposals.length} {proposals.length === 1 ? 'Presupuesto recibido' : 'Presupuestos recibidos'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 leading-relaxed">
+                    {trabajo.descripcion}
+                  </p>
+
+                  {/* Listado de presupuestos recibidos */}
+                  {proposals.length > 0 ? (
+                    <div className="mt-4 border-t border-slate-100 dark:border-slate-700/80 pt-4 space-y-3">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Ofertas de profesionales:
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {proposals.map((prop: any) => {
+                          const cleanPhone = prop.profesionalTelefono?.replace(/\D/g, '') || '';
+                          const whatsappMsg = encodeURIComponent(
+                            `Hola ${prop.profesionalNombre}, vi tu presupuesto de $${prop.montoEstimado} en Bahía Oficios para mi trabajo "${trabajo.titulo}".`
+                          );
+                          const isAccepted = prop.estado === 'aceptado';
+                          return (
+                            <div 
+                              key={prop.id} 
+                              className={`p-4 rounded-xl border transition-all ${
+                                isAccepted 
+                                  ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800' 
+                                  : 'bg-slate-50/80 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={prop.profesionalFoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(prop.profesionalNombre)}`}
+                                    alt={prop.profesionalNombre}
+                                    className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                                  />
+                                  <div>
+                                    <Link to={`/profesional/${prop.profesionalSlug || prop.profesionalId}`} className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white hover:text-indigo-600">
+                                      {prop.profesionalNombre}
+                                    </Link>
+                                    {prop.profesionalIsVip && (
+                                      <span className="ml-1.5 text-[10px] bg-amber-400 text-slate-900 font-bold px-1.5 py-0.2 rounded">
+                                        VIP
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400">
+                                  ${Number(prop.montoEstimado).toLocaleString('es-AR')}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 line-clamp-2">
+                                "{prop.mensaje}"
+                              </p>
+
+                              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                                <span className="text-slate-400 text-[11px]">
+                                  Tiempo: {prop.tiempoEstimado}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {cleanPhone && (
+                                    <a
+                                      href={`https://wa.me/54${cleanPhone}?text=${whatsappMsg}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                                    >
+                                      WhatsApp →
+                                    </a>
+                                  )}
+                                  <Link
+                                    to="/trabajos"
+                                    className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                                  >
+                                    Gestionar
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl text-xs text-slate-500 text-center">
+                      Aún no hay propuestas enviadas para este pedido. Te avisaremos en cuanto un profesional responda.
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Sección Solicitudes Directas */}
+      {requests.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Tus Solicitudes Directas de Presupuesto</h2>
+          <div className="space-y-4">
+            {requests.map(req => (
+              <div key={req.id} className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80 dark:border-slate-700">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">Solicitud de {req.rubro}</h3>
+                    <p className="text-xs text-slate-400">{req.zona} • {new Date(req.fecha?.toDate()).toLocaleDateString()}</p>
+                  </div>
+                  <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-100 dark:border-indigo-900">
+                    {req.respuestas?.length || 0}/3 Respuestas
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{req.descripcion}</p>
+                
+                {req.respuestas && req.respuestas.length > 0 && (
+                  <div className="mt-4 border-t border-slate-100 dark:border-slate-700/80 pt-4">
+                    <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-3">Respuestas de Profesionales:</h4>
+                    <div className="space-y-3">
+                      {req.respuestas.map((resp: any, idx: number) => (
+                        <div key={idx} className="bg-slate-50/80 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+                          <div className="flex justify-between items-center mb-2">
+                            <Link to={`/profesional/${resp.profesionalId}`} className="font-semibold text-xs sm:text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+                              {resp.profesionalNombre}
+                            </Link>
+                            <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">${resp.precio}</span>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{resp.mensaje}</p>
+                          <div className="mt-3 flex justify-end gap-2">
+                            {resp.requiresDeposit && !resp.depositPaid && (
+                              <button
+                                onClick={() => handleDepositPayment(req.id, resp.profesionalId)}
+                                disabled={paying === req.id}
+                                className="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-100 transition-colors flex items-center gap-1 disabled:opacity-50 border border-emerald-200 dark:border-emerald-800"
+                              >
+                                {paying === req.id ? 'Procesando...' : 'Pagar Seña ($10.000)'}
+                              </button>
+                            )}
+                            {resp.requiresDeposit && resp.depositPaid && (
+                              <span className="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1">
+                                <CheckCircle size={13} /> Seña Pagada
+                              </span>
+                            )}
+                            <Link 
+                              to={`/profesional/${resp.profesionalId}`}
+                              className="text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 px-3 py-1.5 rounded-lg font-semibold hover:bg-indigo-100 transition-colors flex items-center gap-1 border border-indigo-100 dark:border-indigo-900"
+                            >
+                              <MessageSquare size={13} /> Contactar
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,8 @@
 {
   "name": "Bahia Oficios",
-  "description": "Plataforma para conectar clientes con profesionales de oficios en Bahía Blanca.",
-  "requestFramePermissions": []
+  "description": "Plataforma para conectar clientes con profesionales de oficios y publicar trabajos requeridos en Bahía Blanca.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

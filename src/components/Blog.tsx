@@ -1,339 +1,489 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Calendar, User, ArrowRight, BookOpen, Clock, Tag, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Calendar, User, ArrowRight, BookOpen, Clock, Tag, X, Search, 
+  ShieldCheck, AlertTriangle, CheckCircle2, ExternalLink, Share2, Sparkles, Filter
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface BlogPost {
-  id: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  author: string;
-  date: string;
-  readTime: string;
-  category: string;
-  imageUrl: string;
-}
-
-const BLOG_POSTS: BlogPost[] = [
-  {
-    id: '1',
-    title: 'Cómo elegir el mejor electricista para tu hogar',
-    excerpt: 'Descubrí los puntos clave que tenés que revisar antes de contratar a un profesional de la electricidad para evitar problemas a futuro.',
-    content: `
-      Contratar a un electricista no es algo que deba tomarse a la ligera. Una mala instalación puede derivar en cortocircuitos, daños en electrodomésticos o incluso incendios. Aquí te dejamos los puntos clave:
-
-      1. **Verificá la Matrícula:** En Bahía Blanca, los electricistas matriculados garantizan que conocen las normativas vigentes de la AEA (Asociación Electrotécnica Argentina).
-      2. **Pedí Referencias:** Consultá con vecinos o revisá las opiniones en Bahía Oficios. Un buen profesional siempre tiene clientes conformes.
-      3. **Presupuesto Detallado:** Un electricista serio te explicará qué materiales se necesitan y por qué. Desconfiá de presupuestos excesivamente bajos.
-      4. **Herramientas Adecuadas:** Observá si utiliza herramientas aisladas y equipos de medición como multímetros o pinzas amperométricas.
-
-      Recordá que en Bahía Oficios podés ver el sello de "Matriculado" en los perfiles verificados.
-    `,
-    author: 'Equipo Bahía Oficios',
-    date: '15 Mar, 2026',
-    readTime: '5 min',
-    category: 'Consejos',
-    imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: '2',
-    title: 'Mantenimiento preventivo de aire acondicionado',
-    excerpt: 'No esperes al verano para revisar tu equipo. Te contamos cómo mantenerlo limpio y eficiente durante todo el año.',
-    content: `
-      El mantenimiento preventivo es la clave para que tu aire acondicionado dure muchos años y no consuma energía de más.
-
-      **Limpieza de Filtros:** Es la tarea más sencilla y la que más impacto tiene. Debes hacerlo al menos una vez al mes durante la temporada de uso. Solo necesitás agua tibia y un jabón suave.
-      
-      **Revisión de la Unidad Exterior:** Asegurate de que no haya hojas, nidos de pájaros o suciedad obstruyendo el flujo de aire en el condensador.
-
-      **Control de Gas:** Si notás que el equipo no enfría como antes, puede haber una pequeña fuga. Un técnico especializado debe revisar las presiones y no simplemente "agregar gas".
-
-      Realizar un service anual con un profesional de Bahía Oficios te asegura un ambiente fresco y una factura de luz más baja.
-    `,
-    author: 'Juan Pérez - Técnico',
-    date: '10 Mar, 2026',
-    readTime: '4 min',
-    category: 'Mantenimiento',
-    imageUrl: 'https://images.unsplash.com/photo-1599939571322-792a326991f2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: '3',
-    title: '5 señales de que necesitás cambiar tus cañerías',
-    excerpt: 'Las filtraciones pueden ser un dolor de cabeza. Aprendé a identificar cuándo es momento de llamar a un plomero de confianza.',
-    content: `
-      Muchas veces ignoramos pequeñas señales que terminan en grandes inundaciones. Prestá atención a estos 5 puntos:
-
-      1. **Baja Presión de Agua:** Si de repente sale menos agua, puede haber una obstrucción por sarro o una fuga interna.
-      2. **Manchas de Humedad:** Si aparecen manchas en paredes o techos, hay una pérdida activa que debe repararse urgente.
-      3. **Agua con Color:** Si el agua sale amarronada o con sedimentos, tus cañerías de hierro están oxidadas por dentro.
-      4. **Ruidos Extraños:** Los "golpes de ariete" o silbidos en las paredes indican problemas de presión o fijación de los caños.
-      5. **Aumento en la Factura:** Si tu factura de ABSA sube sin motivo, podrías tener una fuga invisible.
-
-      No esperes a que sea tarde. Consultá con un plomero en nuestra plataforma para un diagnóstico preventivo.
-    `,
-    author: 'Equipo Bahía Oficios',
-    date: '05 Mar, 2026',
-    readTime: '6 min',
-    category: 'Plomería',
-    imageUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: '4',
-    title: 'Guía de pintura: ¿Cómo elegir el color ideal?',
-    excerpt: 'La iluminación y el tamaño de los ambientes influyen en cómo se ve la pintura. Te damos los mejores tips para no fallar.',
-    content: `
-      Elegir el color de una habitación es una decisión emocionante pero difícil. Aquí te ayudamos a decidir:
-
-      **Ambientes Pequeños:** Usá colores claros y neutros (blanco, tiza, gris perla) para dar sensación de amplitud.
-      
-      **Iluminación:** Un color que se ve bien en la pinturería puede verse muy distinto en tu living. Comprá una muestra pequeña y pintá un cuadrado de 30x30 cm en la pared para ver cómo cambia con la luz del día y la luz artificial.
-
-      **El Techo:** Pintar el techo de un color más claro que las paredes hace que el ambiente parezca más alto.
-
-      Si no te animás a hacerlo vos mismo, en Bahía Oficios tenemos pintores con años de experiencia que dejarán tu casa como nueva.
-    `,
-    author: 'Ana García - Decoradora',
-    date: '01 Mar, 2026',
-    readTime: '7 min',
-    category: 'Decoración',
-    imageUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-  }
-];
+import { BLOG_POSTS, BLOG_CATEGORIES, BlogPost } from '../data/blogData';
 
 export const Blog: React.FC = () => {
-  const [selectedPost, setSelectedPost] = React.useState<BlogPost | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Filter posts by category and search query
+  const filteredPosts = useMemo(() => {
+    return BLOG_POSTS.filter((post) => {
+      const matchesCategory = selectedCategory === 'Todos' || post.category === selectedCategory;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = !q || 
+        post.title.toLowerCase().includes(q) || 
+        post.excerpt.toLowerCase().includes(q) || 
+        post.content.toLowerCase().includes(q) ||
+        post.tags.some(t => t.toLowerCase().includes(q));
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [selectedCategory, searchQuery]);
+
+  // Featured post: always the first in the filtered list or post #1
+  const featuredPost = filteredPosts[0];
+  const gridPosts = filteredPosts.slice(1);
+
+  const handleShare = (post: BlogPost, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const url = `${window.location.origin}/blog/${post.slug}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
         {/* Header */}
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4"
-          >
-            <BookOpen size={16} />
-            BLOG DE CONSEJOS
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6"
-          >
-            Mantenimiento y Tips para tu Hogar
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-gray-600 max-w-2xl mx-auto"
-          >
-            Aprendé a cuidar tu casa con los mejores consejos de profesionales bahienses.
-          </motion.p>
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-4 border border-indigo-100 dark:border-indigo-900/50">
+            <BookOpen size={14} />
+            <span>GUÍAS TÉCNICAS & CONSEJOS BAHÍA BLANCA</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">
+            Mantenimiento y Consejos para tu Hogar
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+            Recomendaciones prácticas, normativas de Camuzzi y EDES, prevención de accidentes y pautas para contratar oficios de forma segura.
+          </p>
         </div>
 
-        {/* Featured Post */}
-        <div className="mb-16">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative bg-white rounded-3xl shadow-xl overflow-hidden lg:grid lg:grid-cols-2 lg:gap-0 cursor-pointer group"
-            onClick={() => setSelectedPost(BLOG_POSTS[0])}
-          >
-            <div className="relative h-64 lg:h-full overflow-hidden">
-              <img
-                src={BLOG_POSTS[0].imageUrl}
-                alt={BLOG_POSTS[0].title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute top-6 left-6">
-                <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">
-                  Destacado
-                </span>
-              </div>
+        {/* Quick Decalogue Banner */}
+        <div className="mb-10 bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-none">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+              <ShieldCheck size={20} />
             </div>
-            <div className="p-8 lg:p-12 flex flex-col justify-center">
-              <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                <span className="flex items-center gap-1.5">
-                  <Calendar size={14} /> {BLOG_POSTS[0].date}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock size={14} /> {BLOG_POSTS[0].readTime}
-                </span>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight group-hover:text-indigo-600 transition-colors">
-                {BLOG_POSTS[0].title}
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                5 Reglas de Oro antes de contratar cualquier oficio
               </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                {BLOG_POSTS[0].excerpt}
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Pautas indispensables para evitar sobrecostos, estafas y riesgos en el hogar.
               </p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
-                    <User size={20} />
-                  </div>
-                  <span className="font-bold text-gray-900">{BLOG_POSTS[0].author}</span>
-                </div>
-                <button className="flex items-center gap-2 text-indigo-600 font-bold hover:underline">
-                  Leer más <ArrowRight size={18} />
-                </button>
-              </div>
             </div>
-          </motion.div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold text-xs">1. Esquema 30/30/40</span>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Nunca pagues el 100% de adelanto. 30% anticipo, 30% a mitad de obra y 40% al probar conformidad.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold text-xs">2. Verificá Matrículas</span>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                En gas y electricidad, solicitá la credencial vigente y corrobórala ante Camuzzi o Colegio de Técnicos.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold text-xs">3. Presupuesto Escrito</span>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Asegurate de que detalle mano de obra, qué materiales incluye, plazo en días y período de garantía.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold text-xs">4. Ventilaciones Libres</span>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Jamás tapes las rejillas de gas por frío. El monóxido de carbono no avisa y se cobra vidas cada invierno.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold text-xs">5. Probá el Disyuntor</span>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Presioná el botón 'T' del disyuntor 1 vez por mes. Si no salta de inmediato, llamá a un electricista urgente.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {BLOG_POSTS.slice(1).map((post, index) => (
-            <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden group hover:shadow-xl transition-all cursor-pointer"
-              onClick={() => setSelectedPost(post)}
-            >
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={post.imageUrl}
-                  alt={post.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute top-4 left-4">
-                  <span className="bg-white/90 backdrop-blur-sm text-indigo-600 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                    {post.category}
-                  </span>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-4 text-[10px] text-gray-500 mb-3 uppercase tracking-widest font-bold">
-                  <span className="flex items-center gap-1">
-                    <Calendar size={12} /> {post.date}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock size={12} /> {post.readTime}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                  {post.title}
-                </h3>
-                <p className="text-gray-600 text-sm mb-6 line-clamp-3">
-                  {post.excerpt}
-                </p>
-                <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                  <span className="text-xs font-bold text-gray-900">{post.author}</span>
-                  <button className="text-indigo-600 font-bold text-xs hover:underline flex items-center gap-1">
-                    Leer <ArrowRight size={14} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+        {/* Filters & Search Toolbar */}
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar consejos (gas, humedad, disyuntor, seña, techos...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 self-end md:self-center">
+              Mostrando {filteredPosts.length} de {BLOG_POSTS.length} artículos
+            </span>
+          </div>
+
+          {/* Category Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {BLOG_CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`
+                    px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0
+                    ${isSelected
+                      ? 'bg-indigo-600 text-white shadow-none'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
+                    }
+                  `}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Post Modal */}
-        {selectedPost && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl"
+        {/* Empty State */}
+        {filteredPosts.length === 0 && (
+          <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-8">
+            <AlertTriangle size={36} className="mx-auto text-amber-500 mb-3" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+              No encontramos guías con ese criterio
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Intentá con otras palabras clave o seleccioná otra categoría.
+            </p>
+            <button
+              onClick={() => {
+                setSelectedCategory('Todos');
+                setSearchQuery('');
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
             >
-              <button 
-                onClick={() => setSelectedPost(null)}
-                className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md p-2 rounded-full text-gray-900 hover:bg-white transition-all shadow-md"
-              >
-                <X size={24} />
-              </button>
-              
-              <div className="h-64 md:h-80 w-full relative">
-                <img 
-                  src={selectedPost.imageUrl} 
-                  alt={selectedPost.title} 
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-6 left-6 right-6">
-                  <span className="bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-3 inline-block">
-                    {selectedPost.category}
-                  </span>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-                    {selectedPost.title}
-                  </h2>
-                </div>
-              </div>
-              
-              <div className="p-6 md:p-10">
-                <div className="flex items-center gap-6 mb-8 pb-6 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
-                      <User size={16} />
-                    </div>
-                    <span className="text-sm font-bold text-gray-900">{selectedPost.author}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar size={14} /> {selectedPost.date}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Clock size={14} /> {selectedPost.readTime}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="prose prose-indigo max-w-none">
-                  {selectedPost.content.split('\n\n').map((paragraph, i) => (
-                    <p key={i} className="text-gray-700 leading-relaxed mb-4 whitespace-pre-line">
-                      {paragraph.trim()}
-                    </p>
-                  ))}
-                </div>
-
-                <div className="mt-12 pt-8 border-t border-gray-100 flex justify-center">
-                  <button 
-                    onClick={() => setSelectedPost(null)}
-                    className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                  >
-                    Cerrar Artículo
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+              Restablecer Filtros
+            </button>
           </div>
         )}
 
+        {/* Featured Post Card */}
+        {featuredPost && (
+          <div className="mb-10">
+            <div
+              onClick={() => setSelectedPost(featuredPost)}
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden lg:grid lg:grid-cols-12 cursor-pointer group hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+            >
+              <div className="relative h-60 lg:h-full lg:col-span-5 overflow-hidden">
+                <img
+                  src={featuredPost.imageUrl}
+                  alt={featuredPost.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute top-4 left-4">
+                  <span className="bg-indigo-600 text-white text-[11px] font-semibold px-2.5 py-1 rounded-md shadow-xs">
+                    Guía Destacada
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-6 lg:p-8 lg:col-span-7 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-2.5">
+                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded text-[11px] font-medium">
+                      {featuredPost.category}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={12} className="text-slate-400" /> {featuredPost.readTime}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar size={12} className="text-slate-400" /> {featuredPost.date}
+                    </span>
+                  </div>
+
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug">
+                    {featuredPost.title}
+                  </h2>
+
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-5 line-clamp-3">
+                    {featuredPost.excerpt}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {featuredPost.tags.slice(0, 4).map(t => (
+                      <span key={t} className="text-[11px] font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <User size={13} className="text-slate-400" /> {featuredPost.author}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleShare(featuredPost, e)}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Copiar enlace"
+                    >
+                      <Share2 size={14} />
+                    </button>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                      Leer guía completa <ArrowRight size={13} />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Regular Posts Grid */}
+        {gridPosts.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+            {gridPosts.map((post) => (
+              <div
+                key={post.id}
+                onClick={() => setSelectedPost(post)}
+                className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer group shadow-none"
+              >
+                <div>
+                  <div className="relative h-44 overflow-hidden">
+                    <img
+                      src={post.imageUrl}
+                      alt={post.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-medium px-2 py-0.5 rounded">
+                        {post.category}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 mb-2 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Clock size={11} className="text-slate-400" /> {post.readTime}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar size={11} className="text-slate-400" /> {post.date}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      {post.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 mb-4 leading-relaxed">
+                      {post.excerpt}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {post.tags.slice(0, 3).map(t => (
+                        <span key={t} className="text-[10px] bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 pt-0">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                    <span className="text-slate-600 dark:text-slate-300 font-medium text-[11px] truncate max-w-[170px]">
+                      {post.author}
+                    </span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-xs flex items-center gap-1">
+                      Leer <ArrowRight size={12} />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modal for Reading Full Article */}
+        <AnimatePresence>
+          {selectedPost && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="bg-white dark:bg-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative border border-slate-200 dark:border-slate-700 shadow-xl"
+              >
+                {/* Close Button */}
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="absolute top-4 right-4 z-20 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs p-2 rounded-full text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-xs"
+                  aria-label="Cerrar modal"
+                >
+                  <X size={20} />
+                </button>
+
+                {/* Hero image */}
+                <div className="h-56 sm:h-72 w-full relative overflow-hidden">
+                  <img
+                    src={selectedPost.imageUrl}
+                    alt={selectedPost.title}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6">
+                    <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider mb-2 inline-block">
+                      {selectedPost.category}
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
+                      {selectedPost.title}
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Body Content */}
+                <div className="p-6 sm:p-8">
+                  <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-6 border-b border-slate-100 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-800 dark:text-slate-200 font-semibold flex items-center gap-1.5">
+                        <User size={14} className="text-slate-400" /> {selectedPost.author}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar size={13} /> {selectedPost.date}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Clock size={13} /> {selectedPost.readTime}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleShare(selectedPost)}
+                        className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg transition-colors"
+                      >
+                        <Share2 size={12} />
+                        <span>{copied ? '¡Copiado!' : 'Compartir'}</span>
+                      </button>
+                      <Link
+                        to={`/blog/${selectedPost.slug}`}
+                        className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg font-semibold hover:underline"
+                      >
+                        <ExternalLink size={12} />
+                        <span>Link Permanente</span>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Formatted paragraphs */}
+                  <div className="space-y-4 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+                    {selectedPost.content.split('\n\n').map((para, i) => {
+                      const trimmed = para.trim();
+                      if (!trimmed) return null;
+
+                      if (trimmed.startsWith('### ')) {
+                        return (
+                          <h3 key={i} className="text-base sm:text-lg font-bold text-slate-900 dark:text-white pt-4 border-t border-slate-100 dark:border-slate-700/60">
+                            {trimmed.replace('### ', '')}
+                          </h3>
+                        );
+                      }
+
+                      return (
+                        <p key={i} className="leading-relaxed">
+                          {trimmed}
+                        </p>
+                      );
+                    })}
+                  </div>
+
+                  {/* Tags */}
+                  {selectedPost.tags && (
+                    <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs text-slate-400 mr-1">Etiquetas:</span>
+                      {selectedPost.tags.map(tag => (
+                        <span key={tag} className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Bottom Action */}
+                  <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <Link
+                      to="/dashboard"
+                      className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors text-center"
+                    >
+                      Buscar Profesionales en Bahía Blanca
+                    </Link>
+                    <button
+                      onClick={() => setSelectedPost(null)}
+                      className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      Cerrar Guía
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* Newsletter CTA */}
-        <div className="mt-20 bg-indigo-900 rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
-          
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold mb-4">¿Querés recibir más consejos?</h2>
-            <p className="text-indigo-100 mb-8">
-              Suscribite a nuestro newsletter y recibí las mejores guías de mantenimiento para tu hogar directamente en tu email.
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-10 text-center border border-slate-200/80 dark:border-slate-700/80">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
+              ¿Querés recibir más consejos técnicos y normativas?
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Recibí guías preventivas de invierno, advertencias de Camuzzi y alertas ante temporales directamente en tu casilla.
             </p>
-            <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                alert('¡Gracias por suscribirte a las guías de Bahía Oficios!');
+              }} 
+              className="flex flex-col sm:flex-row gap-2.5 max-w-md mx-auto"
+            >
               <input
                 type="email"
-                placeholder="Tu correo electrónico"
-                className="flex-1 px-6 py-3 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Tu correo electrónico..."
+                className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
                 required
               />
               <button
                 type="submit"
-                className="bg-white text-indigo-900 px-8 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm rounded-xl transition-colors shrink-0"
               >
                 Suscribirme
               </button>
             </form>
           </div>
         </div>
+
       </div>
     </div>
   );

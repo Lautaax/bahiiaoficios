@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ProfessionalCard } from './ProfessionalCard';
-import { Tag, ChevronLeft, ChevronRight, Briefcase as BriefcaseIcon } from 'lucide-react';
+import { Tag, ChevronLeft, ChevronRight, Briefcase as BriefcaseIcon, Building2, Handshake } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 
 export function Home() {
@@ -160,31 +160,36 @@ export function Home() {
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-slate-950">
       {/* Hero Section */}
-      <div className="relative bg-indigo-900 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1581094794329-cd1096a7a5e6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')] bg-cover bg-center" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+      <div className="relative bg-slate-900 text-white overflow-hidden border-b border-slate-800">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:16px_16px]" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.4 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 mb-6">
+              <MapPin size={13} className="text-indigo-400" />
+              <span>La guía oficial de oficios de Bahía Blanca</span>
+            </div>
+
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
               Encontrá al profesional que necesitás en Bahía Blanca
             </h1>
-            <p className="text-xl text-indigo-100 mb-10">
-              La guía más completa de oficios y servicios verificados. Plomeros, electricistas, albañiles y más, a un click de distancia.
+            <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+              La red más confiable de oficios y servicios verificados. Plomeros, electricistas, albañiles y especialistas calificados a tu alcance.
             </p>
             
-            <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 max-w-2xl mx-auto">
-              <div className="flex-1 flex items-center px-4 bg-gray-50 rounded-md">
-                <Search className="text-gray-400 w-5 h-5" />
+            <div className="bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700 flex flex-col md:flex-row gap-2 max-w-2xl mx-auto">
+              <div className="flex-1 flex items-center px-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl">
+                <Search className="text-slate-400 w-5 h-5 shrink-0" />
                 <input 
                   type="text" 
-                  placeholder="¿Qué estás buscando? (ej. Electricista)" 
-                  className="w-full bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-500 py-3 px-2"
+                  placeholder="¿Qué servicio buscás? (ej. Electricista, Plomero)" 
+                  className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder-slate-400 py-3 px-3 text-sm sm:text-base outline-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -192,36 +197,36 @@ export function Home() {
               </div>
               <button 
                 onClick={handleSearch}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-md font-bold text-lg transition-colors flex items-center justify-center"
+                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-8 py-3.5 rounded-xl font-bold text-base transition-colors flex items-center justify-center shrink-0 shadow-sm"
               >
                 Buscar
               </button>
             </div>
             
-            <div className="mt-8 flex justify-center gap-6 text-sm font-medium text-indigo-200">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-green-400" />
+            <div className="mt-8 flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-slate-400">
+              <div className="flex items-center gap-2 bg-slate-800/70 border border-slate-700/60 px-3 py-1.5 rounded-full">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 <span>Perfiles Verificados</span>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-red-400" />
-                <span>Solo Bahía Blanca</span>
+              <div className="flex items-center gap-2 bg-slate-800/70 border border-slate-700/60 px-3 py-1.5 rounded-full">
+                <MapPin className="w-4 h-4 text-amber-400" />
+                <span>100% Bahía Blanca</span>
               </div>
             </div>
 
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link 
-                to="/solicitar-presupuesto"
-                className="inline-flex items-center gap-2 bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg"
+                to="/trabajos"
+                className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95"
               >
-                <MessageSquare size={20} className="text-indigo-600" />
-                Solicitar Presupuesto Múltiple
+                <Briefcase size={18} className="text-indigo-600" />
+                Trabajos Solicitados
               </Link>
               <Link 
                 to="/dashboard?urgencias=true"
-                className="inline-flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg animate-pulse"
+                className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95"
               >
-                <AlertCircle size={20} />
+                <AlertCircle size={18} />
                 URGENCIAS 24HS
               </Link>
             </div>
@@ -230,14 +235,18 @@ export function Home() {
       </div>
 
       {/* Categories Grid */}
-      <div className="bg-indigo-50/30 py-16">
+      <div className="bg-slate-50 dark:bg-slate-900/50 py-16 border-b border-slate-200/80 dark:border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Rubros Populares</h2>
-            <p className="mt-4 text-gray-600">Explorá los servicios más solicitados en la ciudad</p>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Rubros Populares
+            </h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Explorá los servicios más solicitados en la ciudad
+            </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {categories.map((cat) => {
               const Icon = cat.icon;
               return (
@@ -245,46 +254,61 @@ export function Home() {
                   key={cat.id} 
                   to={`/dashboard?rubro=${encodeURIComponent(cat.name)}`}
                   onClick={() => api.trackSearch(cat.name)}
-                  className="group bg-white hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 hover:shadow-xl rounded-xl p-6 transition-all duration-300 flex flex-col items-center text-center"
+                  className="group bg-white dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-2xl p-5 sm:p-6 transition-all duration-200 flex flex-col items-center text-center shadow-sm hover:shadow-md"
                 >
-                  <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Icon className="w-7 h-7" />
+                  <div className="w-13 h-13 sm:w-14 sm:h-14 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{cat.name}</h3>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {cat.name}
+                  </h3>
                 </Link>
               );
             })}
           </div>
           
-          <div className="mt-12 text-center">
-            <Link to="/dashboard" className="inline-flex items-center text-indigo-600 font-semibold hover:text-indigo-800">
-              Ver todas las categorías <ArrowRight className="ml-2 w-4 h-4" />
+          <div className="mt-10 text-center">
+            <Link 
+              to="/dashboard" 
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+            >
+              Ver todas las categorías <ArrowRight size={15} />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Ads Carousel Section */}
+      {/* Empresas que colaboran con Bahía Oficios */}
       {ads.length > 0 && (
-        <div className="bg-white py-12 overflow-hidden">
+        <div className="bg-white dark:bg-slate-950 py-16 overflow-hidden border-b border-slate-200/80 dark:border-slate-800/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Megaphone className="text-indigo-600" size={24} />
-                Destacados y Novedades
-              </h2>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+              <div>
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1 rounded-full mb-2 border border-indigo-100 dark:border-indigo-900/60">
+                  <Building2 size={13} className="text-indigo-600 dark:text-indigo-400" />
+                  Alianzas & Sponsors Locales
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Empresas que colaboran con Bahía Oficios
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Comercios, corralones y proveedores bahienses comprometidos con el gremio y la comunidad
+                </p>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button 
                   onClick={() => setCurrentAdIndex((prev) => (prev - 1 + ads.length) % ads.length)}
-                  className="p-2 bg-gray-50 border border-gray-200 rounded-full hover:bg-indigo-50 transition-colors shadow-sm"
+                  aria-label="Anterior"
+                  className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-sm active:scale-95"
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
                 </button>
                 <button 
                   onClick={() => setCurrentAdIndex((prev) => (prev + 1) % ads.length)}
-                  className="p-2 bg-gray-50 border border-gray-200 rounded-full hover:bg-indigo-50 transition-colors shadow-sm"
+                  aria-label="Siguiente"
+                  className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all shadow-sm active:scale-95"
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
@@ -299,54 +323,58 @@ export function Home() {
                   <motion.div 
                     key={ad.id} 
                     className="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 px-3 group"
-                    whileHover={{ y: -5 }}
+                    whileHover={{ y: -3 }}
                   >
-                    <div className="bg-gray-50 rounded-2xl shadow-lg border border-gray-100 overflow-hidden h-full">
-                    <div className="relative h-48 overflow-hidden bg-white">
-                      <img 
-                        src={ad.imageUrl} 
-                        alt={ad.title} 
-                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" 
-                        referrerPolicy="no-referrer" 
-                        loading="lazy"
-                      />
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                          Publicidad
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                        {ad.title}
-                      </h3>
-                      <p className="text-gray-600 text-sm line-clamp-2 mb-4">
-                        {ad.description}
-                      </p>
-                      
-                      {ad.offersTradeDiscount && (
-                        <div className="mb-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                          <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs mb-1">
-                            <Tag size={14} />
-                            Beneficio Gremio: {ad.tradeDiscountDetails}
-                          </div>
-                          <p className="text-[10px] text-indigo-500 leading-tight">
-                            * Presentá tu perfil de <strong>Bahía Oficios</strong> para acceder.
-                          </p>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/80 dark:border-slate-800 overflow-hidden h-full flex flex-col transition-all duration-200">
+                      <div className="relative h-44 overflow-hidden bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center p-4 border-b border-slate-100 dark:border-slate-800">
+                        <img 
+                          src={ad.imageUrl} 
+                          alt={ad.title} 
+                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" 
+                          referrerPolicy="no-referrer" 
+                          loading="lazy"
+                        />
+                        <div className="absolute top-3 right-3">
+                          <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                            <Handshake size={11} /> Aliado
+                          </span>
                         </div>
-                      )}
+                      </div>
+                      <div className="p-6 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            {ad.title}
+                          </h3>
+                          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
+                            {ad.description}
+                          </p>
+                          
+                          {ad.offersTradeDiscount && (
+                            <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700">
+                              <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-bold text-xs mb-1">
+                                <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
+                                Beneficio Gremio: {ad.tradeDiscountDetails}
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                                * Presentá tu perfil en <strong>Bahía Oficios</strong> para acceder.
+                              </p>
+                            </div>
+                          )}
+                        </div>
 
-                      {ad.link && (
-                        <a 
-                          href={ad.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="inline-flex items-center gap-2 text-indigo-600 font-bold text-sm hover:text-indigo-800 transition-colors"
-                        >
-                          Saber más <ArrowRight size={16} />
-                        </a>
-                      )}
-                    </div>
+                        {ad.link && (
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                            <a 
+                              href={ad.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                            >
+                              Conocer más sobre esta empresa <ArrowRight size={14} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -358,28 +386,38 @@ export function Home() {
 
       {/* Featured Professionals Section */}
       {featuredPros.length > 0 && (
-        <div className="bg-slate-50 py-12 overflow-hidden">
+        <div className="bg-slate-50 dark:bg-slate-900/50 py-16 overflow-hidden border-b border-slate-200/80 dark:border-slate-800/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
               <div className="text-left">
-                <h2 className="text-3xl font-bold text-gray-900">Profesionales Destacados</h2>
-                <p className="mt-2 text-gray-600">Conocé a los expertos más recomendados de la ciudad</p>
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-950/50 px-3 py-1 rounded-full mb-2 border border-amber-200/60 dark:border-amber-800/50">
+                  <Star size={13} className="fill-amber-500 text-amber-500" />
+                  Recomendados de la Ciudad
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Profesionales Destacados
+                </h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Especialistas calificados y con mejor reputación en Bahía Blanca
+                </p>
               </div>
               {featuredPros.length > cardsPerPage && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 self-end sm:self-auto">
                   <button 
                     onClick={() => setCurrentProIndex((prev) => Math.max(0, prev - 1))}
                     disabled={currentProIndex === 0}
-                    className={`p-2 bg-white border border-gray-200 rounded-full shadow-sm transition-colors ${currentProIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                    aria-label="Anterior profesional"
+                    className={`p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm transition-all ${currentProIndex === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 active:scale-95'}`}
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={18} />
                   </button>
                   <button 
                     onClick={() => setCurrentProIndex((prev) => Math.min(featuredPros.length - cardsPerPage, prev + 1))}
                     disabled={currentProIndex >= featuredPros.length - cardsPerPage}
-                    className={`p-2 bg-white border border-gray-200 rounded-full shadow-sm transition-colors ${currentProIndex >= featuredPros.length - cardsPerPage ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                    aria-label="Siguiente profesional"
+                    className={`p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm transition-all ${currentProIndex >= featuredPros.length - cardsPerPage ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 active:scale-95'}`}
                   >
-                    <ChevronRight size={20} />
+                    <ChevronRight size={18} />
                   </button>
                 </div>
               )}
@@ -400,145 +438,94 @@ export function Home() {
             </div>
             
             <div className="mt-12 text-center">
-              <Link to="/dashboard" className="inline-flex items-center bg-white text-indigo-600 px-8 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-md">
-                Ver todos los profesionales <ArrowRight className="ml-2 w-4 h-4" />
+              <Link 
+                to="/dashboard" 
+                className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-8 py-3.5 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-98 text-sm"
+              >
+                Ver todos los profesionales de Bahía Blanca <ArrowRight size={15} />
               </Link>
             </div>
           </div>
         </div>
       )}
 
-      {/* Trade Discounts Section */}
-      <div className="bg-indigo-50/50 py-16">
+      {/* Beneficios Exclusivos y Publicidad para Negocios (Side by Side) */}
+      <div className="bg-white dark:bg-slate-950 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
-            <div className="max-w-xl">
-              <div className="flex items-center gap-2 mb-4">
-                <Tag className="text-indigo-200" size={24} />
-                <span className="text-indigo-100 font-bold tracking-wider uppercase text-sm">Beneficios Exclusivos</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Descuentos para el Gremio</h2>
-              <p className="text-indigo-100 text-lg">
-                ¿Sos profesional? Aprovechá descuentos exclusivos en casas de repuestos, materiales y más comercios adheridos.
-              </p>
-            </div>
-            <Link 
-              to="/beneficios"
-              className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-50 transition-all shadow-lg hover:scale-105 active:scale-95 whitespace-nowrap"
-            >
-              Ver Beneficios
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Merchant Ads Section */}
-      <div className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gray-900 rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
-            
-            <div className="max-w-xl relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <Megaphone className="text-indigo-400" size={24} />
-                <span className="text-indigo-300 font-bold tracking-wider uppercase text-sm">Publicidad para Negocios</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">¿Tenés un Comercio?</h2>
-              <p className="text-gray-300 text-lg">
-                Llegá a miles de clientes potenciales en Bahía Blanca. Publicitá tu negocio en nuestro carrusel principal y banners estratégicos.
-              </p>
-            </div>
-            <Link 
-              to="/publicitar"
-              className="relative z-10 bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg hover:scale-105 active:scale-95 whitespace-nowrap flex items-center gap-2"
-            >
-              Soy Comercio y quiero Publicitar
-              <ArrowRight size={20} />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Directory by Profession Section */}
-      <div className="bg-slate-50 py-16 border-y border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Directorio por Oficio</h2>
-            <p className="mt-4 text-gray-600">Páginas dedicadas con consejos y profesionales especializados en cada área</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {PROFESSIONS.slice(0, 18).map((prof) => (
-              <Link 
-                key={prof.name}
-                to={`/professions/${prof.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className="group p-4 bg-white rounded-xl text-center hover:bg-indigo-600 transition-all border border-gray-200 hover:border-indigo-600 shadow-sm hover:shadow-md"
-              >
-                <div className="mb-2 flex justify-center text-indigo-600 group-hover:text-white transition-colors">
-                  <prof.icon size={24} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+            {/* Beneficios Exclusivos */}
+            <div className="bg-slate-900 dark:bg-slate-900 rounded-3xl p-6 sm:p-8 md:p-10 text-white flex flex-col justify-between shadow-sm border border-slate-800 h-full relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-4">
+                  <Tag size={13} />
+                  Beneficios Exclusivos
                 </div>
-                <span className="text-sm font-bold text-gray-700 group-hover:text-white transition-colors">{prof.name}</span>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-10 text-center">
-            <Link to="/dashboard" className="text-indigo-600 font-bold hover:underline">Ver todos los oficios →</Link>
+                <h2 className="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight">Descuentos para el Gremio</h2>
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+                  ¿Sos profesional registrado? Aprovechá descuentos y convenios exclusivos en casas de repuestos, materiales y corralones de Bahía Blanca.
+                </p>
+              </div>
+              <div className="relative z-10 pt-2">
+                <Link 
+                  to="/beneficios"
+                  className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 px-6 py-3.5 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-98"
+                >
+                  Ver Beneficios del Gremio
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+
+            {/* Publicidad para Negocios */}
+            <div className="bg-slate-900 dark:bg-slate-900 rounded-3xl p-6 sm:p-8 md:p-10 text-white flex flex-col justify-between shadow-sm border border-slate-800 h-full relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/25 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-4">
+                  <Megaphone size={13} />
+                  Publicidad para Comercios
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight">¿Tenés un Comercio o Corralón?</h2>
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+                  Llegá a miles de clientes potenciales y profesionales en Bahía Blanca. Publicitá tu negocio con presencia destacada en la plataforma.
+                </p>
+              </div>
+              <div className="relative z-10 pt-2">
+                <Link 
+                  to="/publicitar"
+                  className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3.5 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-98"
+                >
+                  Publicitar mi Comercio
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-indigo-600 rounded-2xl shadow-xl overflow-hidden lg:grid lg:grid-cols-2 lg:gap-4">
-            <div className="pt-10 pb-12 px-6 sm:pt-16 sm:px-16 lg:py-16 lg:pr-0 xl:py-20 xl:px-20">
-              <div className="lg:self-center">
-                {currentUser ? (
-                  <>
-                    <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-                      <span className="block">¿Necesitas un servicio?</span>
-                      <span className="block text-indigo-200">Encuentra al experto ideal.</span>
-                    </h2>
-                    <p className="mt-4 text-lg leading-6 text-indigo-100">
-                      Explora nuestra guía de profesionales verificados en Bahía Blanca y contacta al que mejor se adapte a tus necesidades.
-                    </p>
-                    <Link 
-                      to="/dashboard" 
-                      className="mt-8 bg-white border border-transparent rounded-md shadow px-5 py-3 inline-flex items-center text-base font-medium text-indigo-600 hover:bg-indigo-50"
-                    >
-                      ¡Busca a los profesionales!
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-                      <span className="block">¿Ofrecés un servicio?</span>
-                      <span className="block text-indigo-200">Sumate a la guía.</span>
-                    </h2>
-                    <p className="mt-4 text-lg leading-6 text-indigo-100">
-                      Registrate gratis, verificá tu identidad y llegá a más clientes en Bahía Blanca. Tu perfil aparecerá en las búsquedas de miles de vecinos.
-                    </p>
-                    <Link 
-                      to="/signup" 
-                      className="mt-8 bg-white border border-transparent rounded-md shadow px-5 py-3 inline-flex items-center text-base font-medium text-indigo-600 hover:bg-indigo-50"
-                    >
-                      Registrarme Ahora
-                    </Link>
-                  </>
-                )}
+      {/* CTA Section - Solo para usuarios autenticados si buscan un servicio */}
+      {currentUser && (
+        <div className="bg-slate-50 dark:bg-slate-900/50 py-16 border-t border-slate-200/80 dark:border-slate-800/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-slate-900 rounded-3xl p-8 sm:p-12 text-white border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+              <div className="max-w-2xl">
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
+                  ¿Buscás resolver un arreglo o proyecto en tu hogar?
+                </h2>
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                  Explorá nuestra guía completa de profesionales verificados en Bahía Blanca y contactá directamente por WhatsApp al especialista que necesitás.
+                </p>
               </div>
-            </div>
-            <div className="relative -mt-6 aspect-w-5 aspect-h-3 md:aspect-w-2 md:aspect-h-1">
-              <img 
-                className="transform translate-x-6 translate-y-6 rounded-md object-cover object-left-top sm:translate-x-16 lg:translate-y-20" 
-                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-1.2.1&auto=format&fit=crop&w=1567&q=80" 
-                alt="App screenshot" 
-                loading="lazy"
-              />
+              <Link 
+                to="/dashboard" 
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-xl text-sm transition-all shadow-sm active:scale-95 shrink-0"
+              >
+                Buscar Profesionales
+                <ArrowRight size={16} />
+              </Link>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
