@@ -32,9 +32,11 @@ import { NotificationListener } from './components/NotificationListener';
 import { CachedImage } from './components/CachedImage';
 import { ProfessionLanding } from './components/ProfessionLanding';
 import { TrabajosSolicitados } from './components/TrabajosSolicitados';
+import { Footer } from './components/Footer';
 
 import { ChatBadge } from './components/ChatBadge';
 import { HelpChatbot } from './components/HelpChatbot';
+import { FeedbackWidget } from './components/FeedbackWidget';
 import { GuidedOnboarding, triggerOnboardingTour } from './components/GuidedOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { safeSessionStorage } from './utils/storage';
@@ -251,33 +253,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <HelpChatbot />
       <GuidedOnboarding />
       {/* Footer */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 mt-12 py-10 transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
-          <div className="flex justify-center gap-8 mb-6">
-            <div className="flex flex-col items-center">
-              <Users size={20} className="text-indigo-500 mb-1" />
-              <span className="font-bold text-gray-700 dark:text-gray-300">{stats.users}</span>
-              <span className="text-xs">Usuarios Registrados</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <Eye size={20} className="text-indigo-500 mb-1" />
-              <span className="font-bold text-gray-700 dark:text-gray-300">{stats.visits}</span>
-              <span className="text-xs">Visitas Totales</span>
-            </div>
-          </div>
-          <p>© 2026 Bahia Oficios. Todos los derechos reservados.</p>
-          <p className="mt-1 text-xs">
-            Diseñado por <a href="https://www.instagram.com/_lautaaj/?__pwa=1" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">@_lautaaj</a>
-          </p>
-          <div className="mt-2 flex justify-center gap-4">
-            <Link to="/terms" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Términos</Link>
-            <Link to="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Privacidad</Link>
-            <Link to="/help" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Ayuda</Link>
-            <Link to="/beneficios" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Beneficios</Link>
-            <Link to="/blog" className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">Blog</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer stats={stats} />
     </div>
   );
 }
@@ -289,6 +265,7 @@ function AppContent() {
     <>
       <NotificationListener />
       <GuidedOnboarding />
+      <FeedbackWidget />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />

@@ -11,6 +11,9 @@ import { checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { CachedImage } from './CachedImage';
 import { ReportModal } from './ReportModal';
 import { safeLocalStorage } from '../utils/storage';
+import { useProfessionalSEO } from '../hooks/useProfessionalSEO';
+import { getProfessionalBadges } from '../utils/badgeUtils';
+import { ProfessionalBadges } from './ProfessionalBadges';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -25,6 +28,9 @@ export const PublicProfile: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
+
+  // SEO & Schema.org LocalBusiness JSON-LD for Bahía Blanca search engines
+  useProfessionalSEO(professional, reviews);
 
   useEffect(() => {
     if (currentUser && currentUser.favoritos && professional) {
@@ -379,6 +385,9 @@ export const PublicProfile: React.FC = () => {
   // Verificación estricta en tiempo real de membresía VIP
   const isVip = isVipActive(professional.profesionalInfo);
 
+  // Insignias dinámicas de confianza (Respuesta Rápida, Muy Valorado, etc.)
+  const badges = getProfessionalBadges(professional);
+
   const todayIndex = new Date().getDay();
   const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
   const DAYS_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -566,6 +575,15 @@ export const PublicProfile: React.FC = () => {
                 </div>
               </div>
 
+              {badges.length > 0 && (
+                <div className="mb-6 p-3 bg-slate-50 dark:bg-slate-700/40 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 text-center">
+                    Insignias de Confianza
+                  </div>
+                  <ProfessionalBadges badges={badges} variant="compact" maxVisible={5} className="justify-center" />
+                </div>
+              )}
+
               <div className="space-y-4">
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wider">Contacto</h3>
                 
@@ -694,7 +712,7 @@ export const PublicProfile: React.FC = () => {
                     className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                   >
                     <MessageSquare size={18} />
-                    Contactar por WhatsApp
+                    Pedir Presupuesto Gratis en 1 Minuto
                   </a>
                 )}
                 <button
@@ -726,6 +744,24 @@ export const PublicProfile: React.FC = () => {
               {descripcion || "Este profesional no ha añadido una descripción todavía."}
             </p>
           </div>
+
+          {/* Badges and Trust Seals */}
+          {badges.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="text-indigo-600 dark:text-indigo-400" />
+                    Insignias de Confianza y Calidad
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Reconocimientos basados en el historial de servicio, velocidad de respuesta y calificaciones de vecinos bahienses.
+                  </p>
+                </div>
+              </div>
+              <ProfessionalBadges badges={badges} variant="detailed" />
+            </div>
+          )}
 
           {/* Reference Prices Section */}
           {preciosReferencia && preciosReferencia.length > 0 && (

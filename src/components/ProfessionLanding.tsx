@@ -7,6 +7,13 @@ import { ProfessionalCard } from './ProfessionalCard';
 import { Skeleton } from './ui/Skeleton';
 import { PROFESSIONS, PROFESSION_TIPS } from '../constants';
 import { ShieldCheck, Info, ChevronLeft, Briefcase, Star, MapPin } from 'lucide-react';
+import { 
+  updateMetaTag, 
+  updateCanonicalLink, 
+  injectJsonLd, 
+  removeJsonLd, 
+  generateProfessionLandingSchema 
+} from '../utils/seo';
 
 export const ProfessionLanding: React.FC = () => {
   const { profession } = useParams<{ profession: string }>();
@@ -24,16 +31,46 @@ export const ProfessionLanding: React.FC = () => {
   const professionName = professionData?.name || profession || '';
   const tips = PROFESSION_TIPS[professionName] || PROFESSION_TIPS['Default'];
 
-  // SEO Metadata
+  // SEO Metadata & OpenGraph
   useEffect(() => {
-    if (professionName) {
-      document.title = `${professionName}s en Bahía Blanca | Bahía Oficios`;
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) {
-        metaDesc.setAttribute('content', `Encontrá los mejores ${professionName.toLowerCase()}s en Bahía Blanca. Profesionales calificados, presupuestos sin cargo y atención garantizada en toda la ciudad.`);
-      }
-    }
+    if (!professionName) return;
+
+    const previousTitle = document.title;
+    const pageTitle = `${professionName}s en Bahía Blanca | Presupuestos y Profesionales Calificados - Bahía Oficios`;
+    const metaDescription = `Encontrá los mejores ${professionName.toLowerCase()}s en Bahía Blanca. Profesionales verificados y matriculados, presupuestos sin cargo y atención en todos los barrios de la ciudad.`;
+    const canonicalUrl = `${window.location.origin}/profesion/${professionName.toLowerCase().replace(/\s+/g, '-')}`;
+
+    document.title = pageTitle;
+    updateMetaTag('name', 'description', metaDescription);
+    updateMetaTag('name', 'keywords', `${professionName} bahia blanca, mejores ${professionName}s bahia blanca, presupuesto ${professionName}, servicio de ${professionName} en bahia blanca, bahia oficios`);
+    
+    // Social / OpenGraph
+    updateMetaTag('property', 'og:title', pageTitle);
+    updateMetaTag('property', 'og:description', metaDescription);
+    updateMetaTag('property', 'og:url', canonicalUrl);
+    updateMetaTag('property', 'og:type', 'website');
+    updateMetaTag('property', 'og:locale', 'es_AR');
+
+    // Twitter Card
+    updateMetaTag('name', 'twitter:card', 'summary_large_image');
+    updateMetaTag('name', 'twitter:title', pageTitle);
+    updateMetaTag('name', 'twitter:description', metaDescription);
+
+    updateCanonicalLink(canonicalUrl);
+
+    return () => {
+      document.title = previousTitle;
+      removeJsonLd(`profession-${professionName}`);
+    };
   }, [professionName]);
+
+  // Inject ItemList Schema.org structured data once professionals are loaded
+  useEffect(() => {
+    if (professionName && professionals.length > 0) {
+      const schemaData = generateProfessionLandingSchema(professionName, professionals);
+      injectJsonLd(`profession-${professionName}`, schemaData);
+    }
+  }, [professionName, professionals]);
 
   useEffect(() => {
     const fetchProfessionals = async () => {

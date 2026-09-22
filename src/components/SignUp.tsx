@@ -3,18 +3,23 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Role } from '../types';
 import { Upload, User, Briefcase, AlertCircle, Scale, ShieldAlert, ChevronDown, ChevronUp, FileText, CheckCircle2 } from 'lucide-react';
 import { ZONAS, PROFESSIONS } from '../constants';
 
 export const SignUp: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+  const customMessage = searchParams.get('motivo');
+  const roleParam = searchParams.get('role');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nombre, setNombre] = useState('');
   const [nombreNegocio, setNombreNegocio] = useState('');
   const [telefono, setTelefono] = useState('');
-  const [role, setRole] = useState<Role>('cliente');
+  const [role, setRole] = useState<Role>(roleParam === 'profesional' ? 'profesional' : 'cliente');
   const [zona, setZona] = useState('Centro');
   const [rubro, setRubro] = useState('Electricista'); // Default for professionals
   const [rubrosSeleccionados, setRubrosSeleccionados] = useState<string[]>([]);
@@ -211,7 +216,7 @@ export const SignUp: React.FC = () => {
       await setDoc(doc(db, 'usuarios', uid), userData);
 
       // 5. Redirect
-      navigate('/');
+      navigate(redirectUrl);
       
     } catch (err: any) {
       console.error(err);
@@ -238,9 +243,21 @@ export const SignUp: React.FC = () => {
             Crear Cuenta
           </h2>
           <p className="mt-2 text-center text-sm text-gray-500">
-            Únete a la comunidad de oficios de Bahía Blanca
+            {customMessage === 'solicitar_trabajo'
+              ? 'Registrate gratis para solicitar un trabajo o presupuesto'
+              : 'Únete a la comunidad de oficios de Bahía Blanca'}
           </p>
         </div>
+
+        {customMessage === 'solicitar_trabajo' && (
+          <div className="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-xs sm:text-sm text-indigo-800 flex items-start gap-2.5">
+            <span className="text-base">💼</span>
+            <div className="leading-snug">
+              <strong className="block font-bold mb-0.5">Registrate gratis para solicitar un trabajo</strong>
+              Creá tu cuenta de cliente para publicar tu pedido sin costo y recibir propuestas directas de profesionales verificados.
+            </div>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <div className="relative pt-1">
@@ -613,7 +630,10 @@ export const SignUp: React.FC = () => {
           </div>
           
           <div className="text-center mt-4">
-            <Link to="/login" className="text-sm text-indigo-600 hover:text-indigo-500">
+            <Link 
+              to={redirectUrl !== '/' ? `/login?redirect=${encodeURIComponent(redirectUrl)}${customMessage ? `&motivo=${encodeURIComponent(customMessage)}` : ''}` : '/login'} 
+              className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+            >
               ¿Ya tienes cuenta? Inicia sesión
             </Link>
           </div>

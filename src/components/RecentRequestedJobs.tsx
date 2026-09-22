@@ -269,7 +269,7 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
 
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              to="/trabajos?crear=true"
+              to={currentUser ? "/trabajos?crear=true" : "/signup?redirect=%2Ftrabajos%3Fcrear%3Dtrue&motivo=solicitar_trabajo"}
               className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm"
             >
               <PlusCircle size={15} />

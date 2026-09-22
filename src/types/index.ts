@@ -57,6 +57,12 @@ export interface User {
   isAdmin?: boolean;
   favoritos?: string[]; // Array of professional UIDs
   slug?: string;
+  busquedasRecientes?: Array<{
+    term: string;
+    category?: string;
+    zona?: string;
+    timestamp?: string;
+  }>;
   mpConnect?: {
     access_token: string;
     refresh_token: string;
@@ -203,3 +209,168 @@ export interface JobPost {
   estado: 'abierto' | 'en_progreso' | 'completado' | 'cancelado';
   presupuestos: JobBudgetProposal[];
 }
+
+export interface UserFeedback {
+  id?: string;
+  tipo: 'error' | 'mejora' | 'calificacion';
+  mensaje: string;
+  rating?: number; // 1-5
+  categoria?: string;
+  url: string;
+  ruta: string;
+  usuarioId?: string | null;
+  usuarioEmail?: string | null;
+  usuarioNombre?: string | null;
+  usuarioRol?: string;
+  userAgent?: string;
+  pantalla?: string;
+  estado: 'pendiente' | 'en_revision' | 'resuelto';
+  fecha: any;
+}
+
+export type ChurnRiskLevel = 'critico' | 'alto' | 'medio' | 'preventivo';
+
+export interface ChurnRiskAlert {
+  profesionalId: string;
+  nombre: string;
+  email?: string;
+  telefono?: string;
+  fotoUrl?: string;
+  rubro: string;
+  zona: string;
+  nivelRiesgo: ChurnRiskLevel;
+  diasInactivo: number;
+  diagnosticoIA: string;
+  probabilidadAbandono: number; // 0 - 100
+  accionRecomendada: string;
+  mensajeSugeridoWhatsApp: string;
+  motivos: string[];
+  vistas: number;
+  contactos: number;
+  isVip?: boolean;
+  trabajosPendientesEnRubro?: number;
+  ultimaConexionStr?: string;
+}
+
+export interface ChurnAuditReport {
+  id?: string;
+  fecha: string; // YYYY-MM-DD
+  timestamp: any;
+  saludGeneral: {
+    scoreRetencion: number; // 0 - 100
+    totalProfesionales: number;
+    activos: number;
+    enRiesgoCritico: number;
+    enRiesgoAlto: number;
+    enRiesgoMedio: number;
+    enRiesgoPreventivo: number;
+  };
+  resumenEjecutivo: string;
+  alertasRiesgoAbandono: ChurnRiskAlert[];
+  oportunidadesReenganche: {
+    rubro: string;
+    zona?: string;
+    solicitudesSinCubrir: number;
+    profesionalesInactivos: number;
+    estrategia: string;
+  }[];
+  accionesPrioritariasAdmin: {
+    id: string;
+    titulo: string;
+    prioridad: 'alta' | 'media' | 'baja';
+    accion: string;
+    impacto: string;
+  }[];
+  tendenciaSemanal?: string;
+  modeloUtilizado: string;
+}
+
+export interface CategoryPromotionInsight {
+  rubro: string;
+  prioridad: 'ALTA' | 'MEDIA' | 'OPORTUNIDAD';
+  tipoPromocion: 'promover_demanda_clientes' | 'captar_profesionales' | 'reactivar_categoria';
+  justificacionBasadaEnLogs: string;
+  metricas7Dias: {
+    profesionalesActivos: number;
+    busquedas: number;
+    solicitudesTrabajo: number;
+    vistasPerfiles: number;
+    contactosWhatsapp: number;
+    scoreDemanda: number; // 0 - 100
+  };
+  sugerenciaEstrategica: string;
+  copiaRedesSociales: string;
+  notificacionPushSugerida: {
+    titulo: string;
+    cuerpo: string;
+  };
+  accionInmediataRecomendada: string;
+}
+
+export interface AiPromotionInsightsReport {
+  fechaGeneracion: string;
+  periodoAnalizado: string;
+  resumenSemanal: string;
+  kpisGenerales: {
+    categoriaMayorDemanda: string;
+    categoriaMayorDeficit: string;
+    categoriaUrgentePromocionar: string;
+    totalCategoriasAnalizadas: number;
+    oportunidadesDetectadas: number;
+    indiceEquilibrioMercado: number; // 0 - 100
+  };
+  categoriasParaPromocionar: CategoryPromotionInsight[];
+  recomendacionesGeneralesMarketing: {
+    id: string;
+    titulo: string;
+    descripcion: string;
+    canalRecomendado: string;
+    impactoEstimado: string;
+  }[];
+  modeloUtilizado: string;
+}
+
+export interface ProfessionalBadge {
+  id: string;
+  label: string;
+  shortLabel: string;
+  description: string;
+  category: 'confianza' | 'calidad' | 'velocidad' | 'verificacion';
+  icon: string; // Identifier for Lucide icon
+  colorClass: {
+    bg: string;
+    text: string;
+    border: string;
+    icon: string;
+  };
+  tooltip: string;
+}
+
+export interface RecentSearchRecord {
+  id?: string;
+  userId?: string | null;
+  userEmail?: string | null;
+  term: string;
+  category?: string;
+  zona?: string;
+  resultsCount?: number;
+  timestamp: any;
+  fechaStr?: string;
+}
+
+export interface PendingQuoteReminderLog {
+  id?: string;
+  tipo: 'quote_request' | 'trabajo_solicitado';
+  solicitudId: string;
+  tituloSolicitud: string;
+  rubro: string;
+  zona: string;
+  clienteNombre: string;
+  profesionalId: string;
+  profesionalNombre?: string;
+  horasPendiente: number;
+  fechaSolicitud: any;
+  fechaRecordatorio: any;
+  estado: 'enviado' | 'leido' | 'respondido';
+}
+

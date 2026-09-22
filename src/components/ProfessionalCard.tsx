@@ -9,6 +9,8 @@ import { PROFESSIONS } from '../constants';
 import { isVipActive } from '../utils/vipUtils';
 import { CachedImage } from './CachedImage';
 import { safeLocalStorage } from '../utils/storage';
+import { getProfessionalBadges } from '../utils/badgeUtils';
+import { ProfessionalBadges } from './ProfessionalBadges';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -132,6 +134,9 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
     }
     return null;
   }, [preciosReferencia]);
+
+  // Compute reputation & response badges
+  const badges = useMemo(() => getProfessionalBadges(professional), [professional]);
 
   const handleWhatsAppClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -327,18 +332,25 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             )}
           </div>
 
+          {/* Trust and Performance Badges (Respuesta Rápida, Muy Valorado, etc.) */}
+          {badges.length > 0 && (
+            <div className="mb-2">
+              <ProfessionalBadges badges={badges} variant="compact" maxVisible={3} />
+            </div>
+          )}
+
           {/* Description snippet */}
           <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed mb-4 flex-1">
             {descripcion || 'Profesional verificado en Bahía Blanca para presupuestos y trabajos.'}
           </p>
 
-          {/* Action Buttons: Primary action 'Ver Perfil' gets the color accent, secondary action remains neutral */}
+          {/* Action Buttons: Primary action 'Conocer trabajos y opiniones' gets the color accent, secondary action remains neutral */}
           <div className="mt-auto pt-1 flex items-center gap-2">
             <Link 
               to={`/profesional/${professional.slug || uid}`}
-              className="flex-1 text-center py-2 px-2.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+              className="flex-1 text-center py-2 px-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
             >
-              Ver Perfil
+              Conocer trabajos y opiniones
             </Link>
 
             {telefono ? (

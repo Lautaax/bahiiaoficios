@@ -204,7 +204,7 @@ export const UserFavoritesSection: React.FC = () => {
                       to={`/profesional/${pro.slug || pro.uid}`}
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                     >
-                      Ver Perfil <ExternalLink size={11} />
+                      Conocer trabajos y opiniones <ExternalLink size={11} />
                     </Link>
                   </div>
                 </div>

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bahía Oficios - Encuentra a los mejores profesionales en Bahía Blanca</title>
     
+    <!-- Cache Prevention for Instant Design Updates -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <!-- SEO Meta Tags -->
     <meta name="description" content="Directorio de profesionales en Bahía Blanca. Encuentra electricistas, plomeros, gasistas, albañiles, mecánicos y más. Solicita presupuestos y contacta directamente." />
     <meta name="keywords" content="oficios, profesionales, bahia blanca, electricista, plomero, gasista, albañil, mecánico, limpieza, flete, cerrajero, presupuesto" />
@@ -33,6 +38,43 @@
     <meta property="twitter:title" content="Bahía Oficios - Profesionales de confianza" />
     <meta property="twitter:description" content="El directorio más completo de profesionales en Bahía Blanca. Contacta, pide presupuestos y lee reseñas reales." />
     <meta property="twitter:image" content="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=1200&h=630" />
+
+    <!-- Schema.org WebSite & Organization structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://bahiaoficios.com/#website",
+          "url": "https://bahiaoficios.com/",
+          "name": "Bahía Oficios",
+          "description": "Directorio de profesionales y oficios calificados en Bahía Blanca",
+          "inLanguage": "es-AR",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://bahiaoficios.com/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://bahiaoficios.com/#organization",
+          "name": "Bahía Oficios",
+          "url": "https://bahiaoficios.com/",
+          "logo": "https://bahiaoficios.com/icon.svg",
+          "areaServed": {
+            "@type": "City",
+            "name": "Bahía Blanca"
+          },
+          "sameAs": []
+        }
+      ]
+    }
+    </script>
 
     <!-- SEM / Google Analytics (Dummy Tag for SEM tracking) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>

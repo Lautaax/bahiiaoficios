@@ -10,8 +10,11 @@ import { collection, getDocs, query as firestoreQuery, where, limit } from 'fire
 import { db } from '../firebase';
 import { ZONAS } from '../constants';
 import { analyticsService } from '../services/analyticsService';
+import { useAuth } from '../context/AuthContext';
+import { userSearchService } from '../services/userSearchService';
 
 export function Search() {
+  const { currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get('q') || '';
@@ -68,12 +71,19 @@ export function Search() {
         const data = await searchProfessionals(query, categorySlug, selectedZona, minRating);
         setResults(data);
 
-        // Track search analytics
+        // Track search analytics and persist recent search to Firestore
         if (query.trim() || categorySlug) {
-          analyticsService.trackSearch(query.trim() || categorySlug, {
+          const effectiveTerm = query.trim() || categorySlug;
+          analyticsService.trackSearch(effectiveTerm, {
             category: categorySlug,
             zona: selectedZona,
             resultsCount: data.length
+          });
+          userSearchService.saveRecentSearch(currentUser?.uid, effectiveTerm, {
+            category: categorySlug,
+            zona: selectedZona,
+            resultsCount: data.length,
+            userEmail: currentUser?.email
           });
         }
       } catch (error) {
@@ -232,7 +242,7 @@ export function Search() {
                 onSelectProfession={handleSelectProfession}
                 onSelectProfessional={handleSelectProfessional}
                 professionals={allProfessionals}
-                placeholder="Buscar por profesión, nombre o servicio..."
+                placeholder="¿Qué arreglo o servicio necesitás solucionar hoy en Bahía?"
                 inputClassName="w-full pl-10 pr-12 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 outline-none text-sm transition-all"
               />
 

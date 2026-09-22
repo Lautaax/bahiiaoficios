@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup, UserCredential } from 'firebase/auth';
 import { auth, db, googleProvider, appleProvider } from '../firebase';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export const Login: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+  const customMessage = searchParams.get('motivo');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,13 +29,8 @@ export const Login: React.FC = () => {
         // New user -> Redirect to complete profile
         navigate('/complete-profile');
       } else {
-        // Existing user -> Redirect based on role
-        const userData = userDoc.data();
-        if (userData?.rol === 'profesional') {
-          navigate('/');
-        } else {
-          navigate('/');
-        }
+        // Existing user -> Redirect
+        navigate(redirectUrl);
       }
     } catch (err: any) {
       console.error(err);
@@ -56,15 +55,7 @@ export const Login: React.FC = () => {
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData?.rol;
-
-        // 3. Redirect based on role
-        if (role === 'profesional') {
-          navigate('/');
-        } else {
-          navigate('/');
-        }
+        navigate(redirectUrl);
       } else {
         // User exists in Auth but not in Firestore -> Complete Profile
         navigate('/complete-profile');
@@ -97,9 +88,21 @@ export const Login: React.FC = () => {
             Iniciar Sesión
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Bienvenido de nuevo
+            {customMessage === 'solicitar_trabajo'
+              ? 'Iniciá sesión para solicitar un trabajo o pedir presupuestos'
+              : 'Bienvenido de nuevo'}
           </p>
         </div>
+
+        {customMessage === 'solicitar_trabajo' && (
+          <div className="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-xs sm:text-sm text-indigo-800 flex items-start gap-2.5">
+            <span className="text-base">💼</span>
+            <div className="leading-snug">
+              <strong className="block font-bold mb-0.5">Registro necesario para solicitar trabajos</strong>
+              Al iniciar sesión podrás publicar tu requerimiento, recibir cotizaciones de profesionales verificados y chatear directo.
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
@@ -205,8 +208,11 @@ export const Login: React.FC = () => {
           </div>
 
           <div className="text-center mt-4">
-            <Link to="/signup" className="text-sm text-indigo-600 hover:text-indigo-500">
-              ¿No tienes cuenta? Regístrate
+            <Link 
+              to={redirectUrl !== '/' ? `/signup?redirect=${encodeURIComponent(redirectUrl)}${customMessage ? `&motivo=${encodeURIComponent(customMessage)}` : ''}` : '/signup'} 
+              className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+            >
+              ¿No tienes cuenta? Regístrate gratis
             </Link>
           </div>
         </form>

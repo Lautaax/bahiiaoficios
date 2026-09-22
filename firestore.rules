@@ -76,6 +76,11 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     match /trabajosSolicitados/{jobId} {
       allow read: if true;
       allow create: if isAuthenticated();
@@ -121,6 +126,31 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /newsletter/{subscriberId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /daily_ai_audits/{auditId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /ai_promotion_insights/{insightId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /busquedas_recientes/{busquedaId} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /recordatorios_presupuestos/{recordatorioId} {
+      allow read: if isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() || isAdmin();
+      allow update, delete: if isAdmin();
     }
   }
 }

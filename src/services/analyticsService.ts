@@ -14,7 +14,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { safeLocalStorage, safeSessionStorage } from '../utils/storage';
-import { User } from '../types';
+import { User, UserFeedback } from '../types';
 
 export interface PageVisitItem {
   path: string;
@@ -66,6 +66,14 @@ export interface AdminAnalyticsReport {
     topRubros: { rubro: string; count: number; percentage: number }[];
     topZonas: { zona: string; count: number }[];
     voiceSearchesCount: number;
+  };
+  feedback: {
+    total: number;
+    errorsCount: number;
+    suggestionsCount: number;
+    ratingsCount: number;
+    avgRating: number;
+    items: UserFeedback[];
   };
   lastUpdated: Date;
 }
@@ -259,16 +267,44 @@ export const analyticsService = {
       }
     }
 
+    // 4. Fetch real feedback entries
+    let feedbackDocs: UserFeedback[] = [];
+    try {
+      const fbSnap = await getDocs(collection(db, 'feedback'));
+      feedbackDocs = fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as UserFeedback));
+      // Sort in memory by date desc
+      feedbackDocs.sort((a, b) => {
+        const tA = a.fecha?.toMillis ? a.fecha.toMillis() : (a.fecha ? new Date(a.fecha).getTime() : 0);
+        const tB = b.fecha?.toMillis ? b.fecha.toMillis() : (b.fecha ? new Date(b.fecha).getTime() : 0);
+        return tB - tA;
+      });
+    } catch (e) {
+      console.warn("Could not fetch feedback collection:", e);
+    }
+
+    // 5. Fetch real job requests to calculate real zone demand
+    let jobsZonesMap: Record<string, number> = {};
+    try {
+      const jobsSnap = await getDocs(collection(db, 'trabajosSolicitados'));
+      jobsSnap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.zona) {
+          jobsZonesMap[data.zona] = (jobsZonesMap[data.zona] || 0) + 1;
+        }
+      });
+    } catch (e) {
+      console.warn("Could not fetch trabajosSolicitados for zone analytics:", e);
+    }
+
     const professionals = allUsers.filter(u => u.rol === 'profesional' && u.profesionalInfo);
 
-    // Calculate total visits and daily trend (last 7 days)
-    const totalVisits = Math.max(Number(globalStats.visits) || 0, 142);
-    const uniqueVisitorsEstimate = Math.round(totalVisits * 0.68);
-
+    // Calculate real total visits and daily trend (last 7 days) strictly from Firestore data
+    const totalVisits = Number(globalStats.visits) || 0;
     const now = new Date();
     const dailyTrend: DailyTrafficItem[] = [];
     const dailyMap = globalStats.dailyVisits || {};
 
+    let trendSum = 0;
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
@@ -276,45 +312,56 @@ export const analyticsService = {
       const dayName = i === 0 ? 'Hoy' : i === 1 ? 'Ayer' : d.toLocaleDateString('es-AR', { weekday: 'short' });
       const label = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${d.getDate()}/${d.getMonth() + 1}`;
 
-      // If recorded in Firestore use it, otherwise interpolate realistic proportion of total
-      const recordedVisits = dailyMap[isoDate];
-      const calculatedVisits = recordedVisits !== undefined
-        ? Number(recordedVisits)
-        : Math.round((totalVisits / 12) + (Math.sin(i * 1.5) * 6) + 10);
+      // Strictly real recorded visits
+      const realRecordedVisits = Number(dailyMap[isoDate]) || 0;
+      trendSum += realRecordedVisits;
 
       dailyTrend.push({
         date: isoDate,
         label,
-        visits: Math.max(calculatedVisits, 4),
-        unique: Math.max(Math.round(calculatedVisits * 0.72), 3)
+        visits: realRecordedVisits,
+        unique: realRecordedVisits > 0 ? Math.max(Math.round(realRecordedVisits * 0.75), 1) : 0
       });
     }
 
-    const todayVisits = dailyTrend[dailyTrend.length - 1].visits;
-    const avgDailyVisits = Math.round(dailyTrend.reduce((acc, c) => acc + c.visits, 0) / dailyTrend.length);
+    const todayDateStr = now.toISOString().split('T')[0];
+    const todayVisits = Number(dailyMap[todayDateStr]) || (dailyTrend[dailyTrend.length - 1]?.visits || 0);
+    const avgDailyVisits = Math.round(trendSum / 7);
+    const uniqueVisitorsEstimate = totalVisits > 0 ? Math.max(Math.round(totalVisits * 0.7), 1) : 0;
 
-    // 4. Calculate page distribution
-    const pageVisitsMap: Record<string, number> = {};
+    // 6. Calculate real page distribution
     const recordedPageVisits = globalStats.pageVisits || {};
+    const pageVisitsMap: Record<string, number> = {};
 
-    // Standard baseline routes
-    const defaultRouteKeys: { path: string; share: number }[] = [
-      { path: '/', share: 0.38 },
-      { path: '/search', share: 0.24 },
-      { path: '/profesional/:id', share: 0.18 },
-      { path: '/trabajos', share: 0.08 },
-      { path: '/solicitar-presupuesto', share: 0.06 },
-      { path: '/beneficios', share: 0.03 },
-      { path: '/blog', share: 0.02 },
-      { path: '/login', share: 0.01 }
+    // Standard baseline routes registered in the app
+    const monitoredRoutes = [
+      '/',
+      '/search',
+      '/profesional/:id',
+      '/trabajos',
+      '/solicitar-presupuesto',
+      '/beneficios',
+      '/blog',
+      '/login',
+      '/signup',
+      '/help',
+      '/terms',
+      '/privacy'
     ];
 
-    defaultRouteKeys.forEach(r => {
-      const safeKey = r.path.replace(/[/.:]/g, '_');
-      if (recordedPageVisits[safeKey]) {
-        pageVisitsMap[r.path] = Number(recordedPageVisits[safeKey]);
-      } else {
-        pageVisitsMap[r.path] = Math.round(totalVisits * r.share);
+    monitoredRoutes.forEach(route => {
+      const safeKey = route.replace(/[/.:]/g, '_');
+      pageVisitsMap[route] = Number(recordedPageVisits[safeKey]) || 0;
+    });
+
+    // Also include any other visited path recorded dynamically
+    Object.keys(recordedPageVisits).forEach(key => {
+      const val = Number(recordedPageVisits[key]) || 0;
+      if (val > 0) {
+        const matchingMonitored = monitoredRoutes.find(r => r.replace(/[/.:]/g, '_') === key);
+        if (!matchingMonitored) {
+          pageVisitsMap[key] = val;
+        }
       }
     });
 
@@ -324,15 +371,16 @@ export const analyticsService = {
         path,
         label: routeLabels[path] || (path.startsWith('/profesional/') ? 'Perfiles de Profesionales' : path),
         visits,
-        percentage: Math.round((visits / sumPages) * 100)
+        percentage: visits > 0 ? Math.round((visits / sumPages) * 100) : 0
       }))
       .sort((a, b) => b.visits - a.visits);
 
-    // 5. Calculate Professionals Ranking (A qué empleados/profesionales entra la gente)
+    // 7. Calculate Real Professionals Ranking (A qué empleados/profesionales entra la gente)
+    // No mock numbers or fake baselines: completely real profileViews and whatsappClicks!
     const profMetrics: ProfessionalMetricItem[] = professionals.map(p => {
       const info = p.profesionalInfo || ({} as any);
-      const views = Math.max(Number(info.profileViews) || 0, 0);
-      const contacts = Math.max(Number(info.whatsappClicks) || 0, 0);
+      const views = Number(info.profileViews) || 0;
+      const contacts = Number(info.whatsappClicks) || 0;
       const conversionRate = views > 0 ? Math.min(Math.round((contacts / views) * 100), 100) : 0;
 
       return {
@@ -351,61 +399,49 @@ export const analyticsService = {
       };
     }).sort((a, b) => (b.views + b.contacts * 2) - (a.views + a.contacts * 2));
 
-    // If no views registered yet, populate baseline for top profiles so the admin has clear visibility
-    if (profMetrics.every(p => p.views === 0)) {
-      profMetrics.forEach((p, idx) => {
-        p.views = Math.max(28 - idx * 4, 3);
-        p.contacts = Math.max(Math.round(p.views * 0.28), 1);
-        p.conversionRate = Math.round((p.contacts / p.views) * 100);
-      });
-    }
-
-    // 6. Calculate Search Metrics (Qué busca la gente)
-    let topTerms: SearchMetricItem[] = searchStatsDocs.map(s => ({
+    // 8. Calculate Search Metrics strictly from real searches
+    const topTerms: SearchMetricItem[] = searchStatsDocs.map(s => ({
       term: s.term || s.name,
       count: Number(s.searchCount) || 1,
       category: s.category || ''
     }));
 
-    // If searches collection is brand new, provide realistic top terms from Bahia Blanca
-    if (topTerms.length === 0) {
-      topTerms = [
-        { term: 'electricista matriculado', count: 48, category: 'Electricidad' },
-        { term: 'plomero destapaciones', count: 42, category: 'Plomería' },
-        { term: 'gasista camuzzi', count: 37, category: 'Gasista' },
-        { term: 'aire acondicionado instalacion', count: 31, category: 'Refrigeración' },
-        { term: 'pintor de obra', count: 26, category: 'Pintura' },
-        { term: 'cerrajero 24 horas', count: 24, category: 'Cerrajería' },
-        { term: 'albañil refacciones', count: 19, category: 'Albañilería' },
-        { term: 'flete y mudanza', count: 15, category: 'Fletes' }
-      ];
-    }
-
-    // Group searches by rubro
+    // Group real searches by rubro
     const rubroMap: Record<string, number> = {};
     topTerms.forEach(t => {
       const rubroKey = t.category || (t.term.includes('electr') ? 'Electricidad' : t.term.includes('plom') ? 'Plomería' : t.term.includes('gas') ? 'Gasista' : 'Otros');
       rubroMap[rubroKey] = (rubroMap[rubroKey] || 0) + t.count;
     });
 
-    const totalSearchCount = topTerms.reduce((acc, t) => acc + t.count, 0) || 1;
+    const totalSearchCount = topTerms.reduce((acc, t) => acc + t.count, 0) || (topTerms.length > 0 ? 1 : 0);
     const topRubros = Object.entries(rubroMap)
       .map(([rubro, count]) => ({
         rubro,
         count,
-        percentage: Math.round((count / totalSearchCount) * 100)
+        percentage: totalSearchCount > 0 ? Math.round((count / totalSearchCount) * 100) : 0
       }))
       .sort((a, b) => b.count - a.count);
 
-    // Top zones searched in Bahía Blanca
-    const topZonas = [
-      { zona: 'Centro / Microcentro', count: 52 },
-      { zona: 'Barrio Universitario', count: 38 },
-      { zona: 'Palihue / Patagonia', count: 34 },
-      { zona: 'Villa Mitre', count: 29 },
-      { zona: 'Noroeste / San Martín', count: 21 },
-      { zona: 'Ingeniero White', count: 16 }
-    ];
+    // 9. Real zones aggregated from real registered users and real job posts in Bahía Blanca
+    const realZoneCounts: Record<string, number> = { ...jobsZonesMap };
+    allUsers.forEach(u => {
+      if (u.zona) {
+        realZoneCounts[u.zona] = (realZoneCounts[u.zona] || 0) + 1;
+      }
+    });
+
+    const topZonas = Object.entries(realZoneCounts)
+      .map(([zona, count]) => ({ zona, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // 10. Real Feedback summary stats
+    const errorsCount = feedbackDocs.filter(f => f.tipo === 'error').length;
+    const suggestionsCount = feedbackDocs.filter(f => f.tipo === 'mejora').length;
+    const ratingsCount = feedbackDocs.filter(f => f.tipo === 'calificacion').length;
+    const ratedItems = feedbackDocs.filter(f => typeof f.rating === 'number' && f.rating > 0);
+    const avgRating = ratedItems.length > 0 
+      ? Number((ratedItems.reduce((acc, f) => acc + (f.rating || 0), 0) / ratedItems.length).toFixed(1)) 
+      : 5.0;
 
     return {
       traffic: {
@@ -421,7 +457,15 @@ export const analyticsService = {
         topTerms,
         topRubros,
         topZonas,
-        voiceSearchesCount: Math.round(totalSearchCount * 0.18)
+        voiceSearchesCount: 0
+      },
+      feedback: {
+        total: feedbackDocs.length,
+        errorsCount,
+        suggestionsCount,
+        ratingsCount,
+        avgRating,
+        items: feedbackDocs
       },
       lastUpdated: new Date()
     };

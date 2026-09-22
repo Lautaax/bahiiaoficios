@@ -1,23 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff, Crown, CreditCard, BarChart3 } from 'lucide-react';
+import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff, Crown, CreditCard, BarChart3, Flame, Bell, Mail, Copy, Check, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Ad, TradeDiscount } from '../types';
 import { uploadToFirebase } from '../services/firebaseStorageService';
 import { AdminVipManagement } from './AdminVipManagement';
 import { ProfessionalPaymentHistoryModal } from './ProfessionalPaymentHistoryModal';
 import { AdminComprehensiveAnalytics } from './AdminComprehensiveAnalytics';
+import { BahiaBlancaHeatMap } from './BahiaBlancaHeatMap';
+import { AdminProfessionalReactivation } from './AdminProfessionalReactivation';
+import { AdminDailyChurnAudit } from './AdminDailyChurnAudit';
+import { AdminAiPromotionInsights } from './AdminAiPromotionInsights';
+import { identifyInactiveProfessionals } from '../services/adminOperationsService';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'metricas' | 'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos'>('metricas');
+  const [activeTab, setActiveTab] = useState<'resumen_diario_ia' | 'insights_ia' | 'metricas' | 'mapa_calor' | 'reactivacion' | 'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos'>('insights_ia');
+
   const [users, setUsers] = useState<User[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [discounts, setDiscounts] = useState<TradeDiscount[]>([]);
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<{ id: string; email: string; fechaSuscripcion?: any; intereses?: string[]; ciudad?: string }[]>([]);
+  const [showNewsletterModal, setShowNewsletterModal] = useState(false);
+  const [copiedEmails, setCopiedEmails] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
@@ -37,17 +46,23 @@ export const AdminDashboard: React.FC = () => {
   const [newDiscount, setNewDiscount] = useState<Partial<TradeDiscount>>({ active: true });
   const [uploading, setUploading] = useState(false);
 
+  const inactiveProsCount = useMemo(() => {
+    return identifyInactiveProfessionals(users, 30).length;
+  }, [users]);
+
   const fetchData = async () => {
     try {
-      const [usersSnap, adsSnap, discountsSnap] = await Promise.all([
+      const [usersSnap, adsSnap, discountsSnap, newsletterSnap] = await Promise.all([
         getDocs(collection(db, 'usuarios')),
         getDocs(collection(db, 'ads')),
-        getDocs(collection(db, 'tradeDiscounts'))
+        getDocs(collection(db, 'tradeDiscounts')),
+        getDocs(collection(db, 'newsletter')).catch(() => ({ docs: [] } as any))
       ]);
 
       setUsers(usersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
       setAds(adsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Ad)));
       setDiscounts(discountsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as TradeDiscount)));
+      setNewsletterSubscribers(newsletterSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
       console.error("Error fetching admin data:", error);
     } finally {
@@ -326,12 +341,49 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-3">
-        <ShieldCheck className="text-indigo-600" size={32} />
-        Panel de Administración
-      </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+          <ShieldCheck className="text-indigo-600" size={32} />
+          Panel de Administración
+        </h1>
+
+        <button
+          onClick={() => setShowNewsletterModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs hover:shadow-xs transition-all w-fit"
+        >
+          <Mail size={16} className="text-indigo-600" />
+          <span>Suscriptores Newsletter</span>
+          <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-extrabold text-[11px]">
+            {newsletterSubscribers.length}
+          </span>
+        </button>
+      </div>
 
       <div className="flex flex-wrap gap-4 mb-8">
+        <button 
+          onClick={() => setActiveTab('insights_ia')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'insights_ia' ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/25' : 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700/50'}`}
+        >
+          <Sparkles size={20} className={activeTab === 'insights_ia' ? 'text-amber-300' : 'text-indigo-500'} />
+          Insights de IA
+          <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-400 text-indigo-950 uppercase tracking-wide">
+            7 Días
+          </span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('resumen_diario_ia')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'resumen_diario_ia' ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/25' : 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700/50'}`}
+        >
+          <Sparkles size={20} className={activeTab === 'resumen_diario_ia' ? 'text-amber-300' : 'text-indigo-500'} />
+          Resumen Diario IA & Churn
+          {inactiveProsCount > 0 && (
+            <span className={`px-2 py-0.5 text-xs font-black rounded-full ${activeTab === 'resumen_diario_ia' ? 'bg-white text-indigo-700' : 'bg-rose-500 text-white'}`}>
+              {inactiveProsCount}
+            </span>
+          )}
+        </button>
+
         <button 
           onClick={() => setActiveTab('metricas')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'metricas' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
@@ -339,6 +391,28 @@ export const AdminDashboard: React.FC = () => {
           <BarChart3 size={20} />
           Métricas y Tendencias
         </button>
+
+        <button 
+          onClick={() => setActiveTab('mapa_calor')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'mapa_calor' ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/20' : 'bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-gray-700/50'}`}
+        >
+          <Flame size={20} className={activeTab === 'mapa_calor' ? 'text-white' : 'text-orange-500 animate-pulse'} />
+          Mapa de Calor Bahía Blanca
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('reactivacion')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'reactivacion' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
+        >
+          <Bell size={20} className={activeTab === 'reactivacion' ? 'text-white' : 'text-amber-500'} />
+          Reactivación Inactivos
+          {inactiveProsCount > 0 && (
+            <span className={`px-2 py-0.5 text-xs font-black rounded-full ${activeTab === 'reactivacion' ? 'bg-white text-orange-600' : 'bg-rose-500 text-white'}`}>
+              {inactiveProsCount}
+            </span>
+          )}
+        </button>
+
         <button 
           onClick={() => setActiveTab('usuarios')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'usuarios' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
@@ -379,6 +453,27 @@ export const AdminDashboard: React.FC = () => {
         )}
       </div>
 
+      {activeTab === 'insights_ia' && (
+        <AdminAiPromotionInsights 
+          users={users}
+          onNavigateTab={(tab) => setActiveTab(tab as any)}
+        />
+      )}
+
+      {activeTab === 'resumen_diario_ia' && (
+        <AdminDailyChurnAudit 
+          users={users} 
+          onRefreshData={fetchData}
+          onNavigateToUser={(userId) => {
+            const u = users.find(x => x.uid === userId);
+            if (u) {
+              setEditingUser(u);
+              setActiveTab('usuarios');
+            }
+          }}
+        />
+      )}
+
       {activeTab === 'metricas' && (
         <AdminComprehensiveAnalytics 
           users={users} 
@@ -386,8 +481,51 @@ export const AdminDashboard: React.FC = () => {
         />
       )}
 
+      {activeTab === 'mapa_calor' && (
+        <BahiaBlancaHeatMap />
+      )}
+
+      {activeTab === 'reactivacion' && (
+        <AdminProfessionalReactivation 
+          users={users} 
+          onRefreshData={fetchData} 
+        />
+      )}
+
       {activeTab === 'usuarios' && (
         <div className="space-y-4">
+          {inactiveProsCount > 0 && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 mb-2">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600">
+                  <Bell size={20} className="animate-pulse" />
+                </span>
+                <div>
+                  <strong className="text-sm font-bold block">
+                    {inactiveProsCount} profesionales sin visitas ni actividad en los últimos 30 días
+                  </strong>
+                  <span className="text-xs text-amber-700 dark:text-amber-300">
+                    Podés consultar el análisis predictivo de Gemini con mensajes sugeridos o enviarles una notificación push de reactivación.
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setActiveTab('resumen_diario_ia')}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-colors"
+                >
+                  <Sparkles size={14} />
+                  <span>Auditoría Gemini</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('reactivacion')}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-colors"
+                >
+                  Reactivar con Push
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -1124,6 +1262,130 @@ export const AdminDashboard: React.FC = () => {
             await fetchData();
           }}
         />
+      )}
+
+      {/* Newsletter Subscribers Modal */}
+      {showNewsletterModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <Mail size={22} />
+                </span>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                    Suscriptores del Newsletter
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Total: {newsletterSubscribers.length} correos registrados para novedades en Bahía Blanca
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNewsletterModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-500">
+                Correos almacenados en la colección <code className="text-indigo-600 font-mono">newsletter</code> de Firestore.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const allEmails = newsletterSubscribers.map(s => s.email).join(', ');
+                  navigator.clipboard.writeText(allEmails);
+                  setCopiedEmails(true);
+                  setTimeout(() => setCopiedEmails(false), 3000);
+                }}
+                disabled={newsletterSubscribers.length === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 transition-colors disabled:opacity-50"
+              >
+                {copiedEmails ? (
+                  <>
+                    <Check size={14} className="text-emerald-500" />
+                    <span>¡Copiados!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} />
+                    <span>Copiar Todos</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Subscribers List */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/60 pr-1">
+              {newsletterSubscribers.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  Aún no hay suscriptores registrados en el newsletter.
+                </div>
+              ) : (
+                newsletterSubscribers.map((item, index) => {
+                  let dateStr = 'Reciente';
+                  if (item.fechaSuscripcion?.toDate) {
+                    dateStr = item.fechaSuscripcion.toDate().toLocaleDateString('es-AR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    });
+                  }
+
+                  return (
+                    <div key={item.id || index} className="py-3 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white block">
+                          {item.email}
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5 text-slate-400">
+                          <span>{item.ciudad || 'Bahía Blanca'}</span>
+                          <span>•</span>
+                          <span>{dateStr}</span>
+                          {item.intereses && item.intereses.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[200px] text-indigo-500">
+                                {item.intereses.join(', ')}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(item.email);
+                          alert(`Copiado: ${item.email}`);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        title="Copiar correo"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowNewsletterModal(false)}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

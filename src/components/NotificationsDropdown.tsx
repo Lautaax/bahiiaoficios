@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Camera } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -174,6 +174,16 @@ export const NotificationsDropdown: React.FC = () => {
                           className="inline-flex items-center text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 transition-colors"
                         >
                           Ver trabajo y cotizar →
+                        </Link>
+                      )}
+                      {notif.tipo === 'incentivo_fotos' && (
+                        <Link 
+                          to="/dashboard-profesional?tab=perfil&section=portafolio" 
+                          onClick={() => setIsOpen(false)}
+                          className="inline-flex items-center gap-1.5 text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 transition-colors bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800/80"
+                        >
+                          <Camera size={13} />
+                          Cargar al menos 2 fotos ahora →
                         </Link>
                       )}
                     </div>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, MapPin, ArrowRight, Star, ShieldCheck, Users, Briefcase, 
   MessageSquare, CheckCircle, Megaphone, AlertCircle, Mic, MicOff, 
   SlidersHorizontal, Filter, X, Tag, ChevronLeft, ChevronRight, 
-  Building2, Handshake 
+  Building2, Handshake, Sparkles
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,15 +13,18 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ProfessionalCard } from './ProfessionalCard';
+import { WeeklyRecommendedCarousel } from './WeeklyRecommendedCarousel';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { CachedImage } from './CachedImage';
 import { preloadImages } from '../utils/imageCache';
 import { useVoiceSearch } from '../hooks/useVoiceSearch';
+import { userSearchService } from '../services/userSearchService';
 
 export function Home() {
   const { currentUser } = useAuth();
   const [categories, setCategories] = useState<any[]>([]);
   const [featuredPros, setFeaturedPros] = useState<User[]>([]);
+  const [allPros, setAllPros] = useState<User[]>([]);
   const [currentProIndex, setCurrentProIndex] = useState(0);
   const [cardsPerPage, setCardsPerPage] = useState(4);
   const [ads, setAds] = useState<Ad[]>([]);
@@ -52,12 +55,31 @@ export function Home() {
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [disponibilidadInmediata, setDisponibilidadInmediata] = useState(false);
   const [haceUrgencias, setHaceUrgencias] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<Array<{ term: string; category?: string; zona?: string }>>([]);
   const navigate = useNavigate();
+
+  // Load user recent searches from Firestore / local cache
+  useEffect(() => {
+    userSearchService.getUserRecentSearches(currentUser?.uid).then((res) => {
+      if (res && res.length > 0) {
+        setRecentSearches(res);
+      }
+    });
+  }, [currentUser?.uid]);
+
+  // Compute personalized recommendations based on recent searches and professional badges
+  const personalizedData = useMemo(() => {
+    return userSearchService.getPersonalizedSuggestions(allPros, recentSearches);
+  }, [allPros, recentSearches]);
 
   const { isListening, speechFeedback, toggleListening } = useVoiceSearch({
     onResult: (transcript) => {
       setSearchTerm(transcript);
       api.trackSearch(transcript);
+      userSearchService.saveRecentSearch(currentUser?.uid, transcript, {
+        zona: selectedZona !== 'Todas' ? selectedZona : undefined,
+        userEmail: currentUser?.email
+      });
       const params = new URLSearchParams();
       params.set('search', transcript);
       if (selectedZona && selectedZona !== 'Todas') params.set('zona', selectedZona);
@@ -139,6 +161,7 @@ export function Home() {
         );
         const snapshot = await getDocs(q);
         const pros = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as User[];
+        setAllPros(pros);
         
         // Algorithm: VIP first, then ratingAvg (5 to 1), then reviewCount
         const sortedPros = pros.sort((a, b) => {
@@ -186,8 +209,13 @@ export function Home() {
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchTerm.trim()) {
-      api.trackSearch(searchTerm.trim());
-      params.set('search', searchTerm.trim());
+      const term = searchTerm.trim();
+      api.trackSearch(term);
+      userSearchService.saveRecentSearch(currentUser?.uid, term, {
+        zona: selectedZona !== 'Todas' ? selectedZona : undefined,
+        userEmail: currentUser?.email
+      });
+      params.set('search', term);
     }
     if (selectedZona && selectedZona !== 'Todas') {
       params.set('zona', selectedZona);
@@ -244,7 +272,7 @@ export function Home() {
                   <input 
                     id="onboarding-search-input"
                     type="text" 
-                    placeholder="¿Qué servicio buscás? (ej. Electricista, Plomero)" 
+                    placeholder="¿Qué arreglo o servicio necesitás solucionar hoy en Bahía?" 
                     className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder-slate-400 py-3 px-3 text-sm sm:text-base outline-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -464,12 +492,12 @@ export function Home() {
 
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link 
-                to="/trabajos"
+                to="/solicitar-presupuesto"
                 id="onboarding-quotes-step"
                 className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95"
               >
                 <Briefcase size={18} className="text-indigo-600" />
-                Trabajos Solicitados (Pedir Presupuesto)
+                Pedir Presupuesto Gratis en 1 Minuto
               </Link>
               <Link 
                 to="/dashboard?urgencias=true"
@@ -502,7 +530,13 @@ export function Home() {
                 <Link 
                   key={cat.id} 
                   to={`/dashboard?rubro=${encodeURIComponent(cat.name)}`}
-                  onClick={() => api.trackSearch(cat.name)}
+                  onClick={() => {
+                    api.trackSearch(cat.name);
+                    userSearchService.saveRecentSearch(currentUser?.uid, cat.name, {
+                      category: cat.name,
+                      userEmail: currentUser?.email
+                    });
+                  }}
                   className="group bg-white dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-2xl p-5 sm:p-6 transition-all duration-200 flex flex-col items-center text-center shadow-sm hover:shadow-md"
                 >
                   <div className="w-13 h-13 sm:w-14 sm:h-14 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -526,6 +560,68 @@ export function Home() {
           </div>
         </div>
       </div>
+
+      {/* Sugerencias personalizadas basadas en búsquedas recientes guardadas en Firestore */}
+      {personalizedData.suggestedPros.length > 0 && (
+        <section aria-label="Sugerencias personalizadas" className="bg-indigo-50/40 dark:bg-slate-900/90 py-14 border-b border-indigo-100/60 dark:border-slate-800/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+              <div>
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-950/70 px-3 py-1 rounded-full mb-2 border border-indigo-200 dark:border-indigo-800/80">
+                  <Sparkles size={13} className="text-indigo-600 dark:text-indigo-400" />
+                  Sugerencias personalizadas para vos
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Profesionales recomendados según tus búsquedas
+                </h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  Basado en tu actividad reciente y profesionales con mejores insignias de respuesta en Bahía Blanca
+                </p>
+              </div>
+
+              {/* Chips de búsquedas recientes y botón para limpiar */}
+              {personalizedData.activeTerms.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">
+                    Búsquedas recientes:
+                  </span>
+                  {personalizedData.activeTerms.map((t, idx) => (
+                    <Link
+                      key={idx}
+                      to={`/dashboard?search=${encodeURIComponent(t.term)}${t.zona && t.zona !== 'Todas' ? `&zona=${encodeURIComponent(t.zona)}` : ''}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-2xs"
+                    >
+                      <span>🔍 {t.term}</span>
+                      {t.zona && t.zona !== 'Todas' && (
+                        <span className="text-[10px] text-slate-400">({t.zona})</span>
+                      )}
+                    </Link>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await userSearchService.clearRecentSearches(currentUser?.uid);
+                      setRecentSearches([]);
+                    }}
+                    className="text-[11px] font-medium text-slate-400 hover:text-rose-500 transition-colors ml-1 underline cursor-pointer"
+                  >
+                    Borrar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Grilla de profesionales sugeridos con insignias */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {personalizedData.suggestedPros.slice(0, 4).map((pro) => (
+                <div key={pro.uid} className="h-full">
+                  <ProfessionalCard professional={pro} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Empresas que colaboran con Bahía Oficios */}
       {ads.length > 0 && (
@@ -696,6 +792,11 @@ export function Home() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Rotación Destacada: Recomendados de la Semana en Bahía Blanca */}
+      {allPros.length > 0 && (
+        <WeeklyRecommendedCarousel professionals={allPros} />
       )}
 
       {/* Featured Professionals Section */}

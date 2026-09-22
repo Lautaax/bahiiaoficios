@@ -718,6 +718,44 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
             {activeSection === 'portafolio' && formData.rol === 'profesional' && (
               <div className="space-y-8">
+                {/* Banner de Incentivo de Carga de Fotos */}
+                <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 dark:from-amber-950/40 dark:via-indigo-950/40 dark:to-purple-950/40 border border-amber-300/80 dark:border-amber-700/60 rounded-3xl p-6 sm:p-7 shadow-sm">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-amber-400 text-slate-950 rounded-2xl flex-shrink-0 shadow-sm">
+                        <Camera size={26} />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <span className="text-xs font-black uppercase tracking-wider bg-amber-300 dark:bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full">
+                            Incentivo Clave de Confianza
+                          </span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                            {existingWorkImages.length + newWorkFiles.length} de 2 fotos recomendadas
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                          Añadir al menos 2 fotos de trabajos duplica tu tasa de contacto (+100%)
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                          En Bahía Blanca, los vecinos eligen contratar profesionales que exhiben fotos reales de obras, reparaciones o instalaciones finalizadas. Cargar fotos genera máxima confianza y multiplica los presupuestos recibidos.
+                        </p>
+                      </div>
+                    </div>
+
+                    {(existingWorkImages.length + newWorkFiles.length) >= 2 ? (
+                      <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-950/80 px-4 py-2.5 rounded-2xl flex-shrink-0 border border-emerald-300 dark:border-emerald-800">
+                        <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        <span>Meta alcanzada ({existingWorkImages.length + newWorkFiles.length} fotos)</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-100 bg-amber-200/90 dark:bg-amber-900/60 px-4 py-2.5 rounded-2xl flex-shrink-0 border border-amber-300 dark:border-amber-700">
+                        <span>Faltan {2 - (existingWorkImages.length + newWorkFiles.length)} para duplicar contactos</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} className={`border-2 border-dashed rounded-2xl p-12 text-center ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
                   <input type="file" id="work-images" multiple accept="image/*" className="hidden" onChange={handleWorkImagesChange} />
                   <label htmlFor="work-images" className="cursor-pointer flex flex-col items-center gap-4">

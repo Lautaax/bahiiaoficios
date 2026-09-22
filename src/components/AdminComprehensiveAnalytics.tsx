@@ -18,7 +18,12 @@ import {
   Layers,
   BarChart3,
   Flame,
-  Crown
+  Crown,
+  MessageSquare,
+  AlertTriangle,
+  ThumbsUp,
+  HelpCircle,
+  Bug
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -37,6 +42,7 @@ import { User } from '../types';
 import { analyticsService, AdminAnalyticsReport } from '../services/analyticsService';
 import { AdminAiOptimizer } from './AdminAiOptimizer';
 import { AdminMetricsCharts } from './AdminMetricsCharts';
+import { BahiaBlancaHeatMap } from './BahiaBlancaHeatMap';
 import { Link } from 'react-router-dom';
 
 interface AdminComprehensiveAnalyticsProps {
@@ -48,7 +54,7 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
   users, 
   onRefreshData 
 }) => {
-  const [subTab, setSubTab] = useState<'resumen' | 'paginas' | 'profesionales' | 'busquedas' | 'ia_optimizer' | 'tendencia'>('resumen');
+  const [subTab, setSubTab] = useState<'resumen' | 'mapa_calor' | 'paginas' | 'profesionales' | 'busquedas' | 'ia_optimizer' | 'tendencia' | 'feedback'>('resumen');
   const [analytics, setAnalytics] = useState<AdminAnalyticsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [profSearchFilter, setProfSearchFilter] = useState('');
@@ -116,6 +122,18 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
           </button>
 
           <button
+            onClick={() => setSubTab('mapa_calor')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
+              subTab === 'mapa_calor'
+                ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-xs'
+                : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30'
+            }`}
+          >
+            <Flame size={16} className={subTab === 'mapa_calor' ? 'text-white' : 'text-orange-500 animate-pulse'} />
+            <span>Mapa de Calor Bahía Blanca</span>
+          </button>
+
+          <button
             onClick={() => setSubTab('paginas')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
               subTab === 'paginas'
@@ -173,6 +191,23 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
           >
             <TrendingUp size={16} />
             <span>Tendencia Semanal</span>
+          </button>
+
+          <button
+            onClick={() => setSubTab('feedback')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
+              subTab === 'feedback'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+            }`}
+          >
+            <MessageSquare size={16} />
+            <span>Feedback y Reportes</span>
+            {analytics.feedback && analytics.feedback.total > 0 && (
+              <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500 text-white">
+                {analytics.feedback.total}
+              </span>
+            )}
           </button>
         </div>
 
@@ -722,10 +757,19 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
 
               {/* Demand by Zone */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700 shadow-xs space-y-4">
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-                  <MapPin size={18} className="text-indigo-600" />
-                  Zonas de Bahía Más Buscadas
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                    <MapPin size={18} className="text-indigo-600" />
+                    Zonas de Bahía Más Buscadas
+                  </h4>
+                  <button
+                    onClick={() => setSubTab('mapa_calor')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:hover:bg-orange-900/60 dark:text-orange-400 transition-colors"
+                  >
+                    <Flame size={13} className="text-orange-500" />
+                    Ver Mapa de Calor
+                  </button>
+                </div>
 
                 <div className="space-y-2">
                   {searches.topZonas.map((z, i) => (
@@ -745,6 +789,13 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
         </div>
       )}
 
+      {/* SUB-TAB: MAPA DE CALOR GEOGRÁFICO DE BAHÍA BLANCA */}
+      {subTab === 'mapa_calor' && (
+        <div className="space-y-4">
+          <BahiaBlancaHeatMap />
+        </div>
+      )}
+
       {/* SUB-TAB: IA PARA OPTIMIZAR TODO */}
       {subTab === 'ia_optimizer' && (
         <AdminAiOptimizer 
@@ -759,6 +810,150 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
           users={users} 
           onRefreshData={onRefreshData} 
         />
+      )}
+
+      {/* SUB-TAB: FEEDBACK Y REPORTES DE USUARIOS */}
+      {subTab === 'feedback' && (
+        <div className="space-y-6">
+          {/* Métricas Resumen Feedback */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Mensajes</span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <MessageSquare size={16} />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+                {analytics.feedback.total}
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Opiniones y reportes guardados en Firestore
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-rose-500">Errores Reportados</span>
+                <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-600">
+                  <Bug size={16} />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+                {analytics.feedback.errorsCount}
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Problemas técnicos señalados por usuarios
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Sugerencias</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600">
+                  <ThumbsUp size={16} />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+                {analytics.feedback.suggestionsCount}
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Ideas para nuevas funciones y mejoras
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-amber-500">Satisfacción</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-500">
+                  <Star size={16} className="fill-amber-500" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                {analytics.feedback.avgRating} <span className="text-xs text-slate-400 font-normal">/ 5.0</span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {analytics.feedback.ratingsCount} calificaciones directas
+              </p>
+            </div>
+          </div>
+
+          {/* Listado de Feedback en Vivo */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <MessageSquare size={18} className="text-indigo-600" />
+              Bandeja de Entrada de Feedback en Vivo (Colección `feedback`)
+            </h3>
+
+            {analytics.feedback.items.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 dark:text-slate-500 space-y-2">
+                <MessageSquare size={36} className="mx-auto text-slate-300 dark:text-slate-600" />
+                <p className="font-semibold text-sm">Aún no se han recibido reportes ni sugerencias.</p>
+                <p className="text-xs">El widget flotante en la esquina inferior derecha está disponible para todos los usuarios.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                {analytics.feedback.items.map((item) => (
+                  <div key={item.id} className="py-4 first:pt-0 last:pb-0 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          item.tipo === 'error'
+                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                            : item.tipo === 'mejora'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                        }`}>
+                          {item.tipo === 'error' ? 'Reporte de Error' : item.tipo === 'mejora' ? 'Sugerencia de Mejora' : 'Calificación'}
+                        </span>
+
+                        {item.rating && (
+                          <div className="flex items-center text-amber-400 text-xs font-bold gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star 
+                                key={s} 
+                                size={12} 
+                                className={s <= item.rating! ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-600"} 
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        <span className="text-xs text-slate-400">
+                          {item.usuarioNombre || item.usuarioEmail || 'Anónimo'}
+                        </span>
+                      </div>
+
+                      <span className="text-xs text-slate-400">
+                        {item.fecha?.toDate ? item.fecha.toDate().toLocaleString('es-AR') : (item.fecha ? new Date(item.fecha).toLocaleString('es-AR') : 'Reciente')}
+                      </span>
+                    </div>
+
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                      {item.mensaje}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 dark:text-slate-500 pt-1">
+                      {item.ruta && (
+                        <span className="bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-md font-mono text-[11px]">
+                          Ruta: {item.ruta}
+                        </span>
+                      )}
+                      {item.pantalla && (
+                        <span>Resolución: {item.pantalla}</span>
+                      )}
+                      {item.userAgent && (
+                        <span className="truncate max-w-xs" title={item.userAgent}>
+                          Navegador: {item.userAgent.split(' ')[0]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

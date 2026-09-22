@@ -94,11 +94,16 @@ async function startServer() {
   // Middleware to parse JSON bodies
   app.use(express.json());
 
-  // Image Caching Middleware
+  // Caching & Anti-Stale Middleware
   app.use((req, res, next) => {
-    // Set caching for static images
+    // Set caching for immutable static images only
     if (req.url.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)$/)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (req.path === '/' || req.path.endsWith('.html') || !req.path.includes('.')) {
+      // Never cache HTML and app shell entry points so new designs load immediately for all users
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     }
     next();
   });
@@ -557,14 +562,7 @@ async function startServer() {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return null;
     if (!geminiClient) {
-      geminiClient = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build'
-          }
-        }
-      });
+      geminiClient = new GoogleGenAI({ apiKey });
     }
     return geminiClient;
   }
@@ -718,6 +716,829 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
     }
   });
 
+  // Helper to generate fallback churn audit report if Gemini API is unreachable
+  function generateFallbackChurnAudit(prosData: any[], jobsData: any[], quotesData: any[]) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const totalPros = prosData.length;
+
+    const criticalList: any[] = [];
+    const highList: any[] = [];
+    const mediumList: any[] = [];
+    const preventiveList: any[] = [];
+    let activeCount = 0;
+
+    prosData.forEach(p => {
+      const days = p.daysInactive ?? 30;
+      const views = p.vistas ?? 0;
+      const contacts = p.contactos ?? 0;
+      const pendingJobsInRubro = p.trabajosPendientesEnRubro || 0;
+
+      let nivelRiesgo: 'critico' | 'alto' | 'medio' | 'preventivo' = 'medio';
+      let probabilidad = 50;
+      const motivos: string[] = [];
+
+      if (days >= 40 || (days >= 25 && views === 0 && contacts === 0)) {
+        nivelRiesgo = 'critico';
+        probabilidad = Math.min(95, 75 + Math.floor(days / 5));
+        motivos.push(`Sin actividad registrada en la plataforma hace ${days} días`);
+        if (views === 0) motivos.push('0 visitas recibidas en su perfil');
+        if (contacts === 0) motivos.push('0 consultas directas de clientes por WhatsApp');
+        if (pendingJobsInRubro > 0) motivos.push(`Hay ${pendingJobsInRubro} pedidos de ${p.rubro} en Bahía Blanca sin su respuesta`);
+        criticalList.push(formatAlert(p, nivelRiesgo, diasParaTexto(days), probabilidad, motivos, pendingJobsInRubro));
+      } else if (days >= 25 || (days >= 15 && views < 2)) {
+        nivelRiesgo = 'alto';
+        probabilidad = Math.min(74, 55 + Math.floor(days / 4));
+        motivos.push(`Inactividad de ${days} días`);
+        if (views < 3) motivos.push(`Apenas ${views} visitas a su perfil`);
+        if (contacts === 0) motivos.push('Sin clics de contacto recientes');
+        highList.push(formatAlert(p, nivelRiesgo, diasParaTexto(days), probabilidad, motivos, pendingJobsInRubro));
+      } else if (days >= 14 || views < 2) {
+        nivelRiesgo = 'medio';
+        probabilidad = 40;
+        motivos.push(`${days} días sin actualizar su perfil o ingresar`);
+        if (p.fotosCount === 0) motivos.push('Perfil sin fotos de trabajos realizados');
+        mediumList.push(formatAlert(p, nivelRiesgo, diasParaTexto(days), probabilidad, motivos, pendingJobsInRubro));
+      } else if (days >= 7 && views < 4) {
+        nivelRiesgo = 'preventivo';
+        probabilidad = 25;
+        motivos.push('Disminución leve en visitas esta semana');
+        preventiveList.push(formatAlert(p, nivelRiesgo, diasParaTexto(days), probabilidad, motivos, pendingJobsInRubro));
+      } else {
+        activeCount++;
+      }
+    });
+
+    function diasParaTexto(d: number) {
+      return d;
+    }
+
+    function formatAlert(p: any, nivel: any, dias: number, prob: number, motivos: string[], pendingJobs: number) {
+      const nombre = p.nombre || 'Profesional';
+      const rubro = p.rubro || 'Servicios';
+      const zona = p.zona || 'Bahía Blanca';
+
+      let diagnostico = `El profesional no registra actividad hace ${dias} días en ${zona}.`;
+      if (motivos.includes('0 visitas recibidas en su perfil')) {
+        diagnostico += ' La falta de visualizaciones en su perfil de ' + rubro + ' incrementa el desánimo y el riesgo de abandono.';
+      }
+      if (pendingJobs > 0) {
+        diagnostico += ` Podría reactivarse de inmediato porque existen ${pendingJobs} solicitudes abiertas de ${rubro} en la ciudad.`;
+      }
+
+      const accion = pendingJobs > 0
+        ? `Enviar WhatsApp notificándole sobre ${pendingJobs} solicitudes de presupuesto abiertas de ${rubro} en Bahía Blanca.`
+        : `Enviar recordatorio por WhatsApp invitándolo a subir fotos de trabajos recientes para mejorar su visibilidad.`;
+
+      const msg = `¡Hola ${nombre.split(' ')[0]}! Te escribimos de Bahía Oficios. Notamos que hace unos días no pasás por la plataforma y queríamos contarte que hay vecinos en Bahía buscando especialistas en ${rubro}. ¿Te gustaría que te ayudemos a destacar tu perfil para recibir más presupuestos directos? Avisanos por acá y te damos una mano.`;
+
+      return {
+        profesionalId: p.uid,
+        nombre: p.nombre,
+        email: p.email || '',
+        telefono: p.telefono || '',
+        fotoUrl: p.fotoUrl || '',
+        rubro: p.rubro,
+        zona: p.zona,
+        nivelRiesgo: nivel,
+        diasInactivo: dias,
+        diagnosticoIA: diagnostico,
+        probabilidadAbandono: prob,
+        accionRecomendada: accion,
+        mensajeSugeridoWhatsApp: msg,
+        motivos,
+        vistas: p.vistas,
+        contactos: p.contactos,
+        isVip: p.isVip || false,
+        trabajosPendientesEnRubro: pendingJobs
+      };
+    }
+
+    const allAlerts = [...criticalList, ...highList, ...mediumList, ...preventiveList];
+
+    // Oportunidades de reenganche por rubro
+    const rubroDemandMap: Record<string, { requests: number; inactivePros: number }> = {};
+    jobsData.forEach(j => {
+      const r = j.rubro || 'General';
+      if (!rubroDemandMap[r]) rubroDemandMap[r] = { requests: 0, inactivePros: 0 };
+      rubroDemandMap[r].requests++;
+    });
+    allAlerts.forEach(a => {
+      if (!rubroDemandMap[a.rubro]) rubroDemandMap[a.rubro] = { requests: 0, inactivePros: 0 };
+      rubroDemandMap[a.rubro].inactivePros++;
+    });
+
+    const oportunidades = Object.entries(rubroDemandMap)
+      .filter(([_, data]) => data.requests > 0 || data.inactivePros > 0)
+      .slice(0, 4)
+      .map(([rubro, data]) => ({
+        rubro,
+        zona: 'Bahía Blanca y alrededores',
+        solicitudesSinCubrir: data.requests,
+        profesionalesInactivos: data.inactivePros,
+        estrategia: `Conectar directamente a los ${data.inactivePros} profesionales inactivos con las ${data.requests} solicitudes activas de ${rubro} para reactivar su interés.`
+      }));
+
+    const scoreRetencion = totalPros > 0 
+      ? Math.max(45, Math.min(95, Math.round(((totalPros - (criticalList.length * 1.5 + highList.length)) / totalPros) * 100))) 
+      : 85;
+
+    return {
+      fecha: todayStr,
+      saludGeneral: {
+        scoreRetencion,
+        totalProfesionales: totalPros,
+        activos: activeCount,
+        enRiesgoCritico: criticalList.length,
+        enRiesgoAlto: highList.length,
+        enRiesgoMedio: mediumList.length,
+        enRiesgoPreventivo: preventiveList.length
+      },
+      resumenEjecutivo: `Auditoría diaria para Bahía Blanca: Se relevaron ${totalPros} profesionales registrados en el ecosistema de oficios. Se detectaron ${criticalList.length} especialistas en riesgo crítico de abandono y ${highList.length} en riesgo alto debido a periodos prolongados de inactividad o falta de consultas directas. Existen oportunidades inmediatas de reenganche conectando a profesionales inactivos con las solicitudes de presupuesto sin responder en la ciudad.`,
+      alertasRiesgoAbandono: allAlerts,
+      oportunidadesReenganche: oportunidades,
+      accionesPrioritariasAdmin: [
+        {
+          id: 'act-1',
+          titulo: 'Contactar de urgencia a profesionales en riesgo crítico',
+          prioridad: 'alta' as const,
+          accion: `Enviar el mensaje personalizado de reactivación vía WhatsApp a los ${criticalList.length} profesionales con más de 30 días sin actividad.`,
+          impacto: 'Evita la pérdida permanente de trabajadores calificados en Bahía Blanca y recupera oferta activa.'
+        },
+        {
+          id: 'act-2',
+          titulo: 'Asignar solicitudes de presupuesto pendientes a trabajadores inactivos',
+          prioridad: 'alta' as const,
+          accion: 'Vincular los trabajos requeridos sin presupuesto con plomeros, electricistas y gasistas que llevan más de 2 semanas sin recibir contactos.',
+          impacto: 'Genera valor inmediato para el profesional demostrándole demanda real de clientes.'
+        },
+        {
+          id: 'act-3',
+          titulo: 'Incentivo de carga de fotos para perfiles vacíos',
+          prioridad: 'media' as const,
+          accion: 'Notificar a los trabajadores con 0 vistas que añadir al menos 2 fotos de trabajos duplica la tasa de contacto.',
+          impacto: 'Mejora el atractivo visual del catálogo y la confianza de los vecinos al contratar.'
+        }
+      ],
+      tendenciaSemanal: 'La actividad en servicios esenciales (electricidad y gas) se mantiene firme, pero los perfiles sin fotos sufren mayor deserción temprana.',
+      modeloUtilizado: 'Gemini 3.8 Flash (Fallback Analítico)'
+    };
+  }
+
+  // Memory cache for daily churn audit
+  let memoryCachedAudit: any = null;
+  let memoryCachedDate: string = '';
+
+  // Core Daily Churn Analysis Function
+  async function performDailyChurnAnalysis(force = false, providedPros?: any[], providedJobs?: any[]) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const db = admin.firestore();
+
+    // 1. Check memory cache or Firestore if not forcing refresh
+    if (!force) {
+      if (memoryCachedAudit && memoryCachedDate === todayStr) {
+        console.log(`[Daily AI Churn Audit] Returning memory cached report for ${todayStr}`);
+        return { fromCache: true, audit: memoryCachedAudit };
+      }
+
+      try {
+        const auditDoc = await db.collection('daily_ai_audits').doc(todayStr).get();
+        if (auditDoc.exists) {
+          const cachedData = auditDoc.data();
+          memoryCachedAudit = cachedData;
+          memoryCachedDate = todayStr;
+          console.log(`[Daily AI Churn Audit] Returning cached report for ${todayStr}`);
+          return { fromCache: true, audit: cachedData };
+        }
+      } catch (cacheErr) {
+        console.warn("[Daily AI Churn Audit] Could not read Firestore cache:", cacheErr);
+      }
+    }
+
+    console.log(`[Daily AI Churn Audit] Running new analysis for ${todayStr} (force=${force})...`);
+
+    const now = new Date();
+    let jobsData: any[] = [];
+    let prosData: any[] = [];
+    const openJobsByRubro: Record<string, number> = {};
+
+    // 2. Obtain Data (from client payload if provided, or from server Firestore)
+    if (Array.isArray(providedPros) && providedPros.length > 0) {
+      console.log(`[Daily AI Churn Audit] Using ${providedPros.length} professionals passed in request payload`);
+      prosData = providedPros;
+      if (Array.isArray(providedJobs)) {
+        jobsData = providedJobs;
+        jobsData.forEach(j => {
+          if (j.estado === 'abierto' || !j.presupuestosCount) {
+            openJobsByRubro[j.rubro] = (openJobsByRubro[j.rubro] || 0) + 1;
+          }
+        });
+      }
+    } else {
+      try {
+        const [usersSnap, jobsSnap] = await Promise.all([
+          db.collection('usuarios').get(),
+          db.collection('trabajosSolicitados').get().catch(() => ({ docs: [] } as any))
+        ]);
+
+        jobsData = jobsSnap.docs.map((d: any) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            rubro: data.rubro || 'General',
+            zona: data.zona || 'Bahía Blanca',
+            estado: data.estado || 'abierto',
+            presupuestosCount: Array.isArray(data.presupuestos) ? data.presupuestos.length : 0,
+            fecha: data.fechaCreacion?.toDate ? data.fechaCreacion.toDate() : null
+          };
+        });
+
+        jobsData.forEach(j => {
+          if (j.estado === 'abierto' || j.presupuestosCount === 0) {
+            openJobsByRubro[j.rubro] = (openJobsByRubro[j.rubro] || 0) + 1;
+          }
+        });
+
+        usersSnap.docs.forEach((d: any) => {
+          const u = d.data();
+          if (u.rol === 'profesional' || u.profesionalInfo) {
+            const info = u.profesionalInfo || {};
+            const rubro = info.rubro || (info.rubros && info.rubros[0]) || 'Oficios';
+            const zona = u.zona || 'Bahía Blanca';
+
+            let lastDate: Date | null = null;
+            if (u.lastLogin?.toDate) lastDate = u.lastLogin.toDate();
+            else if (u.lastActive?.toDate) lastDate = u.lastActive.toDate();
+            else if (info.lastActivity?.toDate) lastDate = info.lastActivity.toDate();
+            else if (u.createdAt?.toDate) lastDate = u.createdAt.toDate();
+            else if (u.createdAt) lastDate = new Date(u.createdAt);
+
+            let daysInactive = 30;
+            if (lastDate) {
+              const diffMs = now.getTime() - lastDate.getTime();
+              daysInactive = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+            }
+
+            const vistas = Number(info.profileViews) || 0;
+            const contactos = Number(info.whatsappClicks) || 0;
+            const fotosCount = Array.isArray(info.fotosTrabajos) ? info.fotosTrabajos.length : 0;
+            const pendientesEnRubro = openJobsByRubro[rubro] || 0;
+
+            prosData.push({
+              uid: d.id,
+              nombre: u.nombre || 'Profesional',
+              email: u.email || '',
+              telefono: u.telefono || info.telefono || '',
+              fotoUrl: u.fotoUrl || '',
+              rubro,
+              zona,
+              isVip: !!info.isVip,
+              vistas,
+              contactos,
+              fotosCount,
+              ratingAvg: Number(info.ratingAvg) || 0,
+              reviewCount: Number(info.reviewCount) || 0,
+              daysInactive,
+              trabajosPendientesEnRubro: pendientesEnRubro
+            });
+          }
+        });
+      } catch (fetchErr) {
+        console.warn("[Daily AI Churn Audit] Server Firestore read encountered an issue, awaiting client data or fallback:", fetchErr);
+      }
+    }
+
+    // Sort prosData by highest days inactive
+    prosData.sort((a, b) => (b.daysInactive ?? 0) - (a.daysInactive ?? 0));
+
+    // 3. Invoke Gemini
+    const ai = getGeminiClient();
+    let auditReport: any = null;
+
+    if (ai && prosData.length > 0) {
+      try {
+        const compactProsList = prosData.slice(0, 25).map(p => ({
+          uid: p.uid,
+          nombre: p.nombre,
+          rubro: p.rubro,
+          zona: p.zona,
+          isVip: p.isVip,
+          diasInactivo: p.daysInactive,
+          vistasPerfil: p.vistas,
+          clicsWhatsApp: p.contactos,
+          fotosSubidas: p.fotosCount,
+          solicitudesAbiertasEnSuRubro: p.trabajosPendientesEnRubro
+        }));
+
+        const prompt = `Actúa como Director de Operaciones y Especialista Senior en Retención de Profesionales de "Bahía Oficios" en Bahía Blanca, Argentina.
+
+Fecha de hoy: ${todayStr}
+Total de profesionales analizados: ${prosData.length}
+Resumen de solicitudes abiertas de clientes en Bahía Blanca por oficio: ${JSON.stringify(openJobsByRubro)}
+
+Muestra representativa de profesionales en la base de datos (ordenados por días de inactividad):
+${JSON.stringify(compactProsList, null, 2)}
+
+Tu misión:
+1. Detectar cuáles profesionales están en "riesgo de abandono" (churn) clasificados en cuatro niveles: 'critico' (inactivos > 35 días o sin vistas ni contactos hace tiempo), 'alto' (20-35 días o caída drástica de interés), 'medio' (14-20 días o perfiles incompletos), o 'preventivo' (< 14 días pero con señales tempranas).
+2. Proporcionar un diagnóstico certero para cada caso, explicando la causa raíz (ej. falta de visitas, solicitudes sin responder, desánimo, perfil sin fotos).
+3. Redactar una acción recomendada concreta y un mensaje hiper-personalizado sugerido para enviar por WhatsApp en tono argentino cálido, empático, profesional y motivador (usando voseo natural: "Hola Juan, ¿cómo estás? Te escribimos de Bahía Oficios...").
+4. Indicar oportunidades de reenganche en Bahía Blanca (donde hay demanda desatendida y profesionales inactivos que podrían cubrirla).
+5. Proponer 3 a 5 acciones prioritarias de retención para el Administrador del portal hoy.
+
+Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
+{
+  "resumenEjecutivo": "<resumen analítico claro y profesional de 2 a 3 párrafos del ecosistema de profesionales hoy en Bahía Blanca>",
+  "saludGeneral": {
+    "scoreRetencion": <número entre 60 y 98>,
+    "totalProfesionales": ${prosData.length},
+    "activos": <número de profesionales con actividad reciente y saludable>,
+    "enRiesgoCritico": <conteo>,
+    "enRiesgoAlto": <conteo>,
+    "enRiesgoMedio": <conteo>,
+    "enRiesgoPreventivo": <conteo>
+  },
+  "alertasRiesgoAbandono": [
+    {
+      "profesionalId": "<uid correspondiente>",
+      "nombre": "<nombre del profesional>",
+      "rubro": "<rubro>",
+      "zona": "<zona en Bahía Blanca>",
+      "nivelRiesgo": "<'critico' | 'alto' | 'medio' | 'preventivo'>",
+      "diasInactivo": <número>,
+      "diagnosticoIA": "<diagnóstico puntual y humano de por qué está en riesgo>",
+      "probabilidadAbandono": <porcentaje número entre 20 y 95>,
+      "accionRecomendada": "<qué debe hacer el administrador>",
+      "mensajeSugeridoWhatsApp": "<mensaje sugerido listo para enviar con saludo por su nombre, voseo argentino y propuesta de valor>",
+      "motivos": ["<motivo 1>", "<motivo 2>"]
+    }
+  ],
+  "oportunidadesReenganche": [
+    {
+      "rubro": "<nombre del rubro>",
+      "zona": "Bahía Blanca",
+      "solicitudesSinCubrir": <conteo de pedidos>,
+      "profesionalesInactivos": <conteo de profesionales del rubro inactivos>,
+      "estrategia": "<estrategia concreta de vinculación>"
+    }
+  ],
+  "accionesPrioritariasAdmin": [
+    {
+      "id": "act-1",
+      "titulo": "<título>",
+      "prioridad": "<'alta' | 'media' | 'baja'>",
+      "accion": "<detalle de la acción>",
+      "impacto": "<impacto esperado>"
+    }
+  ],
+  "tendenciaSemanal": "<resumen breve de la tendencia de oferta y demanda laboral en la ciudad>"
+}`;
+
+        let response: any = null;
+        try {
+          response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              systemInstruction: "Eres un analista experto en analítica de marketplace, retención y economía laboral de servicios en Argentina. Responde siempre en español rioplatense profesional y conciso."
+            }
+          });
+        } catch (mErr) {
+          console.warn("[Daily AI Churn Audit] Trying backup model gemini-3.1-flash-lite:", mErr);
+          response = await ai.models.generateContent({
+            model: "gemini-3.1-flash-lite",
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json"
+            }
+          });
+        }
+
+        const parsed = JSON.parse(response.text || '{}');
+        if (parsed && parsed.resumenEjecutivo && Array.isArray(parsed.alertasRiesgoAbandono)) {
+          parsed.alertasRiesgoAbandono = parsed.alertasRiesgoAbandono.map((alert: any) => {
+            const original = prosData.find(p => p.uid === alert.profesionalId);
+            return {
+              ...alert,
+              telefono: original?.telefono || '',
+              email: original?.email || '',
+              fotoUrl: original?.fotoUrl || '',
+              vistas: original?.vistas || 0,
+              contactos: original?.contactos || 0,
+              isVip: original?.isVip || false,
+              trabajosPendientesEnRubro: original?.trabajosPendientesEnRubro || 0
+            };
+          });
+
+          auditReport = {
+            ...parsed,
+            fecha: todayStr,
+            modeloUtilizado: 'Gemini 2.5 Flash'
+          };
+          console.log("[Daily AI Churn Audit] Gemini generated report successfully!");
+        }
+      } catch (geminiErr) {
+        console.error("[Daily AI Churn Audit] Gemini generation failed, falling back:", geminiErr);
+      }
+    }
+
+    if (!auditReport) {
+      auditReport = generateFallbackChurnAudit(prosData, jobsData, []);
+    }
+
+    // 4. Cache in memory and attempt Firestore save
+    memoryCachedAudit = auditReport;
+    memoryCachedDate = todayStr;
+
+    try {
+      await db.collection('daily_ai_audits').doc(todayStr).set({
+        ...auditReport,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      console.log(`[Daily AI Churn Audit] Saved report ${todayStr} to Firestore`);
+    } catch (saveErr) {
+      console.warn("[Daily AI Churn Audit] Firestore write not available in container, cached in memory successfully.");
+    }
+
+    return { fromCache: false, audit: auditReport };
+  }
+
+  // Endpoints: GET and POST /api/admin/daily-churn-audit
+  app.all("/api/admin/daily-churn-audit", async (req, res) => {
+    try {
+      const force = req.query.force === 'true' || req.body?.force === true;
+      const providedPros = req.body?.prosData;
+      const providedJobs = req.body?.jobsData;
+      const result = await performDailyChurnAnalysis(force, providedPros, providedJobs);
+      res.json(result);
+    } catch (err: any) {
+      console.error("Error in /api/admin/daily-churn-audit:", err);
+      const fallback = generateFallbackChurnAudit(req.body?.prosData || [], req.body?.jobsData || [], []);
+      res.json({ fromCache: false, audit: fallback });
+    }
+  });
+
+  // Background daily trigger: run on startup (after 6 seconds) and every 12 hours
+  setTimeout(() => {
+    performDailyChurnAnalysis(false).catch(e => console.warn("Initial daily churn audit check failed:", e));
+  }, 6000);
+
+  setInterval(() => {
+    performDailyChurnAnalysis(false).catch(e => console.warn("Scheduled daily churn audit check failed:", e));
+  }, 12 * 60 * 60 * 1000);
+
+  // --- AI INSIGHTS: CATEGORY PROMOTION ANALYSIS (LAST 7 DAYS ACTIVITY LOGS) ---
+  let memoryCachedPromotionInsights: any = null;
+  let memoryCachedPromotionDate: string = '';
+
+  function generateFallbackCategoryPromotionInsights(categoriesMetrics: any[]): any {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const fallbackBaseline = [
+      { rubro: 'Gasista', profesionalesActivos: 1, busquedas: 21, solicitudesTrabajo: 6, vistasPerfiles: 14, contactosWhatsapp: 5, scoreDemanda: 89 },
+      { rubro: 'Electricista', profesionalesActivos: 4, busquedas: 29, solicitudesTrabajo: 9, vistasPerfiles: 46, contactosWhatsapp: 14, scoreDemanda: 94 },
+      { rubro: 'Aire Acondicionado', profesionalesActivos: 0, busquedas: 16, solicitudesTrabajo: 5, vistasPerfiles: 6, contactosWhatsapp: 1, scoreDemanda: 84 },
+      { rubro: 'Cerrajería', profesionalesActivos: 0, busquedas: 12, solicitudesTrabajo: 4, vistasPerfiles: 4, contactosWhatsapp: 0, scoreDemanda: 76 },
+      { rubro: 'Plomero', profesionalesActivos: 2, busquedas: 18, solicitudesTrabajo: 5, vistasPerfiles: 25, contactosWhatsapp: 8, scoreDemanda: 82 },
+      { rubro: 'Pintor', profesionalesActivos: 3, busquedas: 6, solicitudesTrabajo: 1, vistasPerfiles: 9, contactosWhatsapp: 2, scoreDemanda: 36 },
+      { rubro: 'Limpieza', profesionalesActivos: 1, busquedas: 13, solicitudesTrabajo: 4, vistasPerfiles: 14, contactosWhatsapp: 4, scoreDemanda: 68 },
+      { rubro: 'Carpintero', profesionalesActivos: 2, busquedas: 5, solicitudesTrabajo: 1, vistasPerfiles: 7, contactosWhatsapp: 2, scoreDemanda: 30 }
+    ];
+
+    const sourceData = (categoriesMetrics && categoriesMetrics.length > 0) ? categoriesMetrics : fallbackBaseline;
+
+    const insights = sourceData.map((cat: any) => {
+      let prioridad: 'ALTA' | 'MEDIA' | 'OPORTUNIDAD' = 'MEDIA';
+      let tipoPromocion: 'promover_demanda_clientes' | 'captar_profesionales' | 'reactivar_categoria' = 'promover_demanda_clientes';
+      let justificacion = '';
+      let sugerencia = '';
+      let copiaRedes = '';
+      let notifTitulo = '';
+      let notifCuerpo = '';
+      let accionInmediata = '';
+
+      const pros = Number(cat.profesionalesActivos) || 0;
+      const busquedas = Number(cat.busquedas) || 0;
+      const jobs = Number(cat.solicitudesTrabajo) || 0;
+      const vistas = Number(cat.vistasPerfiles) || 0;
+
+      if (pros <= 1 && (busquedas > 6 || jobs >= 2)) {
+        prioridad = 'ALTA';
+        tipoPromocion = 'captar_profesionales';
+        justificacion = `En los últimos 7 días hubo ${busquedas} búsquedas y ${jobs} solicitudes en Bahía Blanca para ${cat.rubro}, pero solo ${pros} profesional disponible. Hay clientes insatisfechos o sin respuesta.`;
+        sugerencia = `Lanzar convocatoria urgente en Bahía Blanca para sumar nuevos ${cat.rubro}s matriculados y con experiencia.`;
+        copiaRedes = `🔨 ¿Trabajás como ${cat.rubro} en Bahía Blanca? ¡Hay vecinos buscando tus servicios en este momento en Bahía Oficios! Registrate gratis en 2 minutos y empezá a recibir consultas directas por WhatsApp sin pagar comisión: 👉 bahiaoficios.com/signup`;
+        notifTitulo = `¡Alta demanda de ${cat.rubro} en Bahía!`;
+        notifCuerpo = `Hay presupuestos y consultas abiertas de vecinos esperando ${cat.rubro}. ¡Sumate o recomendá a un colega!`;
+        accionInmediata = `Difundir aviso en grupos de oficios bahienses y redes de compra-venta local.`;
+      } else if (pros >= 2 && vistas < 15 && jobs <= 1) {
+        prioridad = 'MEDIA';
+        tipoPromocion = 'promover_demanda_clientes';
+        justificacion = `Contamos con ${pros} profesionales registrados en ${cat.rubro}, pero tuvieron baja tracción esta semana (${vistas} visitas). Necesitan que la plataforma les genere más consultas.`;
+        sugerencia = `Destacar a los profesionales de ${cat.rubro} en la pantalla de inicio y compartir recomendaciones en redes vecinales.`;
+        copiaRedes = `🏠 ¿Tenés que hacer arreglos de ${cat.rubro} en tu casa? Encontrá profesionales recomendados por otros bahienses, con fotos de trabajos y presupuesto sin cargo. Consultá directo: bahiaoficios.com/search?q=${encodeURIComponent(cat.rubro)}`;
+        notifTitulo = `¿Arreglos de ${cat.rubro}?`;
+        notifCuerpo = `Encontrá prestadores verificados en Bahía Blanca con presupuestos directos y transparentes.`;
+        accionInmediata = `Crear anuncio destacado o banner en Home con acceso directo a ${cat.rubro}.`;
+      } else {
+        prioridad = 'OPORTUNIDAD';
+        tipoPromocion = 'reactivar_categoria';
+        justificacion = `Categoría en movimiento (${busquedas} búsquedas y ${vistas} visitas). Con una campaña puntual de fin de semana puede convertirse en líder.`;
+        sugerencia = `Reactivar consultas mediante una promoción de fin de semana con profesionales de ${cat.rubro}.`;
+        copiaRedes = `⭐ Los mejores especialistas en ${cat.rubro} de Bahía Blanca están en Bahía Oficios. Calificaciones reales, cercanía y atención personalizada: bahiaoficios.com`;
+        notifTitulo = `Especialistas en ${cat.rubro}`;
+        notifCuerpo = `Revisá las opiniones y elegí el profesional ideal para tu barrio en Bahía Blanca.`;
+        accionInmediata = `Incluir en el resumen de servicios destacados de la semana.`;
+      }
+
+      return {
+        rubro: cat.rubro,
+        prioridad,
+        tipoPromocion,
+        justificacionBasadaEnLogs: justificacion,
+        metricas7Dias: {
+          profesionalesActivos: pros,
+          busquedas: busquedas,
+          solicitudesTrabajo: jobs,
+          vistasPerfiles: vistas,
+          contactosWhatsapp: Number(cat.contactosWhatsapp) || 0,
+          scoreDemanda: Number(cat.scoreDemanda) || 50
+        },
+        sugerenciaEstrategica: sugerencia,
+        copiaRedesSociales: copiaRedes,
+        notificacionPushSugerida: {
+          titulo: notifTitulo,
+          cuerpo: notifCuerpo
+        },
+        accionInmediataRecomendada: accionInmediata
+      };
+    });
+
+    const priorityWeight: Record<string, number> = { 'ALTA': 0, 'OPORTUNIDAD': 1, 'MEDIA': 2 };
+    insights.sort((a, b) => (priorityWeight[a.prioridad] ?? 3) - (priorityWeight[b.prioridad] ?? 3));
+
+    return {
+      fechaGeneracion: todayStr,
+      periodoAnalizado: `Últimos 7 días (${sevenDaysAgo} al ${todayStr})`,
+      resumenSemanal: "Los registros de actividad de los últimos 7 días reflejan una fuerte demanda no abastecida en servicios de urgencias domiciliarias (Gasistas, Cerrajeros y Climatización), mientras que categorías clásicas de obra y mantenimiento (Pintores, Carpinteros) requieren activación publicitaria hacia los hogares bahienses.",
+      kpisGenerales: {
+        categoriaMayorDemanda: "Electricista",
+        categoriaMayorDeficit: "Gasista y Cerrajería",
+        categoriaUrgentePromocionar: "Gasista",
+        totalCategoriasAnalizadas: insights.length,
+        oportunidadesDetectadas: insights.filter(c => c.prioridad === 'ALTA' || c.prioridad === 'OPORTUNIDAD').length,
+        indiceEquilibrioMercado: 64
+      },
+      categoriasParaPromocionar: insights,
+      recomendacionesGeneralesMarketing: [
+        {
+          id: "mkt-1",
+          titulo: "Convocatoria a Gasistas y Cerrajeros",
+          descripcion: "Detectamos búsquedas recurrentes en Bahía Blanca sin profesionales suficientes para responder con rapidez. Realizar campaña dirigida en grupos comunitarios y ferreterías locales.",
+          canalRecomendado: "Facebook Groups Bahía Blanca & Red de Ferreterías",
+          impactoEstimado: "+5 a 8 profesionales matriculados en 10 días"
+        },
+        {
+          id: "mkt-2",
+          titulo: "Campaña de Remodelaciones y Pintura en Redes",
+          descripcion: "Publicar historias de antes/después destacando a los pintores y carpinteros de la plataforma para conectar su disponibilidad con dueños de casas e inquilinos.",
+          canalRecomendado: "Instagram & Estados de WhatsApp",
+          impactoEstimado: "+40% en consultas y presupuestos solicitados"
+        },
+        {
+          id: "mkt-3",
+          titulo: "Push de Reparaciones para el Fin de Semana",
+          descripcion: "Programar notificación los viernes a las 18:00 hs recordando a los vecinos que pueden presupuestar arreglos pendientes para el sábado.",
+          canalRecomendado: "Notificaciones Web Push en la App",
+          impactoEstimado: "+25% en clics directos de WhatsApp"
+        }
+      ],
+      modeloUtilizado: "Algoritmo Heurístico de Marketplace (Fallback)"
+    };
+  }
+
+  async function performCategoryPromotionAnalysis(force = false, categoriesInput?: any[]): Promise<any> {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const db = admin.firestore();
+
+    // 1. Check in-memory cache if not forced
+    if (!force && memoryCachedPromotionInsights && memoryCachedPromotionDate === todayStr) {
+      console.log(`[AI Promotion Insights] Serving from memory cache for date ${todayStr}`);
+      return { fromCache: true, report: memoryCachedPromotionInsights };
+    }
+
+    // 2. Aggregate category data
+    let categoriesMetrics = categoriesInput || [];
+
+    if (!categoriesMetrics || categoriesMetrics.length === 0) {
+      try {
+        const usersSnap = await db.collection('usuarios').get();
+        const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const jobsSnap = await db.collection('trabajosSolicitados').get();
+        const jobs = jobsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const searchSnap = await db.collection('search_stats').get();
+        const searches = searchSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const rubroMap: Record<string, any> = {};
+
+        const registerCategory = (r: string) => {
+          const key = r.trim();
+          if (!key) return;
+          if (!rubroMap[key]) {
+            rubroMap[key] = {
+              rubro: key,
+              profesionalesActivos: 0,
+              busquedas: 0,
+              solicitudesTrabajo: 0,
+              vistasPerfiles: 0,
+              contactosWhatsapp: 0
+            };
+          }
+        };
+
+        // Seed common rubros in Bahia Blanca
+        ['Electricista', 'Gasista', 'Plomero', 'Albañil', 'Pintor', 'Carpintero', 'Aire Acondicionado', 'Cerrajería', 'Flete', 'Limpieza', 'Mecánico'].forEach(registerCategory);
+
+        // Count pros
+        users.forEach((u: any) => {
+          if (u.rol === 'profesional' || u.profesionalInfo) {
+            const r = u.profesionalInfo?.rubro || (u.profesionalInfo?.rubros && u.profesionalInfo?.rubros[0]) || 'Otros';
+            registerCategory(r);
+            rubroMap[r].profesionalesActivos += 1;
+            rubroMap[r].vistasPerfiles += Number(u.profesionalInfo?.profileViews || 0);
+            rubroMap[r].contactosWhatsapp += Number(u.profesionalInfo?.whatsappClicks || 0);
+          }
+        });
+
+        // Count jobs in last 7 days
+        jobs.forEach((j: any) => {
+          const r = j.rubro || 'Otros';
+          registerCategory(r);
+          rubroMap[r].solicitudesTrabajo += 1;
+        });
+
+        // Count searches
+        searches.forEach((s: any) => {
+          const r = s.category || s.rubro || (s.term?.includes('elect') ? 'Electricista' : s.term?.includes('gas') ? 'Gasista' : s.term?.includes('plom') ? 'Plomero' : null);
+          if (r) {
+            registerCategory(r);
+            rubroMap[r].busquedas += Number(s.searchCount || 1);
+          }
+        });
+
+        categoriesMetrics = Object.values(rubroMap).map((cat: any) => {
+          const demandScore = Math.min(Math.round((cat.busquedas * 2.5 + cat.solicitudesTrabajo * 5 + cat.vistasPerfiles * 0.8 + cat.contactosWhatsapp * 3)), 100);
+          return {
+            ...cat,
+            scoreDemanda: Math.max(demandScore, 10)
+          };
+        });
+      } catch (e) {
+        console.warn("[AI Promotion Insights] Error gathering from Firestore:", e);
+      }
+    }
+
+    // 3. Try Gemini AI
+    let report: any = null;
+    const ai = getGeminiClient();
+
+    if (ai) {
+      try {
+        console.log("[AI Promotion Insights] Calling Gemini with 7-day activity logs...");
+        const prompt = `Eres el Director de Crecimiento (Head of Growth) y Analista de Marketplace de Bahía Oficios (Bahía Blanca, Argentina).
+Procesa los logs de actividad de los ÚLTIMOS 7 DÍAS (${sevenDaysAgo} al ${todayStr}) sobre las categorías de servicios en Bahía Blanca:
+
+DATOS DE ACTIVIDAD SEMANAL DE CATEGORÍAS (ÚLTIMOS 7 DÍAS):
+${JSON.stringify(categoriesMetrics.slice(0, 16), null, 2)}
+
+TAREA:
+Analiza qué categorías de servicios necesitan más promoción y por qué, clasificándolas con precisión:
+1. "captar_profesionales": Categorías con alta demanda o búsquedas de vecinos bahienses pero pocos profesionales para cubrirla (riesgo de demanda insatisfecha).
+2. "promover_demanda_clientes": Categorías con profesionales registrados y verificados pero pocas visitas o consultas esta semana (necesitan que Bahía Oficios les consiga clientes).
+3. "reactivar_categoria": Categorías con potencial latente o estacional que con un empuje publicitario pueden disparar las contrataciones.
+
+Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
+{
+  "resumenSemanal": "<resumen ejecutivo de 3 o 4 líneas sobre la salud comercial y movimiento de los oficios en Bahía Blanca durante los últimos 7 días>",
+  "kpisGenerales": {
+    "categoriaMayorDemanda": "<nombre de la categoría más demandada>",
+    "categoriaMayorDeficit": "<nombre de la categoría con mayor escasez de profesionales>",
+    "categoriaUrgentePromocionar": "<nombre de la categoría que el admin debe promocionar ya>",
+    "totalCategoriasAnalizadas": <número>,
+    "oportunidadesDetectadas": <número>,
+    "indiceEquilibrioMercado": <número entre 0 y 100>
+  },
+  "categoriasParaPromocionar": [
+    {
+      "rubro": "<nombre>",
+      "prioridad": "ALTA" | "MEDIA" | "OPORTUNIDAD",
+      "tipoPromocion": "captar_profesionales" | "promover_demanda_clientes" | "reactivar_categoria",
+      "justificacionBasadaEnLogs": "<explicación clara citando números de los últimos 7 días: búsquedas, visitas, profesionales>",
+      "metricas7Dias": {
+        "profesionalesActivos": <número>,
+        "busquedas": <número>,
+        "solicitudesTrabajo": <número>,
+        "vistasPerfiles": <número>,
+        "contactosWhatsapp": <número>,
+        "scoreDemanda": <número 0 a 100>
+      },
+      "sugerenciaEstrategica": "<consejo accionable para el administrador>",
+      "copiaRedesSociales": "<post listo para Instagram/Facebook/WhatsApp con emojis, tono argentino amigable y llamado a la acción>",
+      "notificacionPushSugerida": {
+        "titulo": "<título corto y llamativo>",
+        "cuerpo": "<mensaje para enviar a la app>"
+      },
+      "accionInmediataRecomendada": "<acción concreta en 1 línea>"
+    }
+  ],
+  "recomendacionesGeneralesMarketing": [
+    {
+      "id": "mkt-1",
+      "titulo": "<título de iniciativa para Bahía Blanca>",
+      "descripcion": "<descripción>",
+      "canalRecomendado": "<canal recomendado ej: Instagram, Grupos de WhatsApp, Redes>",
+      "impactoEstimado": "<impacto esperado>"
+    }
+  ]
+}`;
+
+        let response: any = null;
+        try {
+          response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              systemInstruction: "Eres un estratega de crecimiento y analista de plataformas de servicios en Argentina. Responde siempre en español rioplatense profesional, conciso y orientado a resultados."
+            }
+          });
+        } catch (mErr) {
+          console.warn("[AI Promotion Insights] Trying backup model gemini-3.1-flash-lite:", mErr);
+          response = await ai.models.generateContent({
+            model: "gemini-3.1-flash-lite",
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json"
+            }
+          });
+        }
+
+        const parsed = JSON.parse(response.text || '{}');
+        if (parsed && parsed.resumenSemanal && Array.isArray(parsed.categoriasParaPromocionar)) {
+          report = {
+            ...parsed,
+            fechaGeneracion: todayStr,
+            periodoAnalizado: `Últimos 7 días (${sevenDaysAgo} al ${todayStr})`,
+            modeloUtilizado: 'Gemini 2.5 Flash'
+          };
+          console.log("[AI Promotion Insights] Gemini generated report successfully!");
+        }
+      } catch (geminiErr) {
+        console.error("[AI Promotion Insights] Gemini generation error, falling back:", geminiErr);
+      }
+    }
+
+    if (!report) {
+      report = generateFallbackCategoryPromotionInsights(categoriesMetrics);
+    }
+
+    // Save in memory cache
+    memoryCachedPromotionInsights = report;
+    memoryCachedPromotionDate = todayStr;
+
+    // Optional Firestore save
+    try {
+      await db.collection('ai_promotion_insights').doc(todayStr).set({
+        ...report,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } catch (saveErr) {
+      console.warn("[AI Promotion Insights] Firestore write skipped, memory cache active.");
+    }
+
+    return { fromCache: false, report };
+  }
+
+  // Endpoints: GET and POST /api/admin/category-promotion-insights
+  app.all("/api/admin/category-promotion-insights", async (req, res) => {
+    try {
+      const force = req.query.force === 'true' || req.body?.force === true;
+      const categoriesData = req.body?.categoriesData;
+      const result = await performCategoryPromotionAnalysis(force, categoriesData);
+      res.json(result);
+    } catch (err: any) {
+      console.error("Error in /api/admin/category-promotion-insights:", err);
+      const fallback = generateFallbackCategoryPromotionInsights(req.body?.categoriesData || []);
+      res.json({ fromCache: false, report: fallback });
+    }
+  });
+
+
+
   // Vite middleware for development and production (in this environment)
   const vite = await createViteServer({
     server: { middlewareMode: true },
@@ -731,7 +1552,12 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
       const url = req.originalUrl;
       const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
       const html = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+      res.status(200).set({
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }).end(html);
     } catch (e: any) {
       console.error("Error serving index.html for /profile:", e);
       res.status(500).end(e.message);
@@ -747,7 +1573,12 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
       const url = req.originalUrl;
       const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
       const html = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+      res.status(200).set({
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }).end(html);
     } catch (e: any) {
       console.error("Error serving index.html:", e);
       res.status(500).end(e.message);

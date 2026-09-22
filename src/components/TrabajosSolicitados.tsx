@@ -16,7 +16,8 @@ import {
 import { 
   Briefcase, PlusCircle, Search, Filter, Clock, MapPin, DollarSign, 
   Send, CheckCircle2, AlertCircle, MessageCircle, X, ChevronDown, 
-  Calendar, Crown, User as UserIcon, Check, Layers, RefreshCw, XCircle, Sparkles
+  Calendar, Crown, User as UserIcon, Check, Layers, RefreshCw, XCircle, Sparkles,
+  ArrowRight, ShieldAlert
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RecentRequestedJobs } from './RecentRequestedJobs';
@@ -77,15 +78,29 @@ export const TrabajosSolicitados: React.FC = () => {
   const [viewingProposalsJob, setViewingProposalsJob] = useState<JobPost | null>(null);
   const [updatingProposalStatus, setUpdatingProposalStatus] = useState<string | null>(null);
 
-  // Auth notice modal
+  // Auth notice modals
   const [showAuthNotice, setShowAuthNotice] = useState(false);
+  const [showClientAuthNotice, setShowClientAuthNotice] = useState(false);
+
+  // Helper para abrir modal de solicitud requiriendo registro previo
+  const handleOpenCreateModal = () => {
+    if (!currentUser) {
+      setShowClientAuthNotice(true);
+    } else {
+      setShowCreateModal(true);
+    }
+  };
 
   // Detect URL query flags on load
   useEffect(() => {
     if (searchParams.get('crear') === 'true' || searchParams.get('solicitar') === 'true') {
-      setShowCreateModal(true);
+      if (!currentUser) {
+        setShowClientAuthNotice(true);
+      } else {
+        setShowCreateModal(true);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, currentUser]);
 
   // Handle target job passed via URL query
   useEffect(() => {
@@ -145,13 +160,13 @@ export const TrabajosSolicitados: React.FC = () => {
   // Manejar creación de nuevo requerimiento / solicitud múltiple
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newJob.titulo.trim() || !newJob.descripcion.trim()) {
-      alert("Por favor completá el título y la descripción del trabajo requerido.");
+    if (!currentUser) {
+      setShowClientAuthNotice(true);
       return;
     }
 
-    if (!currentUser && (!newJob.clienteNombre || !newJob.clienteTelefono)) {
-      alert("Por favor ingresá tu nombre y teléfono para que los profesionales puedan contactarte.");
+    if (!newJob.titulo.trim() || !newJob.descripcion.trim()) {
+      alert("Por favor completá el título y la descripción del trabajo requerido.");
       return;
     }
 
@@ -164,11 +179,11 @@ export const TrabajosSolicitados: React.FC = () => {
         zona: newJob.zona,
         urgencia: newJob.urgencia,
         presupuestoAproximado: newJob.presupuestoAproximado.trim() || 'A convenir con el profesional',
-        clienteId: currentUser?.uid || 'invitado',
-        clienteNombre: currentUser?.nombre || newJob.clienteNombre.trim(),
-        clienteEmail: currentUser?.email || '',
-        clienteTelefono: newJob.clienteTelefono.trim(),
-        clienteFoto: currentUser?.fotoUrl || '',
+        clienteId: currentUser.uid,
+        clienteNombre: currentUser.nombre || newJob.clienteNombre.trim(),
+        clienteEmail: currentUser.email || '',
+        clienteTelefono: (newJob.clienteTelefono || currentUser.profesionalInfo?.telefono || '').trim(),
+        clienteFoto: currentUser.fotoUrl || '',
         fechaCreacion: serverTimestamp(),
         estado: 'abierto',
         presupuestos: []
@@ -372,7 +387,7 @@ export const TrabajosSolicitados: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-4">
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleOpenCreateModal}
               className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-6 py-3.5 rounded-xl shadow-sm transition-all active:scale-95 text-sm"
             >
               <PlusCircle size={18} />
@@ -674,7 +689,7 @@ export const TrabajosSolicitados: React.FC = () => {
               Restablecer Filtros
             </button>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleOpenCreateModal}
               className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold text-xs"
             >
               Publicar Pedido
@@ -858,7 +873,53 @@ export const TrabajosSolicitados: React.FC = () => {
               <X size={20} />
             </button>
 
-            {createSuccess ? (
+            {!currentUser ? (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Briefcase size={32} />
+                </div>
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1 rounded-full mb-3 border border-indigo-100 dark:border-indigo-900">
+                  <Sparkles size={14} /> Solicitá presupuestos sin cargo
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Registrate para solicitar un trabajo
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
+                  Para publicar un trabajo o pedir presupuestos a los profesionales verificados de Bahía Blanca, necesitás tener una cuenta. Crear tu cuenta es <strong>100% gratuito</strong> para clientes y vecinos.
+                </p>
+
+                <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 mb-6 text-left border border-slate-200/70 dark:border-slate-700 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                    <span>100% gratuito, sin comisiones ni intermediarios</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                    <span>Recibí presupuestos técnicos de profesionales calificados</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                    <span>Chateá directo o coordiná visitas por WhatsApp</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Link
+                    to="/signup?redirect=%2Ftrabajos%3Fcrear%3Dtrue&motivo=solicitar_trabajo"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl text-sm shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+                  >
+                    <span>Crear Cuenta Gratis (en 30 seg)</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link
+                    to="/login?redirect=%2Ftrabajos%3Fcrear%3Dtrue&motivo=solicitar_trabajo"
+                    className="w-full inline-flex items-center justify-center py-3 px-4 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Ya tengo cuenta, Iniciar Sesión
+                  </Link>
+                </div>
+              </div>
+            ) : createSuccess ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in">
                   <CheckCircle2 size={36} />
@@ -976,32 +1037,28 @@ export const TrabajosSolicitados: React.FC = () => {
                   ></textarea>
                 </div>
 
-                {/* Datos de Contacto */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
-                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
-                    Tus datos para recibir las respuestas:
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <input
-                        type="text"
-                        required
-                        value={newJob.clienteNombre}
-                        onChange={(e) => setNewJob({ ...newJob, clienteNombre: e.target.value })}
-                        placeholder="Tu Nombre y Apellido"
-                        className="w-full px-3.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="tel"
-                        required
-                        value={newJob.clienteTelefono}
-                        onChange={(e) => setNewJob({ ...newJob, clienteTelefono: e.target.value })}
-                        placeholder="WhatsApp (ej: 2914123456)"
-                        className="w-full px-3.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
+                {/* Datos de Contacto de la cuenta autenticada */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Publicando como: <strong>{currentUser?.nombre || currentUser?.email}</strong>
+                    </span>
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                      Cuenta verificada
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Teléfono / WhatsApp para recibir llamados o propuestas:
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={newJob.clienteTelefono}
+                      onChange={(e) => setNewJob({ ...newJob, clienteTelefono: e.target.value })}
+                      placeholder="WhatsApp (ej: 2914123456)"
+                      className="w-full px-3.5 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                 </div>
 
@@ -1199,7 +1256,7 @@ export const TrabajosSolicitados: React.FC = () => {
                             to={`/profesional/${proposal.profesionalSlug || proposal.profesionalId}`}
                             className="py-1.5 px-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           >
-                            Ver Perfil
+                            Conocer trabajos y opiniones
                           </Link>
                         </div>
                       </div>
@@ -1260,6 +1317,72 @@ export const TrabajosSolicitados: React.FC = () => {
               <button
                 onClick={() => setShowAuthNotice(false)}
                 className="text-xs text-gray-400 hover:underline pt-2 block mx-auto"
+              >
+                Volver al listado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Pedir registrarse o iniciar sesión para solicitar un trabajo */}
+      {showClientAuthNotice && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 text-center relative animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowClientAuthNotice(false)}
+              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Briefcase size={32} />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1 rounded-full mb-3 border border-indigo-100 dark:border-indigo-900">
+              <Sparkles size={14} /> Solicitá presupuestos gratis
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
+              Registrate para solicitar un trabajo
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
+              Para publicar tu pedido y recibir cotizaciones de profesionales verificados de Bahía Blanca, necesitás registrarte o iniciar sesión. ¡Es <strong>100% gratuito</strong>!
+            </p>
+
+            <div className="bg-slate-50 dark:bg-slate-700/40 rounded-2xl p-4 mb-6 text-left border border-slate-200/70 dark:border-slate-700 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                <span>100% gratis para clientes y vecinos</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                <span>Recibí hasta 3 cotizaciones técnicas y precios</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                <span>Chateá directo o coordiná visitas por WhatsApp</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Link
+                to="/signup?redirect=%2Ftrabajos%3Fcrear%3Dtrue&motivo=solicitar_trabajo"
+                className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl text-sm shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+              >
+                <span>Crear Cuenta Gratis (en 30 seg)</span>
+                <ArrowRight size={16} />
+              </Link>
+              <Link
+                to="/login?redirect=%2Ftrabajos%3Fcrear%3Dtrue&motivo=solicitar_trabajo"
+                className="w-full inline-flex items-center justify-center py-2.5 px-4 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Ya tengo cuenta, Iniciar Sesión
+              </Link>
+              <button
+                onClick={() => setShowClientAuthNotice(false)}
+                className="text-xs text-gray-400 hover:underline pt-1 block mx-auto"
               >
                 Volver al listado
               </button>

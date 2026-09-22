@@ -3,6 +3,8 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { requestNotificationPermission, sendPushNotification } from '../utils/notifications';
+import { quoteReminderService } from '../services/quoteReminderService';
+import { checkAndTriggerPhotoIncentiveForUser } from '../services/photoIncentiveService';
 
 export const NotificationListener: React.FC = () => {
   const { currentUser } = useAuth();
@@ -12,6 +14,26 @@ export const NotificationListener: React.FC = () => {
   useEffect(() => {
     requestNotificationPermission();
   }, []);
+
+  // Automatic check for pending quotes older than 24h & photo incentive for workers with 0 views
+  useEffect(() => {
+    // Run throttled check on mount and whenever user status changes
+    quoteReminderService.checkIfDueAndRun(currentUser?.uid);
+
+    if (currentUser?.rol === 'profesional') {
+      checkAndTriggerPhotoIncentiveForUser(currentUser);
+    }
+
+    // Also run periodic check every 15 minutes while app is open
+    const interval = setInterval(() => {
+      quoteReminderService.checkIfDueAndRun(currentUser?.uid);
+      if (currentUser?.rol === 'profesional') {
+        checkAndTriggerPhotoIncentiveForUser(currentUser);
+      }
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   // Listen for new notifications (e.g., quote requests)
   useEffect(() => {

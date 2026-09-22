@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { PROFESSIONS, ZONAS } from '../constants';
-import { Send, CheckCircle, AlertCircle, User as UserIcon } from 'lucide-react';
+import { Send, CheckCircle, AlertCircle, User as UserIcon, Briefcase, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 export const QuoteRequestForm: React.FC = () => {
@@ -150,6 +150,59 @@ export const QuoteRequestForm: React.FC = () => {
         <Link to="/" className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition-colors">
           Volver al inicio
         </Link>
+      </div>
+    );
+  }
+
+  // Si el usuario no está autenticado, pedir registrarse o iniciar sesión
+  if (!currentUser) {
+    return (
+      <div className="max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden text-center p-8 sm:p-10">
+        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Briefcase size={32} />
+        </div>
+        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1 rounded-full mb-3 border border-indigo-100 dark:border-indigo-900">
+          <ShieldAlert size={14} className="text-indigo-600 dark:text-indigo-400" />
+          <span>Acceso Requerido</span>
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-3">
+          Registrate para solicitar un trabajo
+        </h2>
+        <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base mb-6 leading-relaxed">
+          Para solicitar presupuestos a profesionales verificados en Bahía Blanca necesitás tener una cuenta. 
+          Crear tu cuenta es <strong>100% gratuito</strong> y te permitirá recibir cotizaciones directas y coordinar visitas.
+        </p>
+
+        <div className="bg-slate-50 dark:bg-slate-700/40 rounded-2xl p-4 mb-6 text-left border border-slate-200/70 dark:border-slate-700 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2.5">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+            <span>Sin costo ni comisiones intermedias</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+            <span>Recibí presupuestos de profesionales verificados de tu barrio</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+            <span>Chateá directo o contactá por WhatsApp para acordar la visita</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Link
+            to="/signup?redirect=%2Fsolicitar-presupuesto&motivo=solicitar_trabajo"
+            className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl text-sm sm:text-base shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+          >
+            <span>Crear Cuenta Gratis</span>
+            <ArrowRight size={18} />
+          </Link>
+          <Link
+            to="/login?redirect=%2Fsolicitar-presupuesto&motivo=solicitar_trabajo"
+            className="w-full inline-flex items-center justify-center py-3 px-6 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Ya tengo cuenta, Iniciar Sesión
+          </Link>
+        </div>
       </div>
     );
   }
