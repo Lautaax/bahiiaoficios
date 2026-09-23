@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search as SearchIcon, Mic, MicOff, AlertCircle, MapPin, Star, SlidersHorizontal, X } from 'lucide-react';
+import { Search as SearchIcon, Mic, MicOff, AlertCircle, MapPin, Star, SlidersHorizontal, X, Clock, History } from 'lucide-react';
 import { searchProfessionals } from '../services/firestoreService';
 import { User, Category } from '../types';
 import { api } from '../services/api';
@@ -12,6 +12,12 @@ import { ZONAS } from '../constants';
 import { analyticsService } from '../services/analyticsService';
 import { useAuth } from '../context/AuthContext';
 import { userSearchService } from '../services/userSearchService';
+import { 
+  getLocalSearchHistory, 
+  saveLocalSearchQuery, 
+  removeLocalSearchQuery, 
+  clearLocalSearchHistory 
+} from '../utils/localSearchHistory';
 
 export function Search() {
   const { currentUser } = useAuth();
@@ -31,6 +37,9 @@ export function Search() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   
+  // Local Search History State
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => getLocalSearchHistory());
+
   // Voice search state
   const [isListening, setIsListening] = useState(false);
   const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
@@ -85,6 +94,12 @@ export function Search() {
             resultsCount: data.length,
             userEmail: currentUser?.email
           });
+
+          // Save to local search history
+          if (query.trim().length >= 2) {
+            const updated = saveLocalSearchQuery(query.trim());
+            setSearchHistory(updated);
+          }
         }
       } catch (error) {
         console.error("Error searching professionals:", error);
@@ -94,7 +109,7 @@ export function Search() {
     };
 
     fetchResults();
-  }, [query, categorySlug, selectedZona, minRating]);
+  }, [query, categorySlug, selectedZona, minRating, currentUser?.uid, currentUser?.email]);
 
   const updateUrlParams = (newParams: Record<string, string>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -110,12 +125,41 @@ export function Search() {
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const trimmed = searchInput.trim();
+    if (trimmed.length >= 2) {
+      const updated = saveLocalSearchQuery(trimmed);
+      setSearchHistory(updated);
+    }
     updateUrlParams({
-      q: searchInput.trim(),
+      q: trimmed,
       category: categorySlug,
       zona: selectedZona,
       rating: minRating.toString()
     });
+  };
+
+  // Local Search History handlers
+  const handleHistoryClick = (item: string) => {
+    setSearchInput(item);
+    const updated = saveLocalSearchQuery(item);
+    setSearchHistory(updated);
+    updateUrlParams({
+      q: item,
+      category: categorySlug,
+      zona: selectedZona,
+      rating: minRating.toString()
+    });
+  };
+
+  const handleRemoveHistoryItem = (e: React.MouseEvent, item: string) => {
+    e.stopPropagation();
+    const updated = removeLocalSearchQuery(item);
+    setSearchHistory(updated);
+  };
+
+  const handleClearHistory = () => {
+    clearLocalSearchHistory();
+    setSearchHistory([]);
   };
 
   const handleCategoryChange = (slug: string) => {
@@ -150,6 +194,8 @@ export function Search() {
 
   const handleSelectProfession = (professionName: string) => {
     setSearchInput(professionName);
+    const updated = saveLocalSearchQuery(professionName);
+    setSearchHistory(updated);
     updateUrlParams({
       q: professionName,
       category: categorySlug,
@@ -162,8 +208,8 @@ export function Search() {
     navigate(`/profesional/${pro.slug || pro.uid}`);
   };
 
-  // Web Speech API Voice Search
-  const handleVoiceSearch = () => {
+  // Web Speech API Voice Search with explicit permission request on click
+  const handleVoiceSearch = async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -178,6 +224,25 @@ export function Search() {
       return;
     }
 
+    // Ask for microphone access ONLY when the user clicks the microphone button
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Immediately release audio track so SpeechRecognition can take over
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err: any) {
+        console.warn("Microphone access denied:", err);
+        setIsListening(false);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setSpeechFeedback("Permiso de micrófono no otorgado. Habilitá el micrófono en tu navegador.");
+        } else {
+          setSpeechFeedback("No se pudo acceder al micrófono del dispositivo.");
+        }
+        setTimeout(() => setSpeechFeedback(null), 4500);
+        return;
+      }
+    }
+
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'es-AR';
@@ -186,7 +251,7 @@ export function Search() {
 
       recognition.onstart = () => {
         setIsListening(true);
-        setSpeechFeedback("Escuchando... Di la profesión que buscas (ej: Electricista, Plomero)");
+        setSpeechFeedback("Escuchando... Decí qué rubro o servicio buscás (ej: Electricista, Plomero)");
       };
 
       recognition.onresult = (event: any) => {
@@ -194,6 +259,8 @@ export function Search() {
         if (transcript) {
           const cleaned = transcript.trim();
           setSearchInput(cleaned);
+          const updated = saveLocalSearchQuery(cleaned);
+          setSearchHistory(updated);
           setSearchParams({ q: cleaned, category: categorySlug });
           setSpeechFeedback(`Buscando "${cleaned}"...`);
           setTimeout(() => setSpeechFeedback(null), 2500);
@@ -207,7 +274,7 @@ export function Search() {
         if (event.error === 'not-allowed') {
           setSpeechFeedback("Permiso de micrófono no otorgado.");
         } else if (event.error === 'no-speech') {
-          setSpeechFeedback("No se detectó audio. Por favor intenta de nuevo.");
+          setSpeechFeedback("No se detectó audio. Por favor intentá de nuevo.");
         } else {
           setSpeechFeedback("No se pudo reconocer la voz.");
         }
@@ -242,6 +309,13 @@ export function Search() {
                 onSelectProfession={handleSelectProfession}
                 onSelectProfessional={handleSelectProfessional}
                 professionals={allProfessionals}
+                historyItems={searchHistory}
+                onSelectHistoryItem={handleHistoryClick}
+                onRemoveHistoryItem={(term) => {
+                  const updated = removeLocalSearchQuery(term);
+                  setSearchHistory(updated);
+                }}
+                onClearHistory={handleClearHistory}
                 placeholder="¿Qué arreglo o servicio necesitás solucionar hoy en Bahía?"
                 inputClassName="w-full pl-10 pr-12 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 outline-none text-sm transition-all"
               />
@@ -286,6 +360,52 @@ export function Search() {
               Buscar
             </button>
           </form>
+
+          {/* Historial de búsquedas recientes (Local Storage) */}
+          {searchHistory.length > 0 && (
+            <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 flex-nowrap shrink-0">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <Clock size={13} className="text-slate-400 dark:text-slate-500" />
+                  <span className="hidden sm:inline">Búsquedas recientes:</span>
+                  <span className="sm:hidden">Recientes:</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-nowrap">
+                  {searchHistory.map((item) => (
+                    <div
+                      key={item}
+                      className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200/80 dark:border-slate-700/80 transition-colors shrink-0"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleHistoryClick(item)}
+                        className="font-medium cursor-pointer"
+                        title={`Buscar "${item}"`}
+                      >
+                        {item}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveHistoryItem(e, item)}
+                        className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-rose-500 transition-colors"
+                        title="Eliminar de recientes"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                className="text-[11px] font-medium text-slate-400 hover:text-rose-500 transition-colors whitespace-nowrap shrink-0 ml-1 px-1.5 py-0.5 hover:underline"
+                title="Borrar todo el historial"
+              >
+                Borrar historial
+              </button>
+            </div>
+          )}
 
           {/* Feedback de voz */}
           {speechFeedback && (

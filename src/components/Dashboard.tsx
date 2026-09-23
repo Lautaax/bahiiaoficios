@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ProfessionalCard } from './ProfessionalCard';
+import { CachedImage } from './CachedImage';
 import { EmpresasColaboradoras } from './EmpresasColaboradoras';
 import { Skeleton } from './ui/Skeleton';
 import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star, Briefcase, Clock, ExternalLink, CheckCircle2, DollarSign, Building2, Handshake, ChevronLeft, ChevronRight, Award, Mic, MicOff } from 'lucide-react';
@@ -990,10 +991,12 @@ const ClientQuoteRequests: React.FC = () => {
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                  <img
+                                  <CachedImage
                                     src={prop.profesionalFoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(prop.profesionalNombre)}`}
                                     alt={prop.profesionalNombre}
                                     className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                                    containerClassName="w-8 h-8 rounded-full shrink-0"
+                                    loading="lazy"
                                   />
                                   <div>
                                     <Link to={`/profesional/${prop.profesionalSlug || prop.profesionalId}`} className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white hover:text-indigo-600">

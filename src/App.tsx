@@ -84,108 +84,162 @@ function Navbar() {
   };
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-50 transition-colors duration-200">
+    <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg">
-              <MapPin className="text-white" size={20} />
+        {/* Left: Brand & Main Navigation */}
+        <div className="flex items-center gap-3 sm:gap-6">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="bg-indigo-600 group-hover:bg-indigo-700 text-white p-2 rounded-xl shadow-xs transition-colors shrink-0">
+              <MapPin size={18} />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">Bahia Oficios</h1>
-              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Portal de Profesionales</p>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                Bahía Oficios
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                Bahía Blanca
+              </p>
             </div>
           </Link>
-          <Link to="/trabajos" id="onboarding-nav-jobs" className="hidden sm:flex items-center gap-1.5 ml-4 sm:ml-6 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 px-3 py-1.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800 transition-colors">
-            <Briefcase size={15} />
-            <span>Trabajos Solicitados</span>
-          </Link>
-          <Link to="/blog" className="hidden md:block ml-3 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-            Blog y Consejos
-          </Link>
+
+          <nav className="hidden sm:flex items-center gap-1 sm:gap-2">
+            <Link 
+              to="/trabajos" 
+              id="onboarding-nav-jobs" 
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+            >
+              <Briefcase size={15} className="text-indigo-600 dark:text-indigo-400" />
+              <span>Trabajos Solicitados</span>
+            </Link>
+
+            <Link 
+              to="/blog" 
+              className="hidden md:inline-flex items-center text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+            >
+              Blog y Consejos
+            </Link>
+          </nav>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4">
+
+        {/* Right: Actions, Tour Trigger & User Profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Friendly, non-invasive tutorial helper */}
           <button
             type="button"
             id="btn-nav-onboarding-tour"
             onClick={triggerOnboardingTour}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 transition-colors"
-            title="Tutorial interactivo de bienvenida"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100/80 hover:bg-indigo-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 px-2.5 py-1.5 rounded-xl transition-all"
+            title="Ver guía interactiva de bienvenida"
           >
-            <HelpCircle size={14} className="text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">¿Cómo funciona?</span>
+            <HelpCircle size={15} className="text-indigo-600 dark:text-indigo-400" />
+            <span className="hidden md:inline">¿Cómo funciona?</span>
           </button>
 
           {showInstallBtn && (
             <button
               onClick={handleInstallClick}
-              className="hidden lg:flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800"
+              className="hidden lg:inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2.5 py-1.5 rounded-xl text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-200/60 dark:border-indigo-800/60"
             >
               🚀 Instalar App
             </button>
           )}
+
           {currentUser ? (
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Link to="/dashboard" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link 
+                to="/dashboard" 
+                className="hidden md:inline-flex text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 py-1 rounded-lg transition-colors"
+              >
                 Directorio
               </Link>
+
               {currentUser.rol === 'profesional' && (
-                <Link to="/beneficios" className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                <Link 
+                  to="/beneficios" 
+                  className="hidden md:inline-flex text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 py-1 rounded-lg transition-colors"
+                >
                   Beneficios
                 </Link>
               )}
+
               {currentUser.isAdmin && (
-                <Link to="/admin" className="flex items-center gap-1 text-xs sm:text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">
-                  <ShieldCheck size={16} />
+                <Link 
+                  to="/admin" 
+                  className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-900 px-2.5 py-1 rounded-xl transition-colors"
+                >
+                  <ShieldCheck size={14} />
                   <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
-              <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+
+              <Link 
+                to="/profile" 
+                className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60"
+              >
                 <div className="relative">
                   {currentUser.fotoUrl ? (
-                    <CachedImage src={currentUser.fotoUrl} alt="Perfil" className="w-8 h-8 rounded-full object-cover" containerClassName="w-8 h-8 rounded-full shrink-0" />
+                    <CachedImage 
+                      src={currentUser.fotoUrl} 
+                      alt="Perfil" 
+                      className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
+                      containerClassName="w-8 h-8 rounded-full shrink-0" 
+                      loading="lazy"
+                    />
                   ) : (
-                    <UserIcon size={20} />
+                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                      <UserIcon size={16} className="text-slate-600 dark:text-slate-300" />
+                    </div>
                   )}
                 </div>
-                <span className="hidden lg:inline">Hola, {currentUser.nombre}</span>
+                <span className="hidden lg:inline">{currentUser.nombre.split(' ')[0]}</span>
               </Link>
               
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1">
                 <Link
                   to="/favoritos"
-                  className="p-2 text-gray-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 relative transition-colors"
+                  className="p-2 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 relative rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
                   title="Mis Profesionales Favoritos"
                 >
-                  <Heart size={20} className={Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 ? "fill-rose-500 text-rose-500" : ""} />
+                  <Heart size={18} className={Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 ? "fill-rose-500 text-rose-500" : ""} />
                   {Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 && (
                     <span className="absolute top-1 right-1 bg-rose-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
                       {currentUser.favoritos.length}
                     </span>
                   )}
                 </Link>
+
                 <NotificationsDropdown />
                 <ChatBadge />
+
                 <Link 
                   to={currentUser.rol === 'profesional' ? "/dashboard-profesional" : "/profile"} 
-                  className="hidden sm:block p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400" 
-                  title={currentUser.rol === 'profesional' ? "Mi Panel" : "Editar Perfil"}
+                  className="hidden sm:inline-flex p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors" 
+                  title={currentUser.rol === 'profesional' ? "Mi Panel Profesional" : "Editar Perfil"}
                 >
-                  <Settings size={20} />
+                  <Settings size={18} />
                 </Link>
+
                 <button 
                   onClick={handleLogout}
-                  className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                  title="Salir"
+                  className="p-2 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                  title="Cerrar sesión"
                 >
-                  <LogOut size={20} />
+                  <LogOut size={18} />
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <Link to="/signup" className="hidden sm:block text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">Soy Profesional</Link>
-              <Link to="/login" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link 
+                to="/signup" 
+                className="hidden sm:inline-flex text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              >
+                Soy Profesional
+              </Link>
+              <Link 
+                to="/login" 
+                className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs active:scale-95"
+              >
                 Ingresar
               </Link>
             </div>
@@ -264,7 +318,6 @@ function AppContent() {
   return (
     <>
       <NotificationListener />
-      <GuidedOnboarding />
       <FeedbackWidget />
       <Routes>
         <Route path="/login" element={<Login />} />

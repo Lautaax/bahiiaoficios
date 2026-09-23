@@ -16,6 +16,7 @@ import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from
 import { TrabajosSolicitados } from './TrabajosSolicitados';
 import { ProfessionalMyQuotes } from './ProfessionalMyQuotes';
 import { ProfessionalRequestsChart } from './ProfessionalRequestsChart';
+import { CachedImage } from './CachedImage';
 import { safeLocalStorage } from '../utils/storage';
 
 type TabType = 'resumen' | 'mis-presupuestos' | 'trabajos' | 'pedidos' | 'perfil' | 'estadisticas' | 'reseñas' | 'favoritos';
@@ -175,7 +176,13 @@ export const ProfessionalDashboard: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <NotificationsDropdown />
-          <img src={currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nombre)}`} alt="Perfil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+          <CachedImage 
+            src={currentUser.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nombre)}`} 
+            alt="Perfil" 
+            className="w-8 h-8 rounded-full object-cover border border-gray-200" 
+            containerClassName="w-8 h-8 rounded-full shrink-0"
+            loading="lazy"
+          />
         </div>
       </div>
 
@@ -799,12 +806,13 @@ const ReviewsList: React.FC = () => {
           {review.fotos && review.fotos.length > 0 && (
             <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
               {review.fotos.map((foto: string, idx: number) => (
-                <img 
+                <CachedImage 
                   key={idx} 
                   src={foto} 
                   alt={`Trabajo ${idx}`} 
                   className="w-24 h-24 object-cover rounded-xl border border-gray-100 dark:border-gray-700 flex-shrink-0"
-                  referrerPolicy="no-referrer"
+                  containerClassName="w-24 h-24 flex-shrink-0"
+                  loading="lazy"
                 />
               ))}
             </div>

@@ -29,6 +29,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { ChurnAuditReport, ChurnRiskAlert, ChurnRiskLevel, User } from '../types';
+import { CachedImage } from './CachedImage';
 import { 
   getDailyChurnAudit, 
   buildWhatsAppReactivationUrl, 
@@ -495,10 +496,12 @@ export const AdminDailyChurnAudit: React.FC<AdminDailyChurnAuditProps> = ({
                     <div className="flex items-center gap-3.5">
                       <div className="relative">
                         {alert.fotoUrl ? (
-                          <img
+                          <CachedImage
                             src={alert.fotoUrl}
                             alt={alert.nombre}
                             className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700"
+                            containerClassName="w-12 h-12 rounded-2xl shrink-0"
+                            loading="lazy"
                           />
                         ) : (
                           <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-sm">

@@ -15,6 +15,7 @@ import { AdminProfessionalReactivation } from './AdminProfessionalReactivation';
 import { AdminDailyChurnAudit } from './AdminDailyChurnAudit';
 import { AdminAiPromotionInsights } from './AdminAiPromotionInsights';
 import { identifyInactiveProfessionals } from '../services/adminOperationsService';
+import { CachedImage } from './CachedImage';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -593,7 +594,13 @@ export const AdminDashboard: React.FC = () => {
                     <tr key={user.uid} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <img src={user.fotoUrl || `https://ui-avatars.com/api/?name=${user.nombre}`} alt={user.nombre} className="w-10 h-10 rounded-full object-cover" />
+                          <CachedImage
+                            src={user.fotoUrl || `https://ui-avatars.com/api/?name=${user.nombre}`}
+                            alt={user.nombre}
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                            containerClassName="w-10 h-10 rounded-full shrink-0"
+                            loading="lazy"
+                          />
                           <div>
                             <p className="font-bold text-gray-900 dark:text-white">
                               {user.nombre}
@@ -754,7 +761,13 @@ export const AdminDashboard: React.FC = () => {
             {ads.map(ad => (
               <div key={ad.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 group">
                 <div className="relative h-40 overflow-hidden">
-                  <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <CachedImage 
+                    src={ad.imageUrl} 
+                    alt={ad.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                    containerClassName="w-full h-full"
+                    loading="lazy"
+                  />
                   <div className="absolute top-2 right-2 flex gap-2">
                     <button 
                       onClick={() => toggleAdStatus(ad.id, ad.active)}

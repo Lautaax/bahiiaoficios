@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Send, ArrowLeft, User as UserIcon, FileText, X, Download } from 'lucide-react';
+import { CachedImage } from './CachedImage';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
@@ -212,7 +213,13 @@ export const Chat: React.FC = () => {
           </Link>
           <div className="flex items-center gap-3">
             {otherUser?.fotoUrl ? (
-              <img src={otherUser.fotoUrl} alt={otherUser.nombre} className="w-10 h-10 rounded-full object-cover" />
+              <CachedImage 
+                src={otherUser.fotoUrl} 
+                alt={otherUser.nombre} 
+                className="w-10 h-10 rounded-full object-cover" 
+                containerClassName="w-10 h-10 rounded-full shrink-0"
+                loading="lazy"
+              />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                 <UserIcon size={20} className="text-gray-500 dark:text-gray-400" />

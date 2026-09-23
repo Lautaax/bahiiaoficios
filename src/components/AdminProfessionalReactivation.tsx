@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { User } from '../types';
+import { CachedImage } from './CachedImage';
 import { 
   Bell, 
   Send, 
@@ -487,10 +488,12 @@ export const AdminProfessionalReactivation: React.FC<AdminProfessionalReactivati
                       {/* Professional Info */}
                       <td className="py-3.5 pr-3">
                         <div className="flex items-center gap-3">
-                          <img
+                          <CachedImage
                             src={pro.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pro.nombre)}&background=f59e0b&color=fff`}
                             alt={pro.nombre}
-                            className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                            containerClassName="w-10 h-10 rounded-xl shrink-0"
+                            loading="lazy"
                           />
                           <div>
                             <span className="font-bold text-slate-900 dark:text-white block">

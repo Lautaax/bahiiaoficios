@@ -27,6 +27,7 @@ export interface TourStep {
 }
 
 const STORAGE_KEY = 'bahia_oficios_onboarding_completed_v1';
+const PROMPT_SEEN_KEY = 'bahia_oficios_onboarding_prompt_seen_v1';
 const TOUR_EVENT = 'bahia_start_onboarding_tour';
 
 // Helper function so any component (Navbar, Help page, Footer) can trigger the tour
@@ -185,14 +186,17 @@ export const GuidedOnboarding: React.FC = () => {
     setTooltipPosition({ top, left, placement });
   }, [isOpen, isCompletedState, currentStep]);
 
-  // First time visitor prompt banner
+  // First time visitor prompt banner - strictly runs ONLY ONCE and never repeats
   useEffect(() => {
     try {
       const hasCompleted = safeLocalStorage.getItem(STORAGE_KEY);
-      if (!hasCompleted) {
+      const hasSeenPrompt = safeLocalStorage.getItem(PROMPT_SEEN_KEY);
+      if (!hasCompleted && !hasSeenPrompt) {
+        // Record immediately that the prompt was triggered so it will never repeat again
+        safeLocalStorage.setItem(PROMPT_SEEN_KEY, 'true');
         const timer = setTimeout(() => {
           setShowPromptBanner(true);
-        }, 1200);
+        }, 1500);
         return () => clearTimeout(timer);
       }
     } catch {
@@ -276,6 +280,7 @@ export const GuidedOnboarding: React.FC = () => {
     setIsCompletedState(false);
     try {
       safeLocalStorage.setItem(STORAGE_KEY, 'true');
+      safeLocalStorage.setItem(PROMPT_SEEN_KEY, 'true');
     } catch {
       // safe
     }
@@ -285,6 +290,7 @@ export const GuidedOnboarding: React.FC = () => {
     setShowPromptBanner(false);
     try {
       safeLocalStorage.setItem(STORAGE_KEY, 'true');
+      safeLocalStorage.setItem(PROMPT_SEEN_KEY, 'true');
     } catch {
       // safe
     }
@@ -296,6 +302,12 @@ export const GuidedOnboarding: React.FC = () => {
     } else {
       // Show completion celebration
       setIsCompletedState(true);
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY, 'true');
+        safeLocalStorage.setItem(PROMPT_SEEN_KEY, 'true');
+      } catch {
+        // safe
+      }
     }
   };
 

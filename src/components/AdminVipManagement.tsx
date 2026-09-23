@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { ProfessionalPaymentHistoryModal } from './ProfessionalPaymentHistoryModal';
+import { CachedImage } from './CachedImage';
 
 interface AdminVipManagementProps {
   users: User[];
@@ -498,10 +499,12 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
                       {/* Profesional Info */}
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <img
+                          <CachedImage
                             src={pro.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pro.nombre)}`}
                             alt={pro.nombre}
                             className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                            containerClassName="w-10 h-10 rounded-full shrink-0"
+                            loading="lazy"
                           />
                           <div>
                             <div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">

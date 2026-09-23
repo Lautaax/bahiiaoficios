@@ -48,7 +48,7 @@ export function useVoiceSearch({ onResult, lang = 'es-AR' }: UseVoiceSearchOptio
     setIsListening(false);
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
@@ -63,6 +63,25 @@ export function useVoiceSearch({ onResult, lang = 'es-AR' }: UseVoiceSearchOptio
         recognitionRef.current.stop();
       } catch {
         // ignore
+      }
+    }
+
+    // Request microphone access explicitly ONLY when the user clicks the button
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Immediately release tracks so SpeechRecognition has full exclusive access to the microphone
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err: any) {
+        console.warn('Microphone permission request rejected:', err);
+        setIsListening(false);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setSpeechFeedback('Permiso de micrófono no otorgado. Habilitá el micrófono en tu navegador.');
+        } else {
+          setSpeechFeedback('No se pudo acceder al micrófono del dispositivo.');
+        }
+        clearFeedbackAfter(4500);
+        return;
       }
     }
 

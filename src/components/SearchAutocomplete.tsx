@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User as UserIcon, Star, Crown, ChevronRight, Briefcase } from 'lucide-react';
+import { Search, User as UserIcon, Star, Crown, ChevronRight, Briefcase, Clock, X } from 'lucide-react';
 import { PROFESSIONS } from '../constants';
 import { User } from '../types';
 import { isVipActive } from '../utils/vipUtils';
+import { CachedImage } from './CachedImage';
 
 interface SearchAutocompleteProps {
   value: string;
@@ -14,6 +15,10 @@ interface SearchAutocompleteProps {
   placeholder?: string;
   className?: string;
   inputClassName?: string;
+  historyItems?: string[];
+  onSelectHistoryItem?: (query: string) => void;
+  onRemoveHistoryItem?: (query: string) => void;
+  onClearHistory?: () => void;
 }
 
 export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
@@ -24,7 +29,11 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
   professionals,
   placeholder = 'Buscar por profesión, nombre o servicio...',
   className = '',
-  inputClassName = ''
+  inputClassName = '',
+  historyItems = [],
+  onSelectHistoryItem,
+  onRemoveHistoryItem,
+  onClearHistory
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -70,27 +79,33 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || allSuggestions.length === 0) return;
+    if (!isOpen) return;
 
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightedIndex(prev => (prev + 1) % allSuggestions.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedIndex(prev => (prev - 1 + allSuggestions.length) % allSuggestions.length);
-    } else if (e.key === 'Enter') {
-      if (highlightedIndex >= 0 && highlightedIndex < allSuggestions.length) {
+    if (cleanTerm.length > 0 && allSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
-        const item = allSuggestions[highlightedIndex];
-        if (item.type === 'profession') {
-          onSelectProfession(item.data.name);
-        } else {
-          onSelectProfessional(item.data);
+        setHighlightedIndex(prev => (prev + 1) % allSuggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev - 1 + allSuggestions.length) % allSuggestions.length);
+      } else if (e.key === 'Enter') {
+        if (highlightedIndex >= 0 && highlightedIndex < allSuggestions.length) {
+          e.preventDefault();
+          const item = allSuggestions[highlightedIndex];
+          if (item.type === 'profession') {
+            onSelectProfession(item.data.name);
+          } else {
+            onSelectProfessional(item.data);
+          }
+          setIsOpen(false);
         }
+      } else if (e.key === 'Escape') {
         setIsOpen(false);
       }
-    } else if (e.key === 'Escape') {
-      setIsOpen(false);
+    } else if (cleanTerm.length === 0 && historyItems.length > 0) {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
     }
   };
 
@@ -106,7 +121,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
           setHighlightedIndex(-1);
         }}
         onFocus={() => {
-          if (cleanTerm.length > 0) setIsOpen(true);
+          setIsOpen(true);
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
@@ -114,117 +129,180 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
         autoComplete="off"
       />
 
-      {isOpen && cleanTerm.length > 0 && allSuggestions.length > 0 && (
+      {isOpen && (
         <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-1">
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
-            {/* Profesiones sugeridas */}
-            {matchingProfessions.length > 0 && (
-              <div className="p-2">
-                <div className="px-3 py-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Profesiones y Servicios
-                </div>
-                {matchingProfessions.map((prof, index) => {
-                  const Icon = prof.icon;
-                  const isHighlighted = highlightedIndex === index;
-                  return (
-                    <button
-                      key={prof.name}
-                      type="button"
-                      onClick={() => {
-                        onSelectProfession(prof.name);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors ${
-                        isHighlighted 
-                          ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300' 
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                          <Icon size={15} />
-                        </div>
-                        <div>
-                          <span className="font-semibold text-sm">{prof.name}</span>
-                          <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">
-                            ({prof.category})
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
-                    </button>
-                  );
-                })}
+          {/* Recent Search History dropdown when empty */}
+          {cleanTerm.length === 0 && historyItems.length > 0 && (
+            <div className="p-2">
+              <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <Clock size={12} className="text-slate-400" />
+                  Búsquedas recientes
+                </span>
+                {onClearHistory && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClearHistory();
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-rose-500 normal-case font-medium transition-colors"
+                  >
+                    Borrar historial
+                  </button>
+                )}
               </div>
-            )}
+              <div className="space-y-0.5 mt-1">
+                {historyItems.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group cursor-pointer"
+                    onClick={() => {
+                      if (onSelectHistoryItem) {
+                        onSelectHistoryItem(item);
+                      } else {
+                        onSelectProfession(item);
+                      }
+                      setIsOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200">
+                      <Clock size={14} className="text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
+                      <span>{item}</span>
+                    </div>
+                    {onRemoveHistoryItem && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveHistoryItem(item);
+                        }}
+                        className="p-1 rounded-full text-slate-400 hover:text-rose-500 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors"
+                        title="Eliminar de recientes"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-            {/* Profesionales sugeridos */}
-            {matchingProfessionals.length > 0 && (
-              <div className="p-2">
-                <div className="px-3 py-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Profesionales en Bahía Blanca
-                </div>
-                {matchingProfessionals.map((pro, idx) => {
-                  const globalIndex = matchingProfessions.length + idx;
-                  const isHighlighted = highlightedIndex === globalIndex;
-                  const isVip = isVipActive(pro.profesionalInfo);
-                  return (
-                    <button
-                      key={pro.uid}
-                      type="button"
-                      onClick={() => {
-                        onSelectProfessional(pro);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors ${
-                        isHighlighted 
-                          ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300' 
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="relative">
-                          <img
-                            src={pro.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pro.nombre)}`}
-                            alt={pro.nombre}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                          />
-                          {isVip && (
-                            <span className="absolute -bottom-1 -right-1 bg-amber-400 p-0.5 rounded-full text-slate-950">
-                              <Crown size={9} />
+          {/* Autocomplete suggestions when user types */}
+          {cleanTerm.length > 0 && allSuggestions.length > 0 && (
+            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+              {/* Profesiones sugeridas */}
+              {matchingProfessions.length > 0 && (
+                <div className="p-2">
+                  <div className="px-3 py-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Profesiones y Servicios
+                  </div>
+                  {matchingProfessions.map((prof, index) => {
+                    const Icon = prof.icon;
+                    const isHighlighted = highlightedIndex === index;
+                    return (
+                      <button
+                        key={prof.name}
+                        type="button"
+                        onClick={() => {
+                          onSelectProfession(prof.name);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors ${
+                          isHighlighted 
+                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300' 
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                            <Icon size={15} />
+                          </div>
+                          <div>
+                            <span className="font-semibold text-sm">{prof.name}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">
+                              ({prof.category})
                             </span>
-                          )}
+                          </div>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-sm">{pro.nombre}</span>
+                        <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Profesionales sugeridos con CachedImage lazy */}
+              {matchingProfessionals.length > 0 && (
+                <div className="p-2">
+                  <div className="px-3 py-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Profesionales en Bahía Blanca
+                  </div>
+                  {matchingProfessionals.map((pro, idx) => {
+                    const globalIndex = matchingProfessions.length + idx;
+                    const isHighlighted = highlightedIndex === globalIndex;
+                    const isVip = isVipActive(pro.profesionalInfo);
+                    return (
+                      <button
+                        key={pro.uid}
+                        type="button"
+                        onClick={() => {
+                          onSelectProfessional(pro);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors ${
+                          isHighlighted 
+                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300' 
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="relative">
+                            <CachedImage
+                              src={pro.fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pro.nombre)}`}
+                              alt={pro.nombre}
+                              className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                              containerClassName="w-8 h-8 rounded-full"
+                              loading="lazy"
+                            />
                             {isVip && (
-                              <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.2 rounded">
-                                VIP
+                              <span className="absolute -bottom-1 -right-1 bg-amber-400 p-0.5 rounded-full text-slate-950">
+                                <Crown size={9} />
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {pro.profesionalInfo?.rubro || 'Profesional'}
-                            {pro.zona ? ` • ${pro.zona}` : ''}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-sm">{pro.nombre}</span>
+                              {isVip && (
+                                <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.2 rounded">
+                                  VIP
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {pro.profesionalInfo?.rubro || 'Profesional'}
+                              {pro.zona ? ` • ${pro.zona}` : ''}
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      {pro.profesionalInfo?.ratingAvg ? (
-                        <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
-                          <Star size={12} className="fill-amber-400" />
-                          <span>{pro.profesionalInfo.ratingAvg.toFixed(1)}</span>
-                        </div>
-                      ) : (
-                        <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                        {pro.profesionalInfo?.ratingAvg ? (
+                          <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                            <Star size={12} className="fill-amber-400" />
+                            <span>{pro.profesionalInfo.ratingAvg.toFixed(1)}</span>
+                          </div>
+                        ) : (
+                          <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
