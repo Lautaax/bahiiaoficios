@@ -12,6 +12,7 @@ import { ZONAS } from '../constants';
 import { analyticsService } from '../services/analyticsService';
 import { useAuth } from '../context/AuthContext';
 import { userSearchService } from '../services/userSearchService';
+import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { 
   getLocalSearchHistory, 
   saveLocalSearchQuery, 
@@ -40,9 +41,16 @@ export function Search() {
   // Local Search History State
   const [searchHistory, setSearchHistory] = useState<string[]>(() => getLocalSearchHistory());
 
-  // Voice search state
-  const [isListening, setIsListening] = useState(false);
-  const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
+  // Voice Search Hook - explicitly prompts for microphone access ONLY when user clicks the mic button
+  const { isListening, speechFeedback, toggleListening } = useVoiceSearch({
+    onResult: (transcript) => {
+      const cleaned = transcript.trim();
+      setSearchInput(cleaned);
+      const updated = saveLocalSearchQuery(cleaned);
+      setSearchHistory(updated);
+      setSearchParams({ q: cleaned, category: categorySlug, zona: selectedZona, rating: minRating > 0 ? minRating.toString() : '' });
+    }
+  });
 
   // Sync search input when url query changes
   useEffect(() => {
@@ -208,92 +216,6 @@ export function Search() {
     navigate(`/profesional/${pro.slug || pro.uid}`);
   };
 
-  // Web Speech API Voice Search with explicit permission request on click
-  const handleVoiceSearch = async () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      setSpeechFeedback("Tu navegador no soporta búsqueda por voz. Recomendamos Google Chrome.");
-      setTimeout(() => setSpeechFeedback(null), 4000);
-      return;
-    }
-
-    if (isListening) {
-      setIsListening(false);
-      setSpeechFeedback(null);
-      return;
-    }
-
-    // Ask for microphone access ONLY when the user clicks the microphone button
-    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Immediately release audio track so SpeechRecognition can take over
-        stream.getTracks().forEach(track => track.stop());
-      } catch (err: any) {
-        console.warn("Microphone access denied:", err);
-        setIsListening(false);
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setSpeechFeedback("Permiso de micrófono no otorgado. Habilitá el micrófono en tu navegador.");
-        } else {
-          setSpeechFeedback("No se pudo acceder al micrófono del dispositivo.");
-        }
-        setTimeout(() => setSpeechFeedback(null), 4500);
-        return;
-      }
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'es-AR';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setSpeechFeedback("Escuchando... Decí qué rubro o servicio buscás (ej: Electricista, Plomero)");
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          const cleaned = transcript.trim();
-          setSearchInput(cleaned);
-          const updated = saveLocalSearchQuery(cleaned);
-          setSearchHistory(updated);
-          setSearchParams({ q: cleaned, category: categorySlug });
-          setSpeechFeedback(`Buscando "${cleaned}"...`);
-          setTimeout(() => setSpeechFeedback(null), 2500);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn("Speech recognition error:", event.error);
-        setIsListening(false);
-        if (event.error === 'not-allowed') {
-          setSpeechFeedback("Permiso de micrófono no otorgado.");
-        } else if (event.error === 'no-speech') {
-          setSpeechFeedback("No se detectó audio. Por favor intentá de nuevo.");
-        } else {
-          setSpeechFeedback("No se pudo reconocer la voz.");
-        }
-        setTimeout(() => setSpeechFeedback(null), 3500);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.error("Error starting speech recognition:", err);
-      setIsListening(false);
-      setSpeechFeedback("Error al iniciar el micrófono.");
-      setTimeout(() => setSpeechFeedback(null), 3000);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors">
       {/* Search Header */}
@@ -320,12 +242,12 @@ export function Search() {
                 inputClassName="w-full pl-10 pr-12 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 outline-none text-sm transition-all"
               />
 
-              {/* Botón de Búsqueda por Voz */}
+              {/* Botón de Búsqueda por Voz - pide permiso SOLO al hacer clic */}
               <button
                 type="button"
-                onClick={handleVoiceSearch}
+                onClick={toggleListening}
                 aria-label={isListening ? "Detener búsqueda por voz" : "Buscar por voz"}
-                title={isListening ? "Escuchando..." : "Buscar por voz (Web Speech API)"}
+                title={isListening ? "Escuchando... Haz clic para detener" : "Buscar por voz (dictar búsqueda)"}
                 className={`absolute right-2.5 z-10 p-1.5 rounded-lg transition-all ${
                   isListening
                     ? 'bg-rose-500 text-white animate-pulse shadow-md ring-2 ring-rose-400'

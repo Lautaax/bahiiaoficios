@@ -389,7 +389,7 @@ export const PublicProfile: React.FC = () => {
   const badges = getProfessionalBadges(professional);
 
   const todayIndex = new Date().getDay();
-  const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
+  const worksToday = Array.isArray(diasDisponibilidad) ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
   const DAYS_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
   const profileUrl = window.location.href;
@@ -545,7 +545,7 @@ export const PublicProfile: React.FC = () => {
                   )}
                 </div>
                 
-                {diasDisponibilidad && (
+                {Array.isArray(diasDisponibilidad) && (
                   <div className="mt-4 flex flex-wrap justify-center gap-1">
                     {DAYS_NAMES.map((d, index) => (
                       <span 

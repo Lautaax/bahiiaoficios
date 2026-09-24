@@ -11,10 +11,6 @@ export const NotificationListener: React.FC = () => {
   const initialLoadRef = useRef(true);
   const initialChatsLoadRef = useRef(true);
 
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
-
   // Automatic check for pending quotes older than 24h & photo incentive for workers with 0 views
   useEffect(() => {
     // Run throttled check on mount and whenever user status changes

@@ -191,7 +191,7 @@ function Navbar() {
                     </div>
                   )}
                 </div>
-                <span className="hidden lg:inline">{currentUser.nombre.split(' ')[0]}</span>
+                <span className="hidden lg:inline">{currentUser?.nombre ? currentUser.nombre.split(' ')[0] : 'Mi Cuenta'}</span>
               </Link>
               
               <div className="flex items-center gap-1">

@@ -13,40 +13,34 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ProfessionalCard } from './ProfessionalCard';
-import { WeeklyRecommendedCarousel } from './WeeklyRecommendedCarousel';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { CachedImage } from './CachedImage';
 import { preloadImages } from '../utils/imageCache';
 import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { userSearchService } from '../services/userSearchService';
+import { HomeQuickJobPost } from './HomeQuickJobPost';
 
 export function Home() {
   const { currentUser } = useAuth();
   const [categories, setCategories] = useState<any[]>([]);
-  const [featuredPros, setFeaturedPros] = useState<User[]>([]);
   const [allPros, setAllPros] = useState<User[]>([]);
-  const [currentProIndex, setCurrentProIndex] = useState(0);
-  const [cardsPerPage, setCardsPerPage] = useState(4);
   const [ads, setAds] = useState<Ad[]>([]);
 
   const [adsPerPage, setAdsPerPage] = useState(3);
 
   useEffect(() => {
-    const updateCardsPerPage = () => {
+    const updateAdsPerPage = () => {
       if (window.innerWidth < 640) {
-        setCardsPerPage(1);
         setAdsPerPage(1);
       } else if (window.innerWidth < 1024) {
-        setCardsPerPage(2);
         setAdsPerPage(2);
       } else {
-        setCardsPerPage(4);
         setAdsPerPage(3);
       }
     };
-    updateCardsPerPage();
-    window.addEventListener('resize', updateCardsPerPage);
-    return () => window.removeEventListener('resize', updateCardsPerPage);
+    updateAdsPerPage();
+    window.addEventListener('resize', updateAdsPerPage);
+    return () => window.removeEventListener('resize', updateAdsPerPage);
   }, []);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -179,7 +173,6 @@ export function Home() {
         });
 
         const selectedPros = sortedPros.slice(0, 8);
-        setFeaturedPros(selectedPros);
         
         // Precargar fotos de perfil y portadas en segundo plano
         const imagesToWarm = selectedPros.flatMap(p => [
@@ -511,6 +504,9 @@ export function Home() {
         </div>
       </div>
 
+      {/* Componente de Acceso Rápido para Publicar Trabajos Solicitados */}
+      <HomeQuickJobPost />
+
       {/* Categories Grid */}
       <div className="bg-slate-50 dark:bg-slate-900/50 py-16 border-b border-slate-200/80 dark:border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -612,9 +608,9 @@ export function Home() {
             </div>
 
             {/* Grilla de profesionales sugeridos con insignias */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {personalizedData.suggestedPros.slice(0, 4).map((pro) => (
-                <div key={pro.uid} className="h-full">
+            <div id="onboarding-featured-pros" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {personalizedData.suggestedPros.slice(0, 4).map((pro, index) => (
+                <div key={pro.uid} id={index === 0 ? "onboarding-chat-step" : undefined} className="h-full">
                   <ProfessionalCard professional={pro} />
                 </div>
               ))}
@@ -794,79 +790,7 @@ export function Home() {
         </div>
       )}
 
-      {/* Rotación Destacada: Recomendados de la Semana en Bahía Blanca */}
-      {allPros.length > 0 && (
-        <WeeklyRecommendedCarousel professionals={allPros} />
-      )}
 
-      {/* Featured Professionals Section */}
-      {featuredPros.length > 0 && (
-        <div className="bg-slate-50 dark:bg-slate-900/50 py-16 overflow-hidden border-b border-slate-200/80 dark:border-slate-800/80">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-              <div className="text-left">
-                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-950/50 px-3 py-1 rounded-full mb-2 border border-amber-200/60 dark:border-amber-800/50">
-                  <Star size={13} className="fill-amber-500 text-amber-500" />
-                  Recomendados de la Ciudad
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  Profesionales Destacados
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Especialistas calificados y con mejor reputación en Bahía Blanca
-                </p>
-              </div>
-              {featuredPros.length > cardsPerPage && (
-                <div className="flex gap-2 self-end sm:self-auto">
-                  <button 
-                    onClick={() => setCurrentProIndex((prev) => Math.max(0, prev - 1))}
-                    disabled={currentProIndex === 0}
-                    aria-label="Anterior profesional"
-                    className={`p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm transition-all ${currentProIndex === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 active:scale-95'}`}
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button 
-                    onClick={() => setCurrentProIndex((prev) => Math.min(featuredPros.length - cardsPerPage, prev + 1))}
-                    disabled={currentProIndex >= featuredPros.length - cardsPerPage}
-                    aria-label="Siguiente profesional"
-                    className={`p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm transition-all ${currentProIndex >= featuredPros.length - cardsPerPage ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 active:scale-95'}`}
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            <div id="onboarding-featured-pros" className="relative overflow-hidden">
-              <motion.div 
-                className="flex"
-                animate={{ x: `-${currentProIndex * (100 / cardsPerPage)}%` }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              >
-                {featuredPros.map((pro, index) => (
-                  <div 
-                    key={pro.uid} 
-                    id={index === 0 ? "onboarding-chat-step" : undefined}
-                    className="w-full sm:w-1/2 lg:w-1/4 flex-shrink-0 px-2.5"
-                  >
-                    <ProfessionalCard professional={pro} />
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-            
-            <div className="mt-12 text-center">
-              <Link 
-                to="/dashboard" 
-                className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-8 py-3.5 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-98 text-sm"
-              >
-                Ver todos los profesionales de Bahía Blanca <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Beneficios Exclusivos y Publicidad para Negocios (Side by Side) */}
       <div className="bg-white dark:bg-slate-950 py-16">

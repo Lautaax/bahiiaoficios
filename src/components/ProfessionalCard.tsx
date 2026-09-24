@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../types';
-import { Star, MapPin, Phone, MessageSquare, MessageCircle, Mail, X, Briefcase, Heart, Share2, Check, BadgeCheck } from 'lucide-react';
+import { Star, MapPin, Phone, MessageSquare, MessageCircle, Mail, X, Briefcase, Heart, Share2, Check, BadgeCheck, Clock, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -117,7 +117,8 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
   const isVip = isVipActive(professional.profesionalInfo);
 
   const todayIndex = new Date().getDay();
-  const worksToday = diasDisponibilidad ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
+  const worksToday = Array.isArray(diasDisponibilidad) ? diasDisponibilidad.includes(todayIndex) : [1, 2, 3, 4, 5].includes(todayIndex);
+  const isAvailableNow = Boolean(disponibilidadInmediata || worksToday || haceUrgencias);
 
   // Find profession icon
   const professionData = PROFESSIONS.find(p => p.name === rubro);
@@ -252,27 +253,48 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
               <CachedImage 
                 src={fotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`} 
                 alt={nombre} 
-                className={`w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-800 bg-white dark:bg-slate-700 transition-transform group-hover:scale-105 ${isVip ? 'ring-1 ring-amber-400' : ''}`}
+                className={`w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-800 bg-white dark:bg-slate-700 transition-transform group-hover:scale-105 ${isVip ? 'ring-2 ring-amber-400' : ''}`}
                 containerClassName="rounded-full"
                 loading="lazy"
               />
+              {/* Indicador visual de 'disponible ahora' o 'en línea' en el avatar */}
+              {isAvailableNow && (
+                <span 
+                  className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-800 flex items-center justify-center shadow-xs" 
+                  title="En línea / Disponible ahora"
+                >
+                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                </span>
+              )}
             </Link>
 
-            {/* Single clean priority status pill in neutral style */}
-            <div>
-              {haceUrgencias ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  Urgencias
+            {/* Indicador visual de 'disponible ahora' o 'en línea' para inmediatez de contratación */}
+            <div className="flex flex-col items-end gap-1">
+              {isAvailableNow ? (
+                <span 
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/90 shadow-2xs"
+                  title="En línea y disponible para contratar hoy en Bahía Blanca"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>Disponible ahora</span>
                 </span>
-              ) : disponibilidadInmediata || worksToday ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Disponible
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                  <Clock size={11} className="text-slate-400" />
+                  <span>En línea pronto</span>
+                </span>
+              )}
+              {haceUrgencias ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200/70 dark:border-rose-900/60">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                  24hs Urgencias
                 </span>
               ) : matriculado ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-                  <BadgeCheck size={12} className="text-slate-500 dark:text-slate-400" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-750 dark:text-slate-300">
+                  <BadgeCheck size={11} className="text-indigo-500 dark:text-indigo-400" />
                   Matriculado
                 </span>
               ) : null}

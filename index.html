@@ -84,22 +84,32 @@
       gtag('js', new Date());
       gtag('config', 'G-XXXXXXXXXX');
     </script>
+
+    <!-- Failsafe: Clean up conflicting service workers & unblock white-screen state -->
+    <script>
+      (function() {
+        try {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for (var i = 0; i < registrations.length; i++) {
+                registrations[i].unregister();
+              }
+            }).catch(function(e) {});
+          }
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (var j = 0; j < names.length; j++) {
+                if (names[j].indexOf('workbox') !== -1 || names[j].indexOf('pwa') !== -1) {
+                  caches.delete(names[j]);
+                }
+              }
+            }).catch(function(e) {});
+          }
+        } catch (err) {}
+      })();
+    </script>
   </head>
   <body>
-    <script>
-      // Prevent "Cannot set property fetch of #<Window> which has only a getter" error safely
-      try {
-        if (typeof window !== 'undefined' && window.fetch) {
-          Object.defineProperty(window, 'fetch', {
-            value: window.fetch,
-            writable: true,
-            configurable: true
-          });
-        }
-      } catch (e) {
-        // Ignore if fetch cannot be redefined in this environment
-      }
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

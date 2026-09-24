@@ -12,16 +12,45 @@ import { GoogleGenAI } from "@google/genai";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault()
-    });
-    console.log("Firebase Admin initialized successfully");
-  } catch (error) {
-    console.error("Failed to initialize Firebase Admin:", error);
+// Firebase Admin Management
+let serverDb: admin.firestore.Firestore | null = null;
+let isServerFirestoreAvailable = false;
+
+try {
+  const saEnv = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (saEnv && saEnv.trim().startsWith('{')) {
+    const creds = JSON.parse(saEnv);
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(creds),
+        projectId: creds.project_id || process.env.VITE_FIREBASE_PROJECT_ID || 'bahia-oficios'
+      });
+    }
+    serverDb = admin.firestore();
+    isServerFirestoreAvailable = true;
+    console.log("Firebase Admin initialized with custom service account credentials");
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'bahia-oficios'
+      });
+    }
+    serverDb = admin.firestore();
+    isServerFirestoreAvailable = true;
+    console.log("Firebase Admin initialized with GOOGLE_APPLICATION_CREDENTIALS");
+  } else {
+    // In preview container environments without service account JSON, Application Default Credentials
+    // point to the internal container where Cloud Firestore API is not used.
+    // The web application uses the Firebase Client SDK directly for all Firestore operations.
+    console.log("Firebase Admin: Container running in client-database mode (Firebase Client SDK handles Firestore).");
   }
+} catch (error) {
+  console.warn("Firebase Admin initialization skipped:", error);
+}
+
+function getServerDb(): admin.firestore.Firestore | null {
+  return isServerFirestoreAvailable && serverDb ? serverDb : null;
 }
 
 // Mercado Pago Client Management
@@ -172,16 +201,18 @@ async function startServer() {
       });
 
       if (response.data && response.data.access_token) {
-        const db = admin.firestore();
-        await db.collection('usuarios').doc(userId).update({
-          mpConnect: {
-            access_token: response.data.access_token,
-            refresh_token: response.data.refresh_token,
-            public_key: response.data.public_key,
-            user_id: response.data.user_id,
-            linkedAt: admin.firestore.FieldValue.serverTimestamp()
-          }
-        });
+        const db = getServerDb();
+        if (db) {
+          await db.collection('usuarios').doc(userId).update({
+            mpConnect: {
+              access_token: response.data.access_token,
+              refresh_token: response.data.refresh_token,
+              public_key: response.data.public_key,
+              user_id: response.data.user_id,
+              linkedAt: admin.firestore.FieldValue.serverTimestamp()
+            }
+          });
+        }
         
         // Redirect back to profile with success
         res.redirect(`${baseUrl}/profile?mp_connected=true`);
@@ -229,14 +260,16 @@ async function startServer() {
       
       // If it's a deposit, we need to use the professional's access token
       if (isDeposit && metadata?.profesional_id) {
-        const db = admin.firestore();
-        const profDoc = await db.collection('usuarios').doc(metadata.profesional_id).get();
-        if (profDoc.exists) {
-          const profData = profDoc.data();
-          if (profData?.mpConnect?.access_token) {
-            client = new MercadoPagoConfig({ accessToken: profData.mpConnect.access_token });
-          } else {
-            console.warn(`Professional ${metadata.profesional_id} does not have MP Connect linked. Using platform token.`);
+        const db = getServerDb();
+        if (db) {
+          const profDoc = await db.collection('usuarios').doc(metadata.profesional_id).get();
+          if (profDoc.exists) {
+            const profData = profDoc.data();
+            if (profData?.mpConnect?.access_token) {
+              client = new MercadoPagoConfig({ accessToken: profData.mpConnect.access_token });
+            } else {
+              console.warn(`Professional ${metadata.profesional_id} does not have MP Connect linked. Using platform token.`);
+            }
           }
         }
       }
@@ -312,29 +345,31 @@ async function startServer() {
           
           if (type === 'deposit' && request_id && profesional_id) {
             try {
-              const db = admin.firestore();
-              const requestRef = db.collection('quoteRequests').doc(request_id);
-              
-              // We need to update the specific response inside the array
-              // Since we can't easily update a specific array element in Firestore without reading it first,
-              // we read, modify, and write back.
-              const docSnap = await requestRef.get();
-              if (docSnap.exists) {
-                const data = docSnap.data();
-                if (data && data.respuestas) {
-                  const updatedRespuestas = data.respuestas.map((resp: any) => {
-                    if (resp.profesionalId === profesional_id) {
-                      return { ...resp, depositPaid: true, paymentId: id };
-                    }
-                    return resp;
-                  });
-                  
-                  await requestRef.update({
-                    respuestas: updatedRespuestas,
-                    estado: 'seña_pagada',
-                    profesionalSeleccionado: profesional_id
-                  });
-                  console.log(`Deposit paid for request ${request_id} to professional ${profesional_id}`);
+              const db = getServerDb();
+              if (db) {
+                const requestRef = db.collection('quoteRequests').doc(request_id);
+                
+                // We need to update the specific response inside the array
+                // Since we can't easily update a specific array element in Firestore without reading it first,
+                // we read, modify, and write back.
+                const docSnap = await requestRef.get();
+                if (docSnap.exists) {
+                  const data = docSnap.data();
+                  if (data && data.respuestas) {
+                    const updatedRespuestas = data.respuestas.map((resp: any) => {
+                      if (resp.profesionalId === profesional_id) {
+                        return { ...resp, depositPaid: true, paymentId: id };
+                      }
+                      return resp;
+                    });
+                    
+                    await requestRef.update({
+                      respuestas: updatedRespuestas,
+                      estado: 'seña_pagada',
+                      profesionalSeleccionado: profesional_id
+                    });
+                    console.log(`Deposit paid for request ${request_id} to professional ${profesional_id}`);
+                  }
                 }
               }
             } catch (dbError) {
@@ -342,68 +377,72 @@ async function startServer() {
             }
           } else if (type === 'ad_payment' && adId && months) {
             try {
-              const db = admin.firestore();
-              const adRef = db.collection('ads').doc(adId);
-              
-              const now = new Date();
-              const expirationDate = new Date(now.setMonth(now.getMonth() + Number(months)));
-              
-              await adRef.update({
-                paymentStatus: 'approved',
-                paymentId: id,
-                expirationDate: admin.firestore.Timestamp.fromDate(expirationDate),
-                active: true, // Activate ad after payment
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-              });
-              
-              console.log(`Ad ${adId} paid and activated until ${expirationDate}`);
+              const db = getServerDb();
+              if (db) {
+                const adRef = db.collection('ads').doc(adId);
+                
+                const now = new Date();
+                const expirationDate = new Date(now.setMonth(now.getMonth() + Number(months)));
+                
+                await adRef.update({
+                  paymentStatus: 'approved',
+                  paymentId: id,
+                  expirationDate: admin.firestore.Timestamp.fromDate(expirationDate),
+                  active: true, // Activate ad after payment
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log(`Ad ${adId} paid and activated until ${expirationDate}`);
+              }
             } catch (dbError) {
               console.error("Error updating Firestore for ad:", dbError);
             }
           } else if (user_id && months) {
             try {
-              const db = admin.firestore();
-              const userRef = db.collection('usuarios').doc(user_id);
-              const userDoc = await userRef.get();
-              
-              if (userDoc.exists) {
-                const userData = userDoc.data();
-                const currentVip = userData?.profesionalInfo?.isVip || false;
-                const currentExpiration = userData?.profesionalInfo?.vipExpiration;
+              const db = getServerDb();
+              if (db) {
+                const userRef = db.collection('usuarios').doc(user_id);
+                const userDoc = await userRef.get();
                 
-                let baseDate = new Date();
-                
-                // If user is already VIP and expiration is in the future, extend from that date
-                if (currentVip && currentExpiration) {
-                  const currentExpDate = currentExpiration.toDate();
-                  if (currentExpDate > baseDate) {
-                    baseDate = currentExpDate;
+                if (userDoc.exists) {
+                  const userData = userDoc.data();
+                  const currentVip = userData?.profesionalInfo?.isVip || false;
+                  const currentExpiration = userData?.profesionalInfo?.vipExpiration;
+                  
+                  let baseDate = new Date();
+                  
+                  // If user is already VIP and expiration is in the future, extend from that date
+                  if (currentVip && currentExpiration) {
+                    const currentExpDate = currentExpiration.toDate();
+                    if (currentExpDate > baseDate) {
+                      baseDate = currentExpDate;
+                    }
                   }
-                }
-                
-                const expirationDate = new Date(baseDate.setMonth(baseDate.getMonth() + Number(months)));
-                
-                await userRef.update({
-                  'profesionalInfo.isVip': true,
-                  'profesionalInfo.vipExpiration': admin.firestore.Timestamp.fromDate(expirationDate),
-                  'updatedAt': admin.firestore.FieldValue.serverTimestamp()
-                });
-                
-                // Registrar comprobante en historial de pagos
-                await db.collection('pagos').add({
-                  userId: user_id,
-                  paymentId: id,
-                  type: 'vip_subscription',
-                  months: Number(months),
-                  amount: (payment as any).transaction_amount || 0,
-                  status: 'approved',
-                  createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                  expirationDate: admin.firestore.Timestamp.fromDate(expirationDate),
-                  statementDescriptor: (payment as any).statement_descriptor || 'TodoServicios VIP',
-                  planTitle: `Membresía VIP (${months} mes${Number(months) > 1 ? 'es' : ''})`
-                });
+                  
+                  const expirationDate = new Date(baseDate.setMonth(baseDate.getMonth() + Number(months)));
+                  
+                  await userRef.update({
+                    'profesionalInfo.isVip': true,
+                    'profesionalInfo.vipExpiration': admin.firestore.Timestamp.fromDate(expirationDate),
+                    'updatedAt': admin.firestore.FieldValue.serverTimestamp()
+                  });
+                  
+                  // Registrar comprobante en historial de pagos
+                  await db.collection('pagos').add({
+                    userId: user_id,
+                    paymentId: id,
+                    type: 'vip_subscription',
+                    months: Number(months),
+                    amount: (payment as any).transaction_amount || 0,
+                    status: 'approved',
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    expirationDate: admin.firestore.Timestamp.fromDate(expirationDate),
+                    statementDescriptor: (payment as any).statement_descriptor || 'TodoServicios VIP',
+                    planTitle: `Membresía VIP (${months} mes${Number(months) > 1 ? 'es' : ''})`
+                  });
 
-                console.log(`User ${user_id} upgraded/extended VIP until ${expirationDate} and logged to pagos`);
+                  console.log(`User ${user_id} upgraded/extended VIP until ${expirationDate} and logged to pagos`);
+                }
               }
             } catch (dbError) {
               console.error("Error updating Firestore:", dbError);
@@ -429,8 +468,12 @@ async function startServer() {
     const { uid } = req.body;
     if (!uid) return res.status(400).json({ error: "Falta uid" });
 
+    const db = getServerDb();
+    if (!db) {
+      return res.json({ isVip: false, status: 'client_managed' });
+    }
+
     try {
-      const db = admin.firestore();
       const userRef = db.collection('usuarios').doc(uid);
       const userDoc = await userRef.get();
 
@@ -470,8 +513,12 @@ async function startServer() {
 
   // Endpoint para depurar y sincronizar masivamente todos los VIPs caducados
   app.post("/api/sync-vips", async (req, res) => {
+    const db = getServerDb();
+    if (!db) {
+      return res.json({ success: true, expiredCount: 0, message: "Client-side VIP sync enabled" });
+    }
+
     try {
-      const db = admin.firestore();
       const snapshot = await db.collection('usuarios')
         .where('profesionalInfo.isVip', '==', true)
         .get();
@@ -891,7 +938,7 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
   // Core Daily Churn Analysis Function
   async function performDailyChurnAnalysis(force = false, providedPros?: any[], providedJobs?: any[]) {
     const todayStr = new Date().toISOString().split('T')[0];
-    const db = admin.firestore();
+    const db = getServerDb();
 
     // 1. Check memory cache or Firestore if not forcing refresh
     if (!force) {
@@ -900,17 +947,19 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
         return { fromCache: true, audit: memoryCachedAudit };
       }
 
-      try {
-        const auditDoc = await db.collection('daily_ai_audits').doc(todayStr).get();
-        if (auditDoc.exists) {
-          const cachedData = auditDoc.data();
-          memoryCachedAudit = cachedData;
-          memoryCachedDate = todayStr;
-          console.log(`[Daily AI Churn Audit] Returning cached report for ${todayStr}`);
-          return { fromCache: true, audit: cachedData };
+      if (db) {
+        try {
+          const auditDoc = await db.collection('daily_ai_audits').doc(todayStr).get();
+          if (auditDoc.exists) {
+            const cachedData = auditDoc.data();
+            memoryCachedAudit = cachedData;
+            memoryCachedDate = todayStr;
+            console.log(`[Daily AI Churn Audit] Returning cached report for ${todayStr}`);
+            return { fromCache: true, audit: cachedData };
+          }
+        } catch (cacheErr) {
+          console.warn("[Daily AI Churn Audit] Could not read Firestore cache:", cacheErr);
         }
-      } catch (cacheErr) {
-        console.warn("[Daily AI Churn Audit] Could not read Firestore cache:", cacheErr);
       }
     }
 
@@ -921,7 +970,7 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
     let prosData: any[] = [];
     const openJobsByRubro: Record<string, number> = {};
 
-    // 2. Obtain Data (from client payload if provided, or from server Firestore)
+    // 2. Obtain Data (from client payload if provided, or from server Firestore if available)
     if (Array.isArray(providedPros) && providedPros.length > 0) {
       console.log(`[Daily AI Churn Audit] Using ${providedPros.length} professionals passed in request payload`);
       prosData = providedPros;
@@ -933,7 +982,7 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
           }
         });
       }
-    } else {
+    } else if (db) {
       try {
         const [usersSnap, jobsSnap] = await Promise.all([
           db.collection('usuarios').get(),
@@ -1003,8 +1052,10 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
           }
         });
       } catch (fetchErr) {
-        console.warn("[Daily AI Churn Audit] Server Firestore read encountered an issue, awaiting client data or fallback:", fetchErr);
+        console.warn("[Daily AI Churn Audit] Server Firestore read encountered an issue:", fetchErr);
       }
+    } else {
+      console.log("[Daily AI Churn Audit] Running in client-side data mode (awaiting or generating baseline).");
     }
 
     // Sort prosData by highest days inactive
@@ -1150,14 +1201,16 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
     memoryCachedAudit = auditReport;
     memoryCachedDate = todayStr;
 
-    try {
-      await db.collection('daily_ai_audits').doc(todayStr).set({
-        ...auditReport,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      console.log(`[Daily AI Churn Audit] Saved report ${todayStr} to Firestore`);
-    } catch (saveErr) {
-      console.warn("[Daily AI Churn Audit] Firestore write not available in container, cached in memory successfully.");
+    if (db) {
+      try {
+        await db.collection('daily_ai_audits').doc(todayStr).set({
+          ...auditReport,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        console.log(`[Daily AI Churn Audit] Saved report ${todayStr} to Firestore`);
+      } catch (saveErr) {
+        console.warn("[Daily AI Churn Audit] Could not write to server Firestore:", saveErr);
+      }
     }
 
     return { fromCache: false, audit: auditReport };
@@ -1321,7 +1374,7 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
   async function performCategoryPromotionAnalysis(force = false, categoriesInput?: any[]): Promise<any> {
     const todayStr = new Date().toISOString().split('T')[0];
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const db = admin.firestore();
+    const db = getServerDb();
 
     // 1. Check in-memory cache if not forced
     if (!force && memoryCachedPromotionInsights && memoryCachedPromotionDate === todayStr) {
@@ -1332,7 +1385,7 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
     // 2. Aggregate category data
     let categoriesMetrics = categoriesInput || [];
 
-    if (!categoriesMetrics || categoriesMetrics.length === 0) {
+    if ((!categoriesMetrics || categoriesMetrics.length === 0) && db) {
       try {
         const usersSnap = await db.collection('usuarios').get();
         const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1511,13 +1564,15 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
     memoryCachedPromotionDate = todayStr;
 
     // Optional Firestore save
-    try {
-      await db.collection('ai_promotion_insights').doc(todayStr).set({
-        ...report,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-    } catch (saveErr) {
-      console.warn("[AI Promotion Insights] Firestore write skipped, memory cache active.");
+    if (db) {
+      try {
+        await db.collection('ai_promotion_insights').doc(todayStr).set({
+          ...report,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (saveErr) {
+        console.warn("[AI Promotion Insights] Could not write to server Firestore:", saveErr);
+      }
     }
 
     return { fromCache: false, report };
