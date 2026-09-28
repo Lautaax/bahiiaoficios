@@ -39,6 +39,8 @@ export interface ProfesionalInfo {
   fotosTrabajosDetalle?: { url: string; descripcion: string }[];
   fotoPortada?: string;
   onboardingCompleted?: boolean;
+  precioMinimo?: number | string;
+  especialidad?: string;
 }
 
 export interface User {
