@@ -465,12 +465,28 @@ async function startServer() {
 
   // Endpoint para verificar y sincronizar el estado VIP de un usuario
   app.post("/api/verify-vip-status", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No autorizado: Token de autenticación requerido" });
+    }
+    const token = authHeader.substring(7);
+
     const { uid } = req.body;
     if (!uid) return res.status(400).json({ error: "Falta uid" });
 
     const db = getServerDb();
-    if (!db) {
+    if (!db || !admin.apps.length) {
       return res.json({ isVip: false, status: 'client_managed' });
+    }
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      if (decodedToken.uid !== uid) {
+        return res.status(403).json({ error: "Acceso prohibido: No tiene permisos para este usuario" });
+      }
+    } catch (authErr: any) {
+      console.error("Error al verificar token en verify-vip-status:", authErr);
+      return res.status(401).json({ error: "Token de autenticación inválido o expirado" });
     }
 
     try {
