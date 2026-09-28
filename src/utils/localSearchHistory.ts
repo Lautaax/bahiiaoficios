@@ -4,6 +4,26 @@ const STORAGE_KEY = 'bahia_local_search_history';
 const MAX_HISTORY_ITEMS = 8;
 
 /**
+ * Helper to deduplicate array of strings case-insensitively while keeping first occurrence.
+ */
+function deduplicateItems(items: string[]): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      result.push(trimmed);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Retrieves the local search history from localStorage.
  */
 export function getLocalSearchHistory(): string[] {
@@ -12,7 +32,10 @@ export function getLocalSearchHistory(): string[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed.filter(item => typeof item === 'string' && item.trim().length > 0);
+      const validStrings = parsed.filter(
+        (item): item is string => typeof item === 'string' && item.trim().length > 0
+      );
+      return deduplicateItems(validStrings);
     }
   } catch (error) {
     console.warn('[localSearchHistory] Error reading history:', error);
@@ -32,9 +55,9 @@ export function saveLocalSearchQuery(query: string): string[] {
 
   try {
     const current = getLocalSearchHistory();
-    // Filter out duplicate (case-insensitive)
+    // Filter out any existing case-insensitive matches of the new query
     const filtered = current.filter(item => item.toLowerCase() !== trimmed.toLowerCase());
-    // Prepend new item
+    // Prepend new item and limit
     const updated = [trimmed, ...filtered].slice(0, MAX_HISTORY_ITEMS);
     safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;
@@ -50,7 +73,8 @@ export function saveLocalSearchQuery(query: string): string[] {
 export function removeLocalSearchQuery(query: string): string[] {
   try {
     const current = getLocalSearchHistory();
-    const updated = current.filter(item => item.toLowerCase() !== query.trim().toLowerCase());
+    const target = query.trim().toLowerCase();
+    const updated = current.filter(item => item.toLowerCase() !== target);
     safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;
   } catch (error) {
