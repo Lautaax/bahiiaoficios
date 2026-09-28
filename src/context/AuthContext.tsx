@@ -88,7 +88,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             setCurrentUser({ uid: firebaseUser.uid, ...userData, isNewUser: false, isAdmin: userData.isAdmin || isSuperAdmin });
           } else {
-            console.log('[FirebaseAuth] User document not found in Firestore, treating as new user');
             setCurrentUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
