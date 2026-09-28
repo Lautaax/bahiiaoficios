@@ -2,6 +2,7 @@ import express from 'express';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import admin from 'firebase-admin';
 import axios from 'axios';
+import crypto from 'crypto';
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,63 @@ if (!admin.apps.length) {
     console.log("Firebase Admin initialized");
   } catch (error) {
     console.error("Failed to initialize Firebase Admin:", error);
+  }
+}
+
+/**
+ * Validates MercadoPago Webhook x-signature header.
+ *
+ * Header format: ts=<timestamp>,v1=<hash>
+ * Manifest format: id:<data.id>;request-id:<x-request-id>;ts:<ts>;
+ */
+export function verifyMercadoPagoSignature(req: express.Request): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET || process.env.MP_SECRET_KEY;
+  if (!secret) {
+    console.warn("MP_WEBHOOK_SECRET is not configured. Skipping webhook signature validation in unconfigured environment.");
+    return true;
+  }
+
+  const xSignature = req.headers["x-signature"] as string | undefined;
+  const xRequestId = req.headers["x-request-id"] as string | undefined;
+
+  if (!xSignature) {
+    console.error("Webhook request missing x-signature header");
+    return false;
+  }
+
+  const parts = xSignature.split(",");
+  let ts: string | null = null;
+  let hashV1: string | null = null;
+
+  for (const part of parts) {
+    const [key, val] = part.trim().split("=");
+    if (key === "ts") ts = val;
+    if (key === "v1") hashV1 = val;
+  }
+
+  if (!ts || !hashV1) {
+    console.error("Invalid x-signature header format");
+    return false;
+  }
+
+  const dataId = (req.query["data.id"] as string) || (req.query.id as string) || req.body?.data?.id || req.body?.id || "";
+
+  const manifest = `id:${dataId};request-id:${xRequestId || ""};ts:${ts};`;
+
+  const computedHash = crypto.createHmac("sha256", secret).update(manifest).digest("hex");
+
+  try {
+    const computedBuffer = Buffer.from(computedHash, "hex");
+    const v1Buffer = Buffer.from(hashV1, "hex");
+
+    if (computedBuffer.length !== v1Buffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(computedBuffer, v1Buffer);
+  } catch (error) {
+    console.error("Error comparing signature hashes:", error);
+    return false;
   }
 }
 
@@ -140,9 +198,14 @@ app.post("/api/create_preference", async (req, res) => {
 });
 
 app.post("/api/webhook", async (req, res) => {
+    if (!verifyMercadoPagoSignature(req)) {
+      console.error("Unauthorized webhook request: invalid or missing signature");
+      return res.status(401).json({ error: "Invalid signature" });
+    }
+
     const { type, data } = req.body;
     const topic = req.body.topic || type;
-    const id = data?.id || req.body.data?.id;
+    const id = data?.id || req.body.data?.id || (req.query["data.id"] as string) || (req.query.id as string);
 
     try {
       if (topic === "payment" && id) {
