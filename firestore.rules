@@ -129,7 +129,7 @@ service cloud.firestore {
     }
 
     match /newsletter/{subscriberId} {
-      allow create: if true;
+      allow create: if isAuthenticated() && request.resource.data.email is string;
       allow read, update, delete: if isAdmin();
     }
 
