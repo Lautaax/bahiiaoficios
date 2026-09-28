@@ -5,7 +5,7 @@ import { User, Review } from '../types';
  */
 export function getLocalBusinessSchemaType(rubro?: string): string[] {
   if (!rubro) return ['LocalBusiness', 'ProfessionalService'];
-  const r = rubro.toLowerCase();
+  const r = rubro.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const types = ['LocalBusiness'];
 
@@ -19,7 +19,7 @@ export function getLocalBusinessSchemaType(rubro?: string): string[] {
     types.unshift('Locksmith');
   } else if (r.includes('pint')) {
     types.unshift('GeneralContractor');
-  } else if (r.includes('albañ') || r.includes('construc') || r.includes('reforma')) {
+  } else if (r.includes('alban') || r.includes('albañ') || r.includes('construc') || r.includes('reforma')) {
     types.unshift('GeneralContractor');
   } else if (r.includes('mecanic') || r.includes('taller') || r.includes('chapa') || r.includes('gomer')) {
     types.unshift('AutoRepair');
@@ -184,19 +184,44 @@ export function generateLocalBusinessSchema(
  * Utility to dynamically update head meta tags without requiring react-helmet
  */
 export function updateMetaTag(attributeName: string, attributeValue: string, content: string): void {
-  let element = document.querySelector(`meta[${attributeName}="${attributeValue}"]`);
+  if (typeof document === 'undefined' || !document.head) return;
+  if (!attributeName || !attributeValue) return;
+
+  let element: Element | null = null;
+
+  try {
+    const escapedAttr = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(attributeName) : attributeName;
+    const escapedVal = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(attributeValue) : attributeValue.replace(/"/g, '\\"');
+    element = document.querySelector(`meta[${escapedAttr}="${escapedVal}"]`);
+  } catch {
+    // Fallback if querySelector fails due to complex characters
+  }
+
+  if (!element) {
+    const metaElements = document.getElementsByTagName('meta');
+    for (let i = 0; i < metaElements.length; i++) {
+      if (metaElements[i].getAttribute(attributeName) === attributeValue) {
+        element = metaElements[i];
+        break;
+      }
+    }
+  }
+
   if (!element) {
     element = document.createElement('meta');
     element.setAttribute(attributeName, attributeValue);
     document.head.appendChild(element);
   }
-  element.setAttribute('content', content);
+  element.setAttribute('content', content ?? '');
 }
 
 /**
  * Utility to update or insert canonical link
  */
 export function updateCanonicalLink(url: string): void {
+  if (typeof document === 'undefined' || !document.head) return;
+  if (!url) return;
+
   let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
   if (!link) {
     link = document.createElement('link');
@@ -210,6 +235,9 @@ export function updateCanonicalLink(url: string): void {
  * Injects or updates a JSON-LD script tag in the document <head>
  */
 export function injectJsonLd(id: string, data: Record<string, any>): void {
+  if (typeof document === 'undefined' || !document.head) return;
+  if (!id) return;
+
   const scriptId = `json-ld-${id}`;
   let script = document.getElementById(scriptId) as HTMLScriptElement | null;
   if (!script) {
@@ -218,13 +246,16 @@ export function injectJsonLd(id: string, data: Record<string, any>): void {
     script.type = 'application/ld+json';
     document.head.appendChild(script);
   }
-  script.textContent = JSON.stringify(data, null, 2);
+  script.textContent = JSON.stringify(data ?? {}, null, 2);
 }
 
 /**
  * Removes a previously injected JSON-LD script from the document <head>
  */
 export function removeJsonLd(id: string): void {
+  if (typeof document === 'undefined') return;
+  if (!id) return;
+
   const scriptId = `json-ld-${id}`;
   const script = document.getElementById(scriptId);
   if (script && script.parentNode) {
