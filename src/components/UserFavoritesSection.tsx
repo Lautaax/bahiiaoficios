@@ -30,17 +30,20 @@ export const UserFavoritesSection: React.FC = () => {
       }
 
       try {
-        const loaded: User[] = [];
-        for (const favId of favIds) {
+        const promises = favIds.map(async (favId) => {
           try {
             const docSnap = await getDoc(doc(db, 'usuarios', favId));
             if (docSnap.exists()) {
-              loaded.push({ uid: docSnap.id, ...docSnap.data() } as User);
+              return { uid: docSnap.id, ...docSnap.data() } as User;
             }
           } catch (e) {
             console.warn(`Error fetching favorite pro ${favId}:`, e);
           }
-        }
+          return null;
+        });
+
+        const results = await Promise.all(promises);
+        const loaded = results.filter((user): user is User => user !== null);
         setFavoritePros(loaded);
       } catch (err) {
         console.error("Error loading favorite professionals:", err);
