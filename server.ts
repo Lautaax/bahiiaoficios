@@ -378,6 +378,45 @@ async function startServer() {
     }
   });
 
+  // Middleware to verify Admin authorization for sensitive endpoints
+  const verifyAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "No se proporcionó token de autorización." });
+      }
+
+      const token = authHeader.split('Bearer ')[1];
+      if (!admin.apps.length) {
+        return res.status(403).json({ error: "Servidor no configurado para verificar credenciales de administrador." });
+      }
+
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const isSuperAdmin = decodedToken.email === 'lautaroj.aguilera@gmail.com' || decodedToken.admin === true;
+      let isDbAdmin = false;
+
+      const sDb = getServerDb();
+      if (!isSuperAdmin && sDb) {
+        const userDoc = await sDb.collection('usuarios').doc(decodedToken.uid).get();
+        if (userDoc.exists) {
+          const uData = userDoc.data();
+          isDbAdmin = uData?.isAdmin === true || uData?.rol === 'admin';
+        }
+      }
+
+      if (!isSuperAdmin && !isDbAdmin) {
+        return res.status(403).json({ error: "Acceso denegado: Se requieren permisos de administrador." });
+      }
+
+      (req as any).user = decodedToken;
+      next();
+    } catch (err) {
+      return res.status(401).json({ error: "Token de autenticación inválido o expirado." });
+    }
+  };
+
+  app.use("/api/admin", verifyAdmin);
+
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
