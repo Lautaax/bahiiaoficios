@@ -1,0 +1,53 @@
+{
+  "id": "/",
+  "name": "Bahía Oficios - Profesionales y Servicios",
+  "short_name": "BahíaOficios",
+  "description": "Encontrá plomeros, electricistas, gasistas matriculados y más oficios en Bahía Blanca. Publicá pedidos y cotizá sin comisiones.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "categories": ["business", "utilities", "lifestyle"],
+  "lang": "es-AR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "48x48 72x72 96x96 128x128 192x192 256x256 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar Profesionales",
+      "short_name": "Buscar",
+      "description": "Buscar oficios y profesionales en Bahía Blanca",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Trabajos Solicitados",
+      "short_name": "Trabajos",
+      "description": "Ver tablón de trabajos y pedidos de presupuesto",
+      "url": "/trabajos",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Publicar Pedido",
+      "short_name": "Publicar",
+      "description": "Publicar una necesidad de trabajo en tu casa o comercio",
+      "url": "/trabajos?crear=true",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    }
+  ]
+}

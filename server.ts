@@ -1592,9 +1592,68 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
     }
   });
 
+  // Endpoint to send Push Notifications (FCM / in-app)
+  app.post("/api/notifications/send-push", async (req, res) => {
+    try {
+      const { userId, token, title, body, data } = req.body;
+      console.log(`[FCM Server] Sending push to user: ${userId || 'broadcast'}, title: ${title}`);
 
+      let fcmSent = false;
+      let fcmMessageId = null;
 
-  // Vite middleware for development and production (in this environment)
+      // Attempt Firebase Admin Messaging if credentials available
+      if (admin.apps.length > 0 && token) {
+        try {
+          const messagePayload: admin.messaging.Message = {
+            token,
+            notification: {
+              title: title || '🔔 Bahía Oficios',
+              body: body || 'Tenés un nuevo aviso.'
+            },
+            data: data || {},
+            webpush: {
+              notification: {
+                icon: '/icon.svg',
+                badge: '/icon.svg'
+              }
+            }
+          };
+          fcmMessageId = await admin.messaging().send(messagePayload);
+          fcmSent = true;
+          console.log("[FCM Server] Message sent via admin SDK:", fcmMessageId);
+        } catch (fcmErr) {
+          console.warn("[FCM Server] Admin SDK push skipped or failed:", fcmErr);
+        }
+      }
+
+      // Also persist to server Firestore if available
+      const sDb = getServerDb();
+      if (sDb && userId) {
+        try {
+          await sDb.collection('notificaciones').add({
+            userId,
+            titulo: title || '🔔 Bahía Oficios',
+            mensaje: body || '',
+            data: data || {},
+            leida: false,
+            fecha: admin.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (dbErr) {
+          console.warn("[FCM Server] Firestore write skipped:", dbErr);
+        }
+      }
+
+      return res.json({
+        success: true,
+        fcmSent,
+        messageId: fcmMessageId,
+        message: 'Notificación procesada correctamente'
+      });
+    } catch (err: any) {
+      console.error("[FCM Server] Error sending push:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: "spa",

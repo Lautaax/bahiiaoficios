@@ -8,7 +8,8 @@ import { ProfessionalCard } from './ProfessionalCard';
 import { CachedImage } from './CachedImage';
 import { EmpresasColaboradoras } from './EmpresasColaboradoras';
 import { Skeleton } from './ui/Skeleton';
-import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star, Briefcase, Clock, ExternalLink, CheckCircle2, DollarSign, Building2, Handshake, ChevronLeft, ChevronRight, Award, Mic, MicOff } from 'lucide-react';
+import { JobDetailModal } from './JobDetailModal';
+import { Search, Filter, MapPin, Crown, X, ChevronDown, House, Wrench, Car, Megaphone, Sparkles, MessageSquare, ShieldCheck, CheckCircle, Tag, Scale, Scissors, Heart, Star, Briefcase, Clock, ExternalLink, CheckCircle2, DollarSign, Building2, Handshake, ChevronLeft, ChevronRight, Award, Mic, MicOff, Eye } from 'lucide-react';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { api } from '../services/api';
 import { isVipActive } from '../utils/vipUtils';
@@ -834,6 +835,7 @@ const ClientQuoteRequests: React.FC = () => {
   const [trabajos, setTrabajos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState<string | null>(null);
+  const [selectedJobForDetail, setSelectedJobForDetail] = useState<any | null>(null);
 
   const handleDepositPayment = async (requestId: string, profesionalId: string) => {
     if (!currentUser) return;
@@ -957,6 +959,15 @@ const ClientQuoteRequests: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedJobForDetail(trabajo)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-600 transition-colors shadow-2xs"
+                        title="Ver detalle completo de este trabajo"
+                      >
+                        <Eye size={13} className="text-indigo-600 dark:text-indigo-400" />
+                        <span>Ver Detalle</span>
+                      </button>
                       <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900">
                         {proposals.length} {proposals.length === 1 ? 'Presupuesto recibido' : 'Presupuestos recibidos'}
                       </span>
@@ -1121,6 +1132,13 @@ const ClientQuoteRequests: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Detalle de Trabajo Solicitado */}
+      <JobDetailModal
+        job={selectedJobForDetail}
+        isOpen={Boolean(selectedJobForDetail)}
+        onClose={() => setSelectedJobForDetail(null)}
+      />
     </div>
   );
 };

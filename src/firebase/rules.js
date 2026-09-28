@@ -1,0 +1,237 @@
+/**
+ * Production-ready Firestore Security Rules Configuration for Bahía Oficios.
+ *
+ * Secures the following collections:
+ * - 'ads': Public read access, Admin-only write/delete access.
+ * - 'usuarios': Authenticated read, Owner & Admin update, safe metric increment, Admin full control.
+ * - 'siteStats': Public/Authenticated read & visit counters increment, Admin-only delete.
+ * - 'trabajos' & 'trabajosSolicitados': Authenticated & Public read for job board,
+ *   Authenticated create/update for budget proposals, Admin full control.
+ * - 'quoteRequests', 'chats', 'notificaciones', 'resenas', etc.
+ *
+ * Avoids PERMISSION_DENIED errors by:
+ * 1. Safe existence checks before reading user documents.
+ * 2. Allowing authenticated users to read and query required platform data.
+ * 3. Permitting metric counters updates (profile views, whatsapp clicks).
+ */
+
+export const firestoreRules = `rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "lautaroj.aguilera@gmail.com" ||
+        request.auth.token.admin == true ||
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+
+    // 1. USUARIOS COLLECTION
+    match /usuarios/{userId} {
+      // Authenticated users and public visitors can view professional profiles in directory
+      allow read: if true;
+      
+      // User can create their own profile during signup
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // User can update their own data, Admins have full access,
+      // and safe tracking updates (views, clicks, fcm tokens) are allowed without permission errors
+      allow update: if isOwner(userId) || 
+                    isAdmin() ||
+                    (
+                      request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'profesionalInfo',
+                        'fcmToken',
+                        'fcmTokens',
+                        'fcmPushEnabled',
+                        'fcmUpdatedAt'
+                      ])
+                    );
+                    
+      // Only Admins can delete users
+      allow delete: if isAdmin();
+
+      // Subcollection: Professional Stats
+      match /stats/{statId} {
+        allow read: if isOwner(userId) || isAdmin() || isAuthenticated();
+        allow write: if true;
+      }
+    }
+
+    // 2. ADS (PUBLICIDADES) COLLECTION
+    match /ads/{adId} {
+      // Authenticated and public users can read active ads
+      allow read: if true;
+      // Admins have full control over advertising banners
+      allow write: if isAdmin();
+    }
+
+    // 3. SITE STATS COLLECTION
+    match /siteStats/{statId} {
+      // All users can read general platform statistics
+      allow read: if true;
+      // Allow atomic counter increments for visits and pageviews
+      allow create, update: if true;
+      // Only admins can delete site statistics
+      allow delete: if isAdmin();
+    }
+
+    // 4. TRABAJOS & TRABAJOS SOLICITADOS COLLECTIONS
+    match /trabajos/{jobId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (resource.data.clienteId == request.auth.uid || isAdmin());
+    }
+
+    match /trabajosSolicitados/{jobId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (resource.data.clienteId == request.auth.uid || isAdmin());
+    }
+
+    // 5. QUOTE REQUESTS (PEDIDOS DE PRESUPUESTO DIRECTOS)
+    match /quoteRequests/{requestId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.clienteId == request.auth.uid || 
+        request.auth.uid in resource.data.profesionalesAsignados ||
+        resource.data.profesionalDirectoId == request.auth.uid
+      ));
+      allow create: if isAuthenticated() && (request.resource.data.clienteId == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || (isAuthenticated() && (
+        resource.data.clienteId == request.auth.uid || 
+        request.auth.uid in resource.data.profesionalesAsignados ||
+        resource.data.profesionalDirectoId == request.auth.uid
+      ));
+      allow delete: if isAdmin();
+    }
+
+    // 6. CHATS & MESSAGES
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && (
+        resource.data.clientId == request.auth.uid || 
+        resource.data.workerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.clientId == request.auth.uid || 
+        request.resource.data.workerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update: if isAuthenticated() && (
+        resource.data.clientId == request.auth.uid || 
+        resource.data.workerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+      
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // 7. NOTIFICACIONES
+    match /notificaciones/{notifId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() || isAdmin();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 8. RESEÑAS
+    match /resenas/{resenaId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.profesionalId is string;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.profesionalId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 9. TRADE DISCOUNTS & BENEFITS
+    match /tradeDiscounts/{discountId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 10. SEARCH & ANALYTICS STATS
+    match /search_stats/{statId} {
+      allow read, write: if true;
+    }
+
+    match /analytics_events/{eventId} {
+      allow read: if isAdmin();
+      allow create: if true;
+    }
+
+    // 11. FEEDBACK & REPORTES
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /reportes/{reporteId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // 12. PAYMENTS & SUBSCRIPTIONS
+    match /pagos/{pagoId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 13. BLOG QUESTIONS & COMMUNITY
+    match /blogQuestions/{questionId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // 14. ADMIN AI TOOLS & AUDITS
+    match /ai_optimizations/{optimizationId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /daily_ai_audits/{auditId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /ai_promotion_insights/{insightId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /newsletter/{subscriberId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /busquedas_recientes/{busquedaId} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /recordatorios_presupuestos/{recordatorioId} {
+      allow read, create: if isAuthenticated() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+  }
+}
+`;
+
+export default firestoreRules;

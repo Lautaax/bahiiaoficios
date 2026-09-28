@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase, Heart, HelpCircle } from 'lucide-react';
+import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -38,6 +38,7 @@ import { Footer } from './components/Footer';
 import { ChatBadge } from './components/ChatBadge';
 import { HelpChatbot } from './components/HelpChatbot';
 import { FeedbackWidget } from './components/FeedbackWidget';
+import { InstallAppModal } from './components/InstallAppModal';
 import { GuidedOnboarding, triggerOnboardingTour } from './components/GuidedOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { safeSessionStorage } from './utils/storage';
@@ -48,6 +49,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -136,14 +138,15 @@ function Navbar() {
             <span className="hidden md:inline">¿Cómo funciona?</span>
           </button>
 
-          {showInstallBtn && (
-            <button
-              onClick={handleInstallClick}
-              className="hidden lg:inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2.5 py-1.5 rounded-xl text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-200/60 dark:border-indigo-800/60"
-            >
-              🚀 Instalar App
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowInstallModal(true)}
+            className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-indigo-200/70 dark:border-indigo-800/70 shadow-2xs"
+            title="Instalar App Móvil o Descargar APK"
+          >
+            <Smartphone size={14} className="text-indigo-600 dark:text-indigo-400" />
+            <span className="hidden sm:inline">App / APK</span>
+          </button>
 
           {currentUser ? (
             <div className="flex items-center gap-2 sm:gap-3">
@@ -247,6 +250,11 @@ function Navbar() {
           )}
         </div>
       </div>
+
+      <InstallAppModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
     </header>
   );
 }
@@ -315,14 +323,36 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   useAnalytics();
+  const { currentUser, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  // Consistent callback when authentication succeeds
+  const handleAuthSuccess = (_user: any, targetUrl: string) => {
+    navigate(targetUrl, { replace: true });
+  };
+
+  // Robust loading state: prevents white screen flicker while Firebase Auth state is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-4">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-xl shadow-indigo-200 dark:shadow-none animate-pulse mb-4">
+          B
+        </div>
+        <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 font-semibold text-sm">
+          <div className="w-4 h-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+          <span>Iniciando sesión segura en Bahía Oficios...</span>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <>
+    <ErrorBoundary>
       <NotificationListener />
       <FeedbackWidget />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login onSuccess={handleAuthSuccess} />} />
+        <Route path="/signup" element={<SignUp onSuccess={handleAuthSuccess} />} />
         
         <Route path="/complete-profile" element={
           <PrivateRoute allowNewUser={true}>
@@ -486,7 +516,7 @@ function AppContent() {
           </Layout>
         } />
       </Routes>
-    </>
+    </ErrorBoundary>
   );
 }
 

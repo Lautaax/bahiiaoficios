@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Eye, MapPin, Heart, Wrench, Shield, Sparkles } from 'lucide-react';
+import { Users, Eye, MapPin, Heart, Wrench, Shield, Sparkles, Smartphone } from 'lucide-react';
 import { NewsletterSubscription } from './NewsletterSubscription';
+import { InstallAppModal } from './InstallAppModal';
 
 interface FooterProps {
   stats: {
@@ -11,6 +12,8 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ stats }) => {
+  const [installModalOpen, setInstallModalOpen] = useState(false);
+
   return (
     <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 mt-16 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
@@ -135,6 +138,16 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
                   Política de Privacidad
                 </Link>
               </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setInstallModalOpen(true)}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 text-left"
+                >
+                  <Smartphone size={13} />
+                  <span>Instalar App / Descargar APK</span>
+                </button>
+              </li>
             </ul>
 
             {/* Site Stats Counter */}
@@ -181,6 +194,11 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
           </p>
         </div>
       </div>
+
+      <InstallAppModal 
+        isOpen={installModalOpen} 
+        onClose={() => setInstallModalOpen(false)} 
+      />
     </footer>
   );
 };

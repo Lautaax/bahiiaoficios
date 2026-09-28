@@ -16,6 +16,8 @@ import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from
 import { TrabajosSolicitados } from './TrabajosSolicitados';
 import { ProfessionalMyQuotes } from './ProfessionalMyQuotes';
 import { ProfessionalRequestsChart } from './ProfessionalRequestsChart';
+import { ProfessionalWeeklyPerformanceChart } from './ProfessionalWeeklyPerformanceChart';
+import { fcmService, FcmStatus } from '../services/fcmService';
 import { CachedImage } from './CachedImage';
 import { safeLocalStorage } from '../utils/storage';
 
@@ -30,6 +32,29 @@ export const ProfessionalDashboard: React.FC = () => {
   const [isProfileExpanded, setIsProfileExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [statsData, setStatsData] = useState<any[]>([]);
+  const [fcmStatus, setFcmStatus] = useState<FcmStatus | null>(null);
+  const [activatingFcm, setActivatingFcm] = useState(false);
+
+  useEffect(() => {
+    fcmService.getStatus().then(setFcmStatus);
+  }, [currentUser]);
+
+  const handleToggleFcm = async () => {
+    if (!currentUser) return;
+    setActivatingFcm(true);
+    try {
+      const res = await fcmService.requestPermissionAndGetToken(currentUser.uid);
+      const st = await fcmService.getStatus();
+      setFcmStatus(st);
+      if (res.success) {
+        await fcmService.triggerTestNotification();
+      } else {
+        alert(res.error || 'No se pudieron activar las notificaciones.');
+      }
+    } finally {
+      setActivatingFcm(false);
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -454,78 +479,57 @@ export const ProfessionalDashboard: React.FC = () => {
                     Descargar QR
                   </button>
                 </div>
+
+                {/* FCM Push Notifications Status Card */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 group hover:border-indigo-300 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-3 bg-indigo-50 dark:bg-indigo-900/40 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                        <Bell size={24} />
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                        fcmStatus?.isEnabled
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                      }`}>
+                        {fcmStatus?.isEnabled ? 'Alertas Activas' : 'Alertas Inactivas'}
+                      </span>
+                    </div>
+                    <h3 className="text-gray-900 dark:text-white font-bold text-base">Alertas Push (FCM)</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                      Recibí avisos inmediatos en tu celular o PC cuando te asignen un pedido de presupuesto o te escriban.
+                    </p>
+                  </div>
+                  
+                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                    {!fcmStatus?.isEnabled ? (
+                      <button
+                        type="button"
+                        onClick={handleToggleFcm}
+                        disabled={activatingFcm}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded-xl transition-all shadow-xs disabled:opacity-50"
+                      >
+                        {activatingFcm ? 'Activando...' : 'Activar Notificaciones'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleToggleFcm}
+                        disabled={activatingFcm}
+                        className="w-full border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-bold py-2 px-3 rounded-xl transition-colors"
+                      >
+                        Probar Alerta Push
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Weekly Requests & Inquiries Chart (Recharts) */}
-              <ProfessionalRequestsChart 
+              {/* Weekly Performance Evolution Chart: Views vs Inquiries (Recharts) */}
+              <ProfessionalWeeklyPerformanceChart 
                 professional={currentUser} 
                 onNavigateToQuotes={() => setActiveTab('pedidos')} 
               />
-
-              {/* Charts Section */}
-              <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Actividad de la Semana</h3>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-indigo-600" />
-                      <span className="text-gray-600 dark:text-gray-400">Vistas</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-green-500" />
-                      <span className="text-gray-600 dark:text-gray-400">Clics</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={statsData}>
-                      <defs>
-                        <linearGradient id="colorVistas" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorClics" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fill: '#9ca3af', fontSize: 12}}
-                        dy={10}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fill: '#9ca3af', fontSize: 12}}
-                      />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="vistas" 
-                        stroke="#4f46e5" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorVistas)" 
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="clics" 
-                        stroke="#10b981" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorClics)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
 
               {/* VIP Promotion */}
               {!profesionalInfo?.isVip && (
@@ -590,7 +594,7 @@ export const ProfessionalDashboard: React.FC = () => {
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Estadísticas Detalladas</h2>
               
-              <ProfessionalRequestsChart 
+              <ProfessionalWeeklyPerformanceChart 
                 professional={currentUser} 
                 onNavigateToQuotes={() => setActiveTab('pedidos')} 
               />

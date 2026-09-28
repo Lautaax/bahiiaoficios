@@ -1,16 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Camera } from 'lucide-react';
+import { Bell, Camera, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { fcmService, FcmStatus } from '../services/fcmService';
 
 export const NotificationsDropdown: React.FC = () => {
   const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [fcmStatus, setFcmStatus] = useState<FcmStatus | null>(null);
+  const [activatingPush, setActivatingPush] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fcmService.getStatus().then(setFcmStatus);
+  }, [currentUser, isOpen]);
+
+  const handleEnablePush = async () => {
+    if (!currentUser) return;
+    setActivatingPush(true);
+    try {
+      const res = await fcmService.requestPermissionAndGetToken(currentUser.uid);
+      const st = await fcmService.getStatus();
+      setFcmStatus(st);
+      if (res.success) {
+        await fcmService.triggerTestNotification();
+      }
+    } finally {
+      setActivatingPush(false);
+    }
+  };
 
   useEffect(() => {
     if (!currentUser) return;
@@ -105,6 +127,36 @@ export const NotificationsDropdown: React.FC = () => {
                 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors"
               >
                 Limpiar todas
+              </button>
+            )}
+          </div>
+
+          {/* FCM Push Notifications Toggle Banner */}
+          <div className="px-4 py-2.5 bg-indigo-50/70 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/40 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${fcmStatus?.isEnabled ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span className="text-slate-700 dark:text-slate-300 font-medium">
+                {fcmStatus?.isEnabled ? 'Alertas Push Activas' : 'Alertas Push Inactivas'}
+              </span>
+            </div>
+            {!fcmStatus?.isEnabled ? (
+              <button
+                type="button"
+                onClick={handleEnablePush}
+                disabled={activatingPush}
+                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+              >
+                {activatingPush ? 'Activando...' : 'Activar Alertas'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleEnablePush}
+                disabled={activatingPush}
+                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                title="Prueba una notificación en tu pantalla"
+              >
+                Probar
               </button>
             )}
           </div>

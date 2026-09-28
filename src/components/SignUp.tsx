@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -7,19 +7,42 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Role } from '../types';
 import { Upload, User, Briefcase, AlertCircle, Scale, ShieldAlert, ChevronDown, ChevronUp, FileText, CheckCircle2 } from 'lucide-react';
 import { ZONAS, PROFESSIONS } from '../constants';
+import { useAuth } from '../context/AuthContext';
 
-export const SignUp: React.FC = () => {
+export interface SignUpProps {
+  onSuccess?: (user: any, targetUrl: string) => void;
+}
+
+export const SignUp: React.FC<SignUpProps> = ({ onSuccess }) => {
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') || '/';
+  const navigate = useNavigate();
+  const rawRedirect = searchParams.get('redirect');
+  const redirectUrl = rawRedirect || '/';
   const customMessage = searchParams.get('motivo');
   const roleParam = searchParams.get('role');
 
+  const { currentUser, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nombre, setNombre] = useState('');
   const [nombreNegocio, setNombreNegocio] = useState('');
   const [telefono, setTelefono] = useState('');
   const [role, setRole] = useState<Role>(roleParam === 'profesional' ? 'profesional' : 'cliente');
+
+  // Helper to determine the dashboard route based on user role
+  const getDashboardRoute = (userRole: string): string => {
+    if (userRole === 'profesional') return '/dashboard-profesional';
+    if (userRole === 'admin') return '/admin';
+    return '/dashboard';
+  };
+
+  // If already logged in, redirect directly to dashboard
+  useEffect(() => {
+    if (currentUser && !authLoading) {
+      const target = (rawRedirect && rawRedirect !== '/') ? rawRedirect : getDashboardRoute(currentUser.rol);
+      navigate(target, { replace: true });
+    }
+  }, [currentUser, authLoading, rawRedirect, navigate]);
   const [zona, setZona] = useState('Centro');
   const [rubro, setRubro] = useState('Electricista'); // Default for professionals
   const [rubrosSeleccionados, setRubrosSeleccionados] = useState<string[]>([]);
@@ -44,7 +67,6 @@ export const SignUp: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const rubros = PROFESSIONS.map(p => p.name);
   const zonas = ZONAS;
@@ -215,8 +237,12 @@ export const SignUp: React.FC = () => {
       // 4. Create Document in Firestore
       await setDoc(doc(db, 'usuarios', uid), userData);
 
-      // 5. Redirect
-      navigate(redirectUrl);
+      // 5. Success Hook & Redirect to dashboard consistently
+      const target = (rawRedirect && rawRedirect !== '/') ? rawRedirect : getDashboardRoute(role);
+      if (onSuccess) {
+        onSuccess(userData, target);
+      }
+      navigate(target, { replace: true });
       
     } catch (err: any) {
       console.error(err);

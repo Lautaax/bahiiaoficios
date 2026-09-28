@@ -1,19 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup, UserCredential } from 'firebase/auth';
 import { auth, db, googleProvider, appleProvider } from '../firebase';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
-export const Login: React.FC = () => {
+export interface LoginProps {
+  onSuccess?: (user: any, targetUrl: string) => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') || '/';
+  const rawRedirect = searchParams.get('redirect');
+  const redirectUrl = rawRedirect || '/';
   const customMessage = searchParams.get('motivo');
 
+  const { currentUser, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Helper to determine the appropriate dashboard based on user role
+  const getDashboardRoute = (userData: any): string => {
+    if (!userData) return '/dashboard';
+    if (userData.rol === 'profesional') return '/dashboard-profesional';
+    if (userData.rol === 'admin' || userData.isAdmin) return '/admin';
+    return '/dashboard';
+  };
+
+  // If already logged in, redirect directly to dashboard to prevent redundant login screen
+  useEffect(() => {
+    if (currentUser && !authLoading) {
+      const target = (rawRedirect && rawRedirect !== '/') ? rawRedirect : getDashboardRoute(currentUser);
+      navigate(target, { replace: true });
+    }
+  }, [currentUser, authLoading, rawRedirect, navigate]);
 
   const handleSocialLogin = async (provider: any) => {
     setError('');
@@ -27,10 +50,15 @@ export const Login: React.FC = () => {
 
       if (!userDoc.exists()) {
         // New user -> Redirect to complete profile
-        navigate('/complete-profile');
+        navigate('/complete-profile', { replace: true });
       } else {
-        // Existing user -> Redirect
-        navigate(redirectUrl);
+        // Existing user -> Consistently route to dashboard
+        const userData = { uid: result.user.uid, ...userDoc.data() };
+        const target = (rawRedirect && rawRedirect !== '/') ? rawRedirect : getDashboardRoute(userData);
+        if (onSuccess) {
+          onSuccess(userData, target);
+        }
+        navigate(target, { replace: true });
       }
     } catch (err: any) {
       console.error(err);
@@ -55,10 +83,15 @@ export const Login: React.FC = () => {
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
-        navigate(redirectUrl);
+        const userData = { uid, ...userDoc.data() };
+        const target = (rawRedirect && rawRedirect !== '/') ? rawRedirect : getDashboardRoute(userData);
+        if (onSuccess) {
+          onSuccess(userData, target);
+        }
+        navigate(target, { replace: true });
       } else {
         // User exists in Auth but not in Firestore -> Complete Profile
-        navigate('/complete-profile');
+        navigate('/complete-profile', { replace: true });
       }
 
     } catch (err: any) {

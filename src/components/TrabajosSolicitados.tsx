@@ -17,10 +17,11 @@ import {
   Briefcase, PlusCircle, Search, Filter, Clock, MapPin, DollarSign, 
   Send, CheckCircle2, AlertCircle, MessageCircle, X, ChevronDown, 
   Calendar, Crown, User as UserIcon, Check, Layers, RefreshCw, XCircle, Sparkles,
-  ArrowRight, ShieldAlert
+  ArrowRight, ShieldAlert, Eye
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RecentRequestedJobs } from './RecentRequestedJobs';
+import { JobDetailModal } from './JobDetailModal';
 import { CachedImage } from './CachedImage';
 
 const POPULAR_RUBROS = [
@@ -70,6 +71,9 @@ export const TrabajosSolicitados: React.FC = () => {
     clienteNombre: currentUser?.nombre || '',
     clienteTelefono: currentUser?.profesionalInfo?.telefono || ''
   });
+
+  // Modal: Detalle Completo de Trabajo
+  const [selectedJobForDetail, setSelectedJobForDetail] = useState<JobPost | null>(null);
 
   // Modal: Cotizar Trabajo (ProfessionalQuoteAction)
   const [quotingJob, setQuotingJob] = useState<JobPost | null>(null);
@@ -408,7 +412,10 @@ export const TrabajosSolicitados: React.FC = () => {
       </div>
 
       {/* Sección Destacada: Últimos Trabajos Solicitados */}
-      <RecentRequestedJobs hideViewAll={true} />
+      <RecentRequestedJobs 
+        hideViewAll={true} 
+        onSelectJob={(job) => setSelectedJobForDetail(job)} 
+      />
 
       {/* Tabs Principales de Visualización */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 pb-4">
@@ -711,14 +718,15 @@ export const TrabajosSolicitados: React.FC = () => {
               <div 
                 key={job.id} 
                 id={`job-card-${job.id}`}
-                className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border transition-colors flex flex-col justify-between h-full shadow-none ${
-                  isTargeted ? 'border-indigo-500 ring-1 ring-indigo-500/30' : ''
+                onClick={() => setSelectedJobForDetail(job)}
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border transition-all flex flex-col justify-between h-full shadow-xs hover:shadow-md cursor-pointer group ${
+                  isTargeted ? 'border-indigo-500 ring-2 ring-indigo-500/30' : ''
                 } ${
                   isClosed 
                     ? 'opacity-70 border-slate-200/60 dark:border-slate-700/60' 
                     : isOwner 
-                      ? 'border-indigo-200 dark:border-indigo-800' 
-                      : 'border-slate-200/70 dark:border-slate-700/70 hover:border-slate-300 dark:hover:border-slate-600'
+                      ? 'border-indigo-200 dark:border-indigo-800 hover:border-indigo-400' 
+                      : 'border-slate-200/70 dark:border-slate-700/70 hover:border-indigo-300 dark:hover:border-indigo-600'
                 }`}
               >
                 <div>
@@ -731,7 +739,7 @@ export const TrabajosSolicitados: React.FC = () => {
                   </div>
 
                   {/* Title & Description */}
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5 leading-snug">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {job.titulo}
                   </h3>
                   <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm mb-4 line-clamp-2 leading-relaxed">
@@ -758,7 +766,7 @@ export const TrabajosSolicitados: React.FC = () => {
                 </div>
 
                 {/* Bottom Actions & Status */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between mb-3 text-xs">
                     <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1 text-[11px]">
                       <MessageCircle size={13} />
@@ -776,72 +784,105 @@ export const TrabajosSolicitados: React.FC = () => {
                     ) : null}
                   </div>
 
-                  {/* Caso 1: Es el dueño del trabajo (Cliente) */}
-                  {isOwner ? (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setViewingProposalsJob(job)}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
-                      >
-                        <MessageCircle size={14} />
-                        Ver Presupuestos ({proposalsCount})
-                      </button>
-                      {!isClosed && (
-                        <button
-                          onClick={() => handleCloseJob(job.id!)}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
-                          title="Cerrar solicitud"
-                        >
-                          <Check size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ) : currentUser?.rol === 'profesional' ? (
-                    /* Caso 2: Es un profesional */
-                    alreadyQuoted ? (
-                      <div className="space-y-2">
-                        <div className="bg-slate-50 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 p-2 rounded-xl text-xs font-medium flex items-center justify-between border border-slate-200/80 dark:border-slate-600">
-                          <span className="flex items-center gap-1.5">
-                            <CheckCircle2 size={14} className="text-emerald-500" />
-                            Cotizado: ${Number(myProposal?.montoEstimado).toLocaleString('es-AR')}
-                          </span>
-                          <button
-                            onClick={() => setQuotingJob(job)}
-                            className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold text-xs"
-                          >
-                            Editar
-                          </button>
-                        </div>
-                      </div>
-                    ) : isClosed ? (
-                      <div className="text-center py-2 text-xs font-medium text-slate-400">
-                        Esta solicitud ya fue finalizada
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setQuotingJob(job)}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-95"
-                      >
-                        <Send size={14} />
-                        Pasar Presupuesto
-                      </button>
-                    )
-                  ) : (
-                    /* Caso 3: Visitante o usuario común */
+                  {/* Botones de acción: siempre incluye 'Ver Detalle' y la acción principal */}
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setShowAuthNotice(true)}
-                      className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                      type="button"
+                      onClick={() => setSelectedJobForDetail(job)}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                      title="Ver información y descripción completa de este trabajo"
                     >
-                      <Briefcase size={14} />
-                      ¿Sos profesional? Pasar Presupuesto
+                      <Eye size={14} className="text-indigo-600 dark:text-indigo-400" />
+                      <span>Ver Detalle</span>
                     </button>
-                  )}
+
+                    {/* Caso 1: Es el dueño del trabajo (Cliente) */}
+                    {isOwner ? (
+                      <div className="flex gap-2 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewingProposalsJob(job)}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <MessageCircle size={14} />
+                          Presupuestos ({proposalsCount})
+                        </button>
+                        {!isClosed && (
+                          <button
+                            type="button"
+                            onClick={() => handleCloseJob(job.id!)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                            title="Cerrar solicitud"
+                          >
+                            <Check size={16} />
+                          </button>
+                        )}
+                      </div>
+                    ) : currentUser?.rol === 'profesional' ? (
+                      /* Caso 2: Es un profesional */
+                      alreadyQuoted ? (
+                        <div className="flex-1">
+                          <div className="bg-slate-50 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 p-2 rounded-xl text-xs font-medium flex items-center justify-between border border-slate-200/80 dark:border-slate-600">
+                            <span className="flex items-center gap-1.5 text-[11px] truncate">
+                              <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                              ${Number(myProposal?.montoEstimado).toLocaleString('es-AR')}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setQuotingJob(job)}
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold text-xs shrink-0 ml-1"
+                            >
+                              Editar
+                            </button>
+                          </div>
+                        </div>
+                      ) : isClosed ? (
+                        <div className="flex-1 text-center py-2 text-xs font-medium text-slate-400">
+                          Finalizado
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setQuotingJob(job)}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-xs"
+                        >
+                          <Send size={13} />
+                          <span>Cotizar</span>
+                        </button>
+                      )
+                    ) : (
+                      /* Caso 3: Visitante o usuario común */
+                      <button
+                        type="button"
+                        onClick={() => setShowAuthNotice(true)}
+                        className="flex-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-indigo-700 dark:text-indigo-300 font-semibold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Briefcase size={13} />
+                        <span>Cotizar</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* COMPONENTE: JobDetailModal (Modal de detalle completo con fotos, presupuesto y WhatsApp) */}
+      <JobDetailModal
+        job={selectedJobForDetail}
+        isOpen={Boolean(selectedJobForDetail)}
+        onClose={() => setSelectedJobForDetail(null)}
+        onQuote={(j) => {
+          setSelectedJobForDetail(null);
+          setQuotingJob(j);
+        }}
+        onViewProposals={(j) => {
+          setSelectedJobForDetail(null);
+          setViewingProposalsJob(j);
+        }}
+      />
 
       {/* COMPONENTE: ProfessionalQuoteAction (Modal para enviar / editar presupuesto) */}
       {quotingJob && (

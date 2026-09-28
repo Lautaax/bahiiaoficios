@@ -6,107 +6,11 @@ import { JobPost } from '../types';
 import { PROFESSIONS } from '../constants';
 import { 
   Briefcase, PlusCircle, ArrowRight, MapPin, DollarSign, 
-  Clock, MessageCircle, Sparkles, ChevronRight, CheckCircle2 
+  Clock, MessageCircle, Sparkles, ChevronRight, CheckCircle2,
+  FileText
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-// Sample fallback jobs for Bahía Blanca in case Firestore has 0 documents
-const FALLBACK_JOBS: JobPost[] = [
-  {
-    id: 'sample-job-1',
-    titulo: 'Instalación de termotanque y cambio de llaves de paso',
-    descripcion: 'Necesito reemplazar un termotanque de 80 litros en casa particular y cambiar dos llaves de paso de agua caliente que tienen pequeñas pérdidas.',
-    rubro: 'Gasista',
-    zona: 'Palihue',
-    urgencia: 'esta_semana',
-    presupuestoAproximado: '$45.000 - $60.000',
-    clienteId: 'demo-1',
-    clienteNombre: 'Martín Gómez',
-    fechaCreacion: new Date(Date.now() - 1000 * 60 * 60 * 2), // hace 2 horas
-    estado: 'abierto',
-    presupuestos: []
-  },
-  {
-    id: 'sample-job-2',
-    titulo: 'Colocación de disyuntor diferencial y revisión de térmicas',
-    descripcion: 'Salto recurrente de térmicas en cocina y lavadero. Requiero electricista matriculado para revisar tablero principal y equilibrar fases.',
-    rubro: 'Electricista',
-    zona: 'Universitario',
-    urgencia: 'urgente',
-    presupuestoAproximado: '$35.000',
-    clienteId: 'demo-2',
-    clienteNombre: 'Laura Fernández',
-    fechaCreacion: new Date(Date.now() - 1000 * 60 * 60 * 4), // hace 4 horas
-    estado: 'abierto',
-    presupuestos: [{
-      id: 'p-1',
-      profesionalId: 'pro-1',
-      profesionalNombre: 'Carlos Morales',
-      profesionalRubro: 'Electricista',
-      montoEstimado: 38000,
-      tiempoEstimado: '1 día',
-      mensaje: 'Hola Laura, puedo pasar hoy a presupuestar sin cargo.',
-      estado: 'pendiente',
-      fecha: new Date()
-    }]
-  },
-  {
-    id: 'sample-job-3',
-    titulo: 'Pintura interior completa de living-comedor y pasillo',
-    descripcion: 'Pintura látex lavable en paredes (unos 65m2 aprox.) y cielorraso con tratamiento previo de algunas manchas de humedad ya secas.',
-    rubro: 'Pintor',
-    zona: 'Centro',
-    urgencia: 'flexible',
-    presupuestoAproximado: 'A convenir con materiales',
-    clienteId: 'demo-3',
-    clienteNombre: 'Roberto S.',
-    fechaCreacion: new Date(Date.now() - 1000 * 60 * 60 * 9), // hace 9 horas
-    estado: 'abierto',
-    presupuestos: []
-  },
-  {
-    id: 'sample-job-4',
-    titulo: 'Destape de desagüe pluvial y revisión de canaletas',
-    descripcion: 'Con las últimas lluvias desbordó la canaleta del patio. Requiero limpieza y desobstrucción de bajada pluvial hacia la vereda.',
-    rubro: 'Plomero',
-    zona: 'Villa Mitre',
-    urgencia: 'esta_semana',
-    presupuestoAproximado: '$28.000 - $35.000',
-    clienteId: 'demo-4',
-    clienteNombre: 'Mariana Pérez',
-    fechaCreacion: new Date(Date.now() - 1000 * 60 * 60 * 18), // hace 18 horas
-    estado: 'abierto',
-    presupuestos: []
-  },
-  {
-    id: 'sample-job-5',
-    titulo: 'Instalación y vacío de split frío/calor 3000 frigorías',
-    descripcion: 'Equipo nuevo en caja para colocar en dormitorio en primer piso. Pared exterior de ladrillo hueco con acceso despejado.',
-    rubro: 'Aire Acondicionado',
-    zona: 'Bella Vista',
-    urgencia: 'esta_semana',
-    presupuestoAproximado: 'A convenir',
-    clienteId: 'demo-5',
-    clienteNombre: 'Federico M.',
-    fechaCreacion: new Date(Date.now() - 1000 * 60 * 60 * 26), // ayer
-    estado: 'abierto',
-    presupuestos: []
-  },
-  {
-    id: 'sample-job-6',
-    titulo: 'Reparación de revoque exterior y zócalo con humedad',
-    descripcion: 'Pared medianera con desprendimiento de revoque en zócalo bajo. Trabajo con hidrófugo y fino para posterior pintura.',
-    rubro: 'Albañil',
-    zona: 'Patagonia',
-    urgencia: 'flexible',
-    presupuestoAproximado: '$80.000',
-    clienteId: 'demo-6',
-    clienteNombre: 'Alejandro C.',
-    fechaCreacion: new Date(Date.now() - 1000 * 60 * 60 * 30),
-    estado: 'abierto',
-    presupuestos: []
-  }
-];
+import { Link, useNavigate } from 'react-router-dom';
+import { JobDetailModal } from './JobDetailModal';
 
 function formatRelativeTime(fecha: any): string {
   if (!fecha) return 'Reciente';
@@ -132,15 +36,22 @@ function formatRelativeTime(fecha: any): string {
 interface RecentRequestedJobsProps {
   selectedCategory?: string;
   hideViewAll?: boolean;
+  onSelectJob?: (job: JobPost) => void;
 }
 
-export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ selectedCategory, hideViewAll = false }) => {
+export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ 
+  selectedCategory, 
+  hideViewAll = false,
+  onSelectJob 
+}) => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRubroFilter, setSelectedRubroFilter] = useState<string>('todos');
+  const [selectedJobForDetail, setSelectedJobForDetail] = useState<JobPost | null>(null);
 
-  // Listen to the latest 12 jobs in Firestore
+  // Listen to real jobs from Firestore
   useEffect(() => {
     setLoading(true);
     try {
@@ -160,14 +71,14 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
             } as JobPost));
             setJobs(list);
           } else {
-            // If empty collection, use realistic demo jobs
-            setJobs(FALLBACK_JOBS);
+            // Production rule: No mock data! Only real jobs
+            setJobs([]);
           }
           setLoading(false);
         },
         (error) => {
-          console.warn("Firestore trabajosSolicitados snapshot error, using local fallback:", error);
-          setJobs(FALLBACK_JOBS);
+          console.warn("Firestore trabajosSolicitados snapshot error:", error);
+          setJobs([]);
           setLoading(false);
         }
       );
@@ -175,78 +86,83 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
       return () => unsubscribe();
     } catch (err) {
       console.warn("Error initializing trabajosSolicitados listener:", err);
-      setJobs(FALLBACK_JOBS);
+      setJobs([]);
       setLoading(false);
     }
   }, []);
 
-  // Update selectedRubroFilter if parent passed a category or if user changes
-  useEffect(() => {
-    if (selectedCategory && selectedCategory !== 'Todos') {
-      setSelectedRubroFilter(selectedCategory);
-    }
-  }, [selectedCategory]);
+  const userProRubro = currentUser?.profesionalInfo?.rubro;
 
-  const userProRubro = currentUser?.profesionalInfo?.rubro || currentUser?.profesionalInfo?.rubros?.[0];
-
-  // Quick filter options
+  // Filter options based on real jobs
   const filterOptions = useMemo(() => {
-    const options = ['todos'];
-    if (userProRubro && !options.includes(userProRubro)) {
-      options.push(userProRubro);
+    const list = ['todos'];
+    if (userProRubro && !list.includes(userProRubro)) {
+      list.push(userProRubro);
     }
-    const populars = ['Electricista', 'Plomero', 'Gasista', 'Pintor', 'Albañil', 'Aire Acondicionado'];
-    populars.forEach(p => {
-      if (!options.includes(p)) options.push(p);
+    const realRubros = Array.from(new Set(jobs.map(j => j.rubro).filter(Boolean)));
+    realRubros.forEach(r => {
+      if (!list.includes(r)) list.push(r);
     });
-    return options;
-  }, [userProRubro]);
+    return list;
+  }, [jobs, userProRubro]);
 
-  // Filter jobs according to selected tab and state
   const displayedJobs = useMemo(() => {
-    let filtered = jobs.filter(j => j.estado !== 'cancelado');
-    if (selectedRubroFilter !== 'todos') {
-      filtered = filtered.filter(j => j.rubro.toLowerCase() === selectedRubroFilter.toLowerCase());
-    }
-    return filtered.slice(0, 6);
-  }, [jobs, selectedRubroFilter]);
+    let result = jobs;
 
-  const getRubroIcon = (rubro: string) => {
-    const p = PROFESSIONS.find(item => item.name.toLowerCase() === rubro.toLowerCase());
-    return p?.icon || Briefcase;
+    // Filter by passed selectedCategory prop if provided
+    if (selectedCategory && selectedCategory.toLowerCase() !== 'todos') {
+      result = result.filter(j => j.rubro?.toLowerCase() === selectedCategory.toLowerCase());
+    }
+
+    // Filter by tab filter
+    if (selectedRubroFilter && selectedRubroFilter.toLowerCase() !== 'todos') {
+      result = result.filter(j => j.rubro?.toLowerCase() === selectedRubroFilter.toLowerCase());
+    }
+
+    return result;
+  }, [jobs, selectedCategory, selectedRubroFilter]);
+
+  const getRubroIcon = (rubroName: string) => {
+    const prof = PROFESSIONS.find(p => p.name.toLowerCase() === (rubroName || '').toLowerCase());
+    return prof?.icon || Briefcase;
   };
 
-  const renderUrgenciaPill = (urgencia: string) => {
+  const renderUrgenciaPill = (urgencia?: string) => {
     switch (urgencia) {
       case 'urgente':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+          <span className="inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 px-2 py-0.5 rounded-full text-[11px] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
             Urgente
           </span>
         );
       case 'esta_semana':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
-            <Clock size={11} className="text-slate-400" />
-            Esta semana
+          <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 px-2 py-0.5 rounded-full text-[11px] font-semibold">
+            ⚡ Esta semana
           </span>
         );
       case 'flexible':
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
-            <Clock size={11} className="text-slate-400" />
-            Flexible
+          <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-[11px] font-medium">
+            🕒 Flexible
           </span>
         );
     }
   };
 
+  const handleOpenJob = (job: JobPost) => {
+    setSelectedJobForDetail(job);
+    if (onSelectJob) {
+      onSelectJob(job);
+    }
+  };
+
   return (
     <section 
-      aria-label="Últimos Trabajos Solicitados" 
-      className="mb-10 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm overflow-hidden"
+      aria-label="Trabajos Solicitados Recientes en Bahía Blanca"
+      className="bg-white dark:bg-slate-900/90 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden mb-12"
     >
       {/* Header Container */}
       <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/80">
@@ -259,7 +175,7 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
             <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               Últimos Trabajos Solicitados
               <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full">
-                {jobs.length} activos
+                {jobs.length} reales
               </span>
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl">
@@ -288,34 +204,37 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
         </div>
 
         {/* Quick Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 hidden sm:inline">
-            Rubro:
-          </span>
-          {filterOptions.map((opt) => {
-            const isUserRubro = userProRubro && opt.toLowerCase() === userProRubro.toLowerCase() && opt !== 'todos';
-            const isSelected = selectedRubroFilter.toLowerCase() === opt.toLowerCase();
-            const label = opt === 'todos' ? 'Todos los oficios' : isUserRubro ? `Mi Rubro (${opt})` : opt;
+        {jobs.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 hidden sm:inline">
+              Rubro:
+            </span>
+            {filterOptions.map((opt) => {
+              const isUserRubro = userProRubro && opt.toLowerCase() === userProRubro.toLowerCase() && opt !== 'todos';
+              const isSelected = selectedRubroFilter.toLowerCase() === opt.toLowerCase();
+              const label = opt === 'todos' ? 'Todos los oficios' : isUserRubro ? `Mi Rubro (${opt})` : opt;
 
-            return (
-              <button
-                key={opt}
-                onClick={() => setSelectedRubroFilter(opt)}
-                className={`
-                  whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 shrink-0
-                  ${isSelected
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : isUserRubro
-                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100'
-                      : 'bg-white dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                  }
-                `}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setSelectedRubroFilter(opt)}
+                  className={`
+                    whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 shrink-0
+                    ${isSelected
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : isUserRubro
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100'
+                        : 'bg-white dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }
+                  `}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Cards Grid */}
@@ -327,19 +246,22 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
             ))}
           </div>
         ) : displayedJobs.length === 0 ? (
-          <div className="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-            <Briefcase size={28} className="mx-auto text-slate-400 mb-2" />
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              No hay solicitudes abiertas en este rubro por el momento.
+          <div className="text-center py-10 px-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+            <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <Briefcase size={24} />
+            </div>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              No hay solicitudes publicadas activas en este rubro
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              ¿Tenés un trabajo pendiente? Sé el primero en publicar tu solicitud en Bahía Blanca.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              Sé el primero en publicar tu requerimiento de trabajo para que profesionales bahienses te coticen gratis.
             </p>
             <Link
               to="/trabajos?crear=true"
-              className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+              className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-all shadow-xs"
             >
-              Publicar ahora <ArrowRight size={13} />
+              <PlusCircle size={14} />
+              Publicar Pedido Ahora
             </Link>
           </div>
         ) : (
@@ -348,15 +270,12 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
               const RubroIcon = getRubroIcon(job.rubro);
               const proposalCount = job.presupuestos?.length || 0;
               const isUserRubroMatch = userProRubro && userProRubro.toLowerCase() === job.rubro.toLowerCase();
-              const targetUrl = `/trabajos?jobId=${job.id}&rubro=${encodeURIComponent(job.rubro)}&search=${encodeURIComponent(job.titulo)}`;
-              const actionUrl = isUserRubroMatch
-                ? `/trabajos?jobId=${job.id}&cotizar=true&rubro=${encodeURIComponent(job.rubro)}`
-                : targetUrl;
 
               return (
                 <div
                   key={job.id}
-                  className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200/70 dark:border-slate-700/70 hover:border-slate-300 dark:hover:border-slate-600 transition-colors flex flex-col justify-between shadow-none"
+                  className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200/70 dark:border-slate-700/70 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all flex flex-col justify-between shadow-xs hover:shadow-md cursor-pointer group"
+                  onClick={() => handleOpenJob(job)}
                 >
                   <div>
                     {/* Top Badges */}
@@ -369,10 +288,8 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
                     </div>
 
                     {/* Title */}
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base mb-1.5 line-clamp-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                      <Link to={targetUrl} title={job.titulo}>
-                        {job.titulo}
-                      </Link>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base mb-1.5 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      {job.titulo}
                     </h4>
 
                     {/* Description */}
@@ -406,13 +323,17 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
                       </span>
                     </div>
 
-                    <Link
-                      to={actionUrl}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shrink-0"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenJob(job);
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shrink-0 shadow-xs"
                     >
-                      <span>{isUserRubroMatch ? 'Presupuestar' : 'Ver Detalle'}</span>
+                      <span>Ver Detalle</span>
                       <ChevronRight size={13} />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               );
@@ -434,6 +355,19 @@ export const RecentRequestedJobs: React.FC<RecentRequestedJobsProps> = ({ select
           </Link>
         </div>
       </div>
+
+      {/* Modal de Detalle Completo de Trabajo */}
+      <JobDetailModal
+        job={selectedJobForDetail}
+        isOpen={Boolean(selectedJobForDetail)}
+        onClose={() => setSelectedJobForDetail(null)}
+        onQuote={(j) => {
+          navigate(`/trabajos?jobId=${j.id}&cotizar=true`);
+        }}
+        onViewProposals={(j) => {
+          navigate(`/trabajos?jobId=${j.id}`);
+        }}
+      />
     </section>
   );
 };

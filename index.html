@@ -17,11 +17,12 @@
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://bahiaoficios.com/" />
     
-    <!-- PWA Meta Tags -->
+    <!-- PWA & Android WebAPK Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#4f46e5" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Bahía Oficios" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     
@@ -157,28 +158,17 @@
       };
     </script>
 
-    <!-- Failsafe: Clean up conflicting service workers & unblock white-screen state -->
+    <!-- Service Worker Registration for PWA / WebAPK installability -->
     <script>
-      (function() {
-        try {
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for (var i = 0; i < registrations.length; i++) {
-                registrations[i].unregister();
-              }
-            }).catch(function(e) {});
-          }
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              for (var j = 0; j < names.length; j++) {
-                if (names[j].indexOf('workbox') !== -1 || names[j].indexOf('pwa') !== -1) {
-                  caches.delete(names[j]);
-                }
-              }
-            }).catch(function(e) {});
-          }
-        } catch (err) {}
-      })();
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('[PWA] Service Worker registered with scope:', reg.scope);
+          }).catch(function(err) {
+            console.warn('[PWA] Service Worker registration failed:', err);
+          });
+        });
+      }
     </script>
   </head>
   <body>

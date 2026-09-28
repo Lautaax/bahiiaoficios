@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bahía Oficios</string>
+    <string name="title_activity_main">Bahía Oficios</string>
+    <string name="package_name">com.bahiaoficios.app</string>
+    <string name="custom_url_scheme">com.bahiaoficios.app</string>
+</resources>
