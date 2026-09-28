@@ -37,24 +37,25 @@ export const ChatList: React.FC = () => {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const chatData: ChatPreview[] = [];
-      for (const docSnapshot of snapshot.docs) {
-        const data = docSnapshot.data() as ChatPreview;
-        data.id = docSnapshot.id;
+      const chatData = await Promise.all(
+        snapshot.docs.map(async (docSnapshot) => {
+          const data = docSnapshot.data() as ChatPreview;
+          data.id = docSnapshot.id;
 
-        // Fetch other user's photo
-        const otherUserId = isClient ? data.workerId : data.clientId;
-        try {
-          const otherUserDoc = await getDoc(doc(db, 'usuarios', otherUserId));
-          if (otherUserDoc.exists()) {
-            data.otherUserFotoUrl = otherUserDoc.data().fotoUrl;
+          // Fetch other user's photo
+          const otherUserId = isClient ? data.workerId : data.clientId;
+          try {
+            const otherUserDoc = await getDoc(doc(db, 'usuarios', otherUserId));
+            if (otherUserDoc.exists()) {
+              data.otherUserFotoUrl = otherUserDoc.data().fotoUrl;
+            }
+          } catch (error) {
+            console.error("Error fetching other user photo:", error);
           }
-        } catch (error) {
-          console.error("Error fetching other user photo:", error);
-        }
 
-        chatData.push(data);
-      }
+          return data;
+        })
+      );
       
       // Sort client-side to avoid composite index requirement
       chatData.sort((a, b) => {
