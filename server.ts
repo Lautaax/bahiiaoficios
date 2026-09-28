@@ -53,6 +53,81 @@ function getServerDb(): admin.firestore.Firestore | null {
   return isServerFirestoreAvailable && serverDb ? serverDb : null;
 }
 
+// Middleware to verify Admin access
+const requireAdmin: express.RequestHandler = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+    }
+
+    const idToken = authHeader.split('Bearer ')[1].trim();
+    if (!idToken) {
+      return res.status(401).json({ error: "Unauthorized: Empty token" });
+    }
+
+    let email: string | undefined;
+    let uid: string | undefined;
+    let isAdminClaim = false;
+
+    if (admin.apps.length > 0) {
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        uid = decodedToken.uid;
+        email = decodedToken.email;
+        isAdminClaim = decodedToken.admin === true || decodedToken.isAdmin === true;
+      } catch (verifyErr) {
+        console.error("Token verification failed with Firebase Admin:", verifyErr);
+        return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+      }
+    } else {
+      // Fallback for container/preview environments without Firebase Admin service account initialized
+      try {
+        const parts = idToken.split('.');
+        if (parts.length === 3) {
+          const payloadBuf = Buffer.from(parts[1], 'base64');
+          const payload = JSON.parse(payloadBuf.toString('utf-8'));
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            return res.status(401).json({ error: "Unauthorized: Token expired" });
+          }
+          uid = payload.user_id || payload.sub || payload.uid;
+          email = payload.email;
+          isAdminClaim = payload.admin === true || payload.isAdmin === true;
+        }
+      } catch (parseErr) {
+        return res.status(401).json({ error: "Unauthorized: Invalid token format" });
+      }
+    }
+
+    const isSuperAdmin = email === 'lautaroj.aguilera@gmail.com';
+    let isDbAdmin = false;
+
+    if (!isSuperAdmin && !isAdminClaim && uid) {
+      const db = getServerDb();
+      if (db) {
+        try {
+          const userDoc = await db.collection('usuarios').doc(uid).get();
+          if (userDoc.exists && userDoc.data()?.isAdmin === true) {
+            isDbAdmin = true;
+          }
+        } catch (dbErr) {
+          console.warn("Could not verify admin status in Firestore:", dbErr);
+        }
+      }
+    }
+
+    if (!isSuperAdmin && !isAdminClaim && !isDbAdmin) {
+      return res.status(403).json({ error: "Forbidden: Admin privileges required" });
+    }
+
+    (req as any).user = { uid, email };
+    next();
+  } catch (err: any) {
+    console.error("Error in requireAdmin middleware:", err);
+    return res.status(500).json({ error: "Internal server error during authorization" });
+  }
+};
+
 // Mercado Pago Client Management
 let mpClient: MercadoPagoConfig | null = null;
 let mpAccessToken: string | null = null;
@@ -694,7 +769,7 @@ async function startServer() {
   }
 
   // AI Optimization Endpoint (Gemini 3.8 Flash)
-  app.post("/api/admin/ai-optimize", async (req, res) => {
+  app.post("/api/admin/ai-optimize", requireAdmin, async (req, res) => {
     try {
       const { metrics } = req.body;
       const ai = getGeminiClient();
@@ -1217,7 +1292,7 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
   }
 
   // Endpoints: GET and POST /api/admin/daily-churn-audit
-  app.all("/api/admin/daily-churn-audit", async (req, res) => {
+  app.all("/api/admin/daily-churn-audit", requireAdmin, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const providedPros = req.body?.prosData;
@@ -1579,7 +1654,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
   }
 
   // Endpoints: GET and POST /api/admin/category-promotion-insights
-  app.all("/api/admin/category-promotion-insights", async (req, res) => {
+  app.all("/api/admin/category-promotion-insights", requireAdmin, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const categoriesData = req.body?.categoriesData;
