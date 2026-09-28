@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from "@google/genai";
 
-// Fix for __dirname in ES modules
+// ES Module compatibility fix for __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
