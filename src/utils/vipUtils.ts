@@ -141,7 +141,6 @@ export const checkAndExpireUserVip = async (
         'profesionalInfo.isVip': false,
         'profesionalInfo.vipExpiredAt': new Date()
       });
-      console.log(`[VIP Manager] Usuario ${userId} actualizado a no-VIP por vencimiento (${expiration.toLocaleDateString()})`);
       return true;
     } catch (error) {
       console.error(`[VIP Manager] Error al expirar VIP de usuario ${userId}:`, error);
