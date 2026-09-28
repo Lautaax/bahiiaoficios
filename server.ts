@@ -142,6 +142,279 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // User Feedback & Suggestions API (Guaranteed persistence for all visitors)
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const payload = req.body || {};
+      const feedbackId = payload.id || 'fb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+      const cleanFeedback = {
+        id: feedbackId,
+        tipo: payload.tipo || 'mejora',
+        categoria: payload.categoria || 'General',
+        mensaje: (payload.mensaje || '').trim(),
+        rating: typeof payload.rating === 'number' ? payload.rating : 5,
+        url: payload.url || '',
+        ruta: payload.ruta || '/',
+        usuarioId: payload.usuarioId || null,
+        usuarioEmail: payload.usuarioEmail || null,
+        usuarioNombre: payload.usuarioNombre || null,
+        usuarioRol: payload.usuarioRol || 'visitante',
+        userAgent: payload.userAgent || (req.headers['user-agent'] as string) || '',
+        pantalla: payload.pantalla || '',
+        estado: 'pendiente',
+        fechaIso: payload.fechaIso || new Date().toISOString()
+      };
+
+      const sDb = getServerDb();
+      if (sDb) {
+        // 1. Save in 'feedback' collection
+        await sDb.collection('feedback').doc(feedbackId).set({
+          ...cleanFeedback,
+          fecha: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 2. Save in siteStats/feedback_hub without serverTimestamp inside array
+        const hubRef = sDb.collection('siteStats').doc('feedback_hub');
+        await hubRef.set({
+          items: admin.firestore.FieldValue.arrayUnion(cleanFeedback),
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // 3. Save as individual siteStats doc for fallback
+        await sDb.collection('siteStats').doc(feedbackId).set({
+          ...cleanFeedback,
+          isFeedback: true
+        });
+
+        // 4. Create admin notification
+        await sDb.collection('notificaciones').add({
+          tipo: 'nuevo_feedback',
+          userId: 'admin',
+          titulo: cleanFeedback.tipo === 'error' ? 'Nuevo reporte de error' : 'Nueva sugerencia / feedback',
+          mensaje: `${cleanFeedback.usuarioNombre ? cleanFeedback.usuarioNombre + ': ' : ''}${cleanFeedback.mensaje.slice(0, 120)}`,
+          leida: false,
+          fecha: admin.firestore.FieldValue.serverTimestamp(),
+          feedbackId
+        }).catch(() => {});
+      }
+
+      return res.json({ success: true, id: feedbackId });
+    } catch (err: any) {
+      console.error("Server /api/feedback error:", err);
+      return res.status(500).json({ error: err.message || "Error saving feedback" });
+    }
+  });
+
+  // User Profile Report API
+  app.post("/api/report", async (req, res) => {
+    try {
+      const payload = req.body || {};
+      const reportId = payload.id || 'rep_' + Date.now();
+      const reportData = {
+        id: reportId,
+        profesionalId: payload.profesionalId || '',
+        profesionalNombre: payload.profesionalNombre || 'Profesional',
+        profesionalRubro: payload.profesionalRubro || 'Oficios',
+        profesionalSlug: payload.profesionalSlug || '',
+        reporterUid: payload.reporterUid || null,
+        reporterEmail: payload.reporterEmail || 'Anónimo',
+        reporterNombre: payload.reporterNombre || 'Cliente',
+        motivo: payload.motivo || 'Otro motivo',
+        descripcion: (payload.descripcion || '').trim(),
+        estado: 'pendiente',
+        fechaIso: payload.fechaIso || new Date().toISOString()
+      };
+
+      const sDb = getServerDb();
+      if (sDb) {
+        // Save in 'reportes' collection
+        await sDb.collection('reportes').doc(reportId).set({
+          ...reportData,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Save in siteStats
+        await sDb.collection('siteStats').doc(reportId).set({
+          ...reportData,
+          isReport: true
+        });
+
+        // Save in siteStats/feedback_hub as error item
+        const hubRef = sDb.collection('siteStats').doc('feedback_hub');
+        await hubRef.set({
+          items: admin.firestore.FieldValue.arrayUnion({
+            id: reportId,
+            tipo: 'error',
+            categoria: `Reporte: ${reportData.motivo}`,
+            mensaje: `Reporte de perfil "${reportData.profesionalNombre}": ${reportData.descripcion}`,
+            rating: 1,
+            usuarioEmail: reportData.reporterEmail,
+            usuarioNombre: reportData.reporterNombre,
+            estado: 'pendiente',
+            fechaIso: reportData.fechaIso
+          }),
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // Admin notification
+        await sDb.collection('notificaciones').add({
+          tipo: 'reporte_perfil',
+          userId: 'admin',
+          titulo: 'Nuevo reporte de perfil',
+          mensaje: `Se ha reportado el perfil de "${reportData.profesionalNombre}" por: ${reportData.motivo}.`,
+          leida: false,
+          fecha: admin.firestore.FieldValue.serverTimestamp(),
+          link: `/profesional/${reportData.profesionalSlug || reportData.profesionalId}`
+        }).catch(() => {});
+      }
+
+      return res.json({ success: true, id: reportId });
+    } catch (err: any) {
+      console.error("Server /api/report error:", err);
+      return res.status(500).json({ error: err.message || "Error saving report" });
+    }
+  });
+
+  // Track Page View API (Bypasses ad-blockers)
+  app.post("/api/analytics/pageview", async (req, res) => {
+    try {
+      const { pathname } = req.body || {};
+      const sDb = getServerDb();
+      if (!sDb) return res.json({ status: "skipped" });
+
+      const path = pathname || '/';
+      let normalizedPath = path;
+      if (path.startsWith('/profesional/')) normalizedPath = '/profesional/:id';
+      else if (path.startsWith('/blog/')) normalizedPath = '/blog/:id';
+      else if (path.startsWith('/chat/')) normalizedPath = '/chat/:id';
+      else if (path.startsWith('/rubro/')) normalizedPath = `/rubro/${path.replace('/rubro/', '')}`;
+
+      const safeKey = normalizedPath.replace(/[/.:]/g, '_');
+      
+      let argDate = new Date().toISOString().split('T')[0];
+      try {
+        argDate = new Intl.DateTimeFormat('fr-CA', { 
+          timeZone: 'America/Argentina/Buenos_Aires',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(new Date());
+      } catch {}
+
+      const globalRef = sDb.collection('siteStats').doc('global');
+      await globalRef.set({
+        visits: admin.firestore.FieldValue.increment(1),
+        [`pageVisits.${safeKey}`]: admin.firestore.FieldValue.increment(1),
+        [`dailyVisits.${argDate}`]: admin.firestore.FieldValue.increment(1),
+        [`routeMappings.${safeKey}`]: normalizedPath,
+        lastVisitAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      return res.json({ success: true });
+    } catch (err) {
+      return res.json({ success: false });
+    }
+  });
+
+  // Track Search API (Bypasses ad-blockers)
+  app.post("/api/analytics/track-search", async (req, res) => {
+    try {
+      const { term, category, zona, resultsCount, userId, userEmail } = req.body || {};
+      const cleanTerm = (term || '').trim().toLowerCase();
+      if (!cleanTerm || cleanTerm.length < 2) return res.json({ status: "skipped" });
+
+      const safeTermKey = cleanTerm.replace(/[./[\]#$]/g, '_');
+      const safeCatKey = (category || '').trim().toLowerCase().replace(/[./[\]#$]/g, '_');
+      const safeZonaKey = (zona || '').trim().replace(/[./[\]#$]/g, '_');
+      const nowIso = new Date().toISOString();
+
+      const sDb = getServerDb();
+      if (sDb) {
+        // 1. Record in busquedas_recientes
+        await sDb.collection('busquedas_recientes').add({
+          term: cleanTerm,
+          category: category || '',
+          zona: zona || 'Todas',
+          resultsCount: resultsCount || 0,
+          userId: userId || 'invitado',
+          userEmail: userEmail || null,
+          fechaStr: nowIso,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 2. Record in siteStats/searches
+        const searchesRef = sDb.collection('siteStats').doc('searches');
+        const updatePayload: Record<string, any> = {
+          [`terms.${safeTermKey}`]: admin.firestore.FieldValue.increment(1),
+          recentSearches: admin.firestore.FieldValue.arrayUnion({
+            term: cleanTerm,
+            category: category || '',
+            zona: zona || 'Todas',
+            timestamp: nowIso
+          }),
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (safeCatKey) {
+          updatePayload[`categories.${safeCatKey}`] = admin.firestore.FieldValue.increment(1);
+        }
+        if (safeZonaKey && safeZonaKey !== 'Todas') {
+          updatePayload[`zonas.${safeZonaKey}`] = admin.firestore.FieldValue.increment(1);
+        }
+
+        await searchesRef.set(updatePayload, { merge: true });
+
+        // 3. Update global searches count
+        await sDb.collection('siteStats').doc('global').set({
+          searchesCount: admin.firestore.FieldValue.increment(1),
+          lastSearchAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Server /api/analytics/track-search error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
+  app.post("/api/admin/toggle-vip", async (req, res) => {
+    try {
+      const { userId, isVip } = req.body || {};
+      if (!userId) {
+        return res.status(400).json({ error: "Missing userId" });
+      }
+
+      const sDb = getServerDb();
+      if (sDb) {
+        const updateData: any = {
+          isVip: Boolean(isVip),
+          'profesionalInfo.isVip': Boolean(isVip),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+        if (!isVip) {
+          updateData['profesionalInfo.vipExpiration'] = null;
+          updateData['profesionalInfo.vipExpiredAt'] = admin.firestore.FieldValue.serverTimestamp();
+        } else {
+          updateData['profesionalInfo.vipExpiration'] = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        }
+
+        try {
+          await sDb.collection('usuarios').doc(userId).update(updateData);
+        } catch {
+          await sDb.collection('usuarios').doc(userId).set(updateData, { merge: true });
+        }
+        return res.json({ success: true, userId, isVip: Boolean(isVip) });
+      }
+
+      return res.json({ success: true, message: "Client-side update authorized" });
+    } catch (err: any) {
+      console.error("Server /api/admin/toggle-vip error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/mp/auth-url", (req, res) => {
     const { userId, redirectUrl } = req.query;
     if (!userId) {

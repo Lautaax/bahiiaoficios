@@ -55,6 +55,7 @@ export interface User {
   createdAt?: any;
   isNewUser?: boolean;
   isAdmin?: boolean;
+  isVip?: boolean;
   favoritos?: string[]; // Array of professional UIDs
   slug?: string;
   busquedasRecientes?: Array<{
@@ -225,7 +226,8 @@ export interface UserFeedback {
   userAgent?: string;
   pantalla?: string;
   estado: 'pendiente' | 'en_revision' | 'resuelto';
-  fecha: any;
+  fecha?: any;
+  fechaIso?: string;
 }
 
 export type ChurnRiskLevel = 'critico' | 'alto' | 'medio' | 'preventivo';

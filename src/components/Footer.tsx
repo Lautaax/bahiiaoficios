@@ -48,39 +48,6 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
             </div>
           </div>
 
-          {/* Rubros SEO Destacados */}
-          <div className="space-y-2">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Rubros en Bahía Blanca
-            </h5>
-            <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
-              <li>
-                <Link to="/rubro/plomero" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  Plomeros y Destapaciones
-                </Link>
-              </li>
-              <li>
-                <Link to="/rubro/gasista" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  Gasistas Matriculados
-                </Link>
-              </li>
-              <li>
-                <Link to="/rubro/electricista" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  Electricistas 24 Horas
-                </Link>
-              </li>
-              <li>
-                <Link to="/rubro/techista" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  Techistas y Goteras
-                </Link>
-              </li>
-              <li>
-                <Link to="/rubro/materiales-de-construccion" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  Materiales y Corralones
-                </Link>
-              </li>
-            </ul>
-          </div>
 
           {/* Quick Links */}
           <div className="space-y-2">

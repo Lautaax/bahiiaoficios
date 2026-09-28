@@ -18,6 +18,7 @@ import { CachedImage } from './CachedImage';
 import { preloadImages } from '../utils/imageCache';
 import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { userSearchService } from '../services/userSearchService';
+import { analyticsService } from '../services/analyticsService';
 import { HomeQuickJobPost } from './HomeQuickJobPost';
 
 export function Home() {
@@ -203,9 +204,13 @@ export function Home() {
     const params = new URLSearchParams();
     if (searchTerm.trim()) {
       const term = searchTerm.trim();
+      const currentZona = selectedZona !== 'Todas' ? selectedZona : undefined;
+      analyticsService.trackSearch(term, {
+        zona: currentZona
+      });
       api.trackSearch(term);
       userSearchService.saveRecentSearch(currentUser?.uid, term, {
-        zona: selectedZona !== 'Todas' ? selectedZona : undefined,
+        zona: currentZona,
         userEmail: currentUser?.email
       });
       params.set('search', term);
@@ -247,7 +252,7 @@ export function Home() {
           >
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 mb-6">
               <MapPin size={13} className="text-indigo-400" />
-              <span>La guía oficial de oficios de Bahía Blanca</span>
+              <span>Directorio de profesionales y oficios en Bahía Blanca</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
@@ -507,55 +512,7 @@ export function Home() {
       {/* Componente de Acceso Rápido para Publicar Trabajos Solicitados */}
       <HomeQuickJobPost />
 
-      {/* Categories Grid */}
-      <div className="bg-slate-50 dark:bg-slate-900/50 py-16 border-b border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Rubros Populares
-            </h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Explorá los servicios más solicitados en la ciudad
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {categories.map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <Link 
-                  key={cat.id} 
-                  to={`/rubro/${encodeURIComponent(cat.name.toLowerCase().replace(/\s+/g, '-'))}`}
-                  onClick={() => {
-                    api.trackSearch(cat.name);
-                    userSearchService.saveRecentSearch(currentUser?.uid, cat.name, {
-                      category: cat.name,
-                      userEmail: currentUser?.email
-                    });
-                  }}
-                  className="group bg-white dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-2xl p-5 sm:p-6 transition-all duration-200 flex flex-col items-center text-center shadow-sm hover:shadow-md"
-                >
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
-                  </div>
-                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    {cat.name}
-                  </h3>
-                </Link>
-              );
-            })}
-          </div>
-          
-          <div className="mt-10 text-center">
-            <Link 
-              to="/dashboard" 
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-            >
-              Ver todas las categorías <ArrowRight size={15} />
-            </Link>
-          </div>
-        </div>
-      </div>
+
 
       {/* Sugerencias personalizadas basadas en búsquedas recientes guardadas en Firestore */}
       {personalizedData.suggestedPros.length > 0 && (
@@ -848,174 +805,7 @@ export function Home() {
       {/* SEO Strategic Section: Rubros Prioritarios de Bahía Blanca */}
       <section className="bg-slate-50 dark:bg-slate-900/60 py-16 border-t border-slate-200/80 dark:border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-3">
-              <MapPin size={13} className="text-indigo-600 dark:text-indigo-400" />
-              Guía Oficial de Rubros en Bahía Blanca
-            </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-              Plomeros, Gasistas, Electricistas, Techistas y Corralones
-            </h2>
-            <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              Los 5 servicios y oficios con mayor demanda en Bahía Blanca. Contactá al instante a profesionales calificados y cotizá materiales para tu obra sin intermediarios.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {/* Plomeros */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1 rounded-full">
-                    Urgencias & Destapaciones
-                  </span>
-                  <span className="text-xs text-slate-400">Bahía Blanca</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">
-                  Plomeros en Bahía Blanca
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                  Destapaciones cloacales con máquina, reparación de pérdidas de agua, cambio de canillas e instalación de termotanques y cañerías en termofusión.
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Destapaciones 24hs</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Termofusión</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Presupuesto gratis</span>
-                </div>
-              </div>
-              <Link 
-                to="/rubro/plomero" 
-                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-xs"
-              >
-                Ver Plomeros Disponibles <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            {/* Gasistas */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-3 py-1 rounded-full">
-                    Matriculados Camuzzi
-                  </span>
-                  <span className="text-xs text-slate-400">Bahía Blanca</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">
-                  Gasistas Matriculados
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                  Trámites y planos ante Camuzzi Gas del Sur, colocación de calefactores tiro balanceado, pruebas de hermeticidad certificadas y detección de fugas.
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Habilitación Camuzzi</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Calefactores</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Matrícula al día</span>
-                </div>
-              </div>
-              <Link 
-                to="/rubro/gasista" 
-                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shadow-xs"
-              >
-                Ver Gasistas Matriculados <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            {/* Electricistas */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full">
-                    EDES & Guardia 24hs
-                  </span>
-                  <span className="text-xs text-slate-400">Bahía Blanca</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">
-                  Electricistas en Bahía Blanca
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                  Reparación de cortocircuitos urgentes, bajadas de luz y pilares reglamentarios para EDES, tableros con disyuntores y recableado de viviendas.
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Pilares EDES</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Urgencias 24hs</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Certificados CAE</span>
-                </div>
-              </div>
-              <Link 
-                to="/rubro/electricista" 
-                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs"
-              >
-                Ver Electricistas Disponibles <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            {/* Techistas */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-3 py-1 rounded-full">
-                    Arreglo de Techos & Goteras
-                  </span>
-                  <span className="text-xs text-slate-400">Bahía Blanca</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">
-                  Techistas en Bahía Blanca
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                  Filtraciones por tormentas, colocación de membrana asfáltica, cambio de chapas cincalum, limpieza de canaletas y zinguería a medida.
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Chapas & Tirantes</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Membrana asfáltica</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Zinguería</span>
-                </div>
-              </div>
-              <Link 
-                to="/rubro/techista" 
-                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs"
-              >
-                Ver Techistas Calificados <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            {/* Materiales de Construcción */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between md:col-span-2 lg:col-span-2">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1 rounded-full">
-                    Corralones & Flete en Obra
-                  </span>
-                  <span className="text-xs text-slate-400">Bahía Blanca y la Región</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">
-                  Materiales de Construcción & Corralones
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                  Cotizá bolsas y bolsones de arena, piedra partida, cemento Loma Negra, cal, ladrillos huecos y perfiles de hierro con entrega directa en camión hidrogrúa en tu obra o domicilio.
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Arena & Cemento</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Ladrillos huecos</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Flete a domicilio</span>
-                  <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-md">✓ Beneficio Gremio</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap sm:flex-nowrap gap-3">
-                <Link 
-                  to="/rubro/materiales-de-construccion" 
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-xs"
-                >
-                  Ver Corralones y Materiales <ArrowRight size={14} />
-                </Link>
-                <Link 
-                  to="/beneficios" 
-                  className="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors"
-                >
-                  Descuentos Gremio
-                </Link>
-              </div>
-            </div>
-          </div>
 
           {/* Homepage FAQ Section para posicionamiento orgánico en Google */}
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-10 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">

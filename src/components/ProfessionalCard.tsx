@@ -12,6 +12,7 @@ import { safeLocalStorage } from '../utils/storage';
 import { getProfessionalBadges } from '../utils/badgeUtils';
 import { ProfessionalBadges } from './ProfessionalBadges';
 import { semTracker } from '../utils/semTracker';
+import { analyticsService } from '../services/analyticsService';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -148,13 +149,14 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
       profesionalNombre: nombre,
       zona: professional.zona
     });
+    analyticsService.trackProfessionalContact(uid, 'whatsapp');
     try {
       const userRef = doc(db, 'usuarios', uid);
       await updateDoc(userRef, {
         'profesionalInfo.whatsappClicks': (professional.profesionalInfo.whatsappClicks || 0) + 1
       });
     } catch (error) {
-      console.error("Error updating whatsapp clicks:", error);
+      // Handled by siteStats
     }
   };
 

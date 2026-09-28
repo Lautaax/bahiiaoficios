@@ -271,19 +271,23 @@ function Layout({ children }: { children: React.ReactNode }) {
         const statsDoc = await getDoc(statsRef);
         
         let currentVisits = 0;
-        if (!statsDoc.exists()) {
-          await setDoc(statsRef, { visits: 1 });
-          currentVisits = 1;
+        const statsData = statsDoc.exists() ? (statsDoc.data() || {}) : {};
+        const prevVisits = typeof statsData.visits === 'number' ? statsData.visits : 0;
+        
+        if (!safeSessionStorage.getItem('siteVisited')) {
+          await setDoc(statsRef, { visits: increment(1) }, { merge: true });
+          currentVisits = prevVisits + 1;
+          safeSessionStorage.setItem('siteVisited', 'true');
+          
+          // Server ping for adblocker resilience
+          fetch('/api/analytics/pageview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pathname: window.location.pathname }),
+            keepalive: true
+          }).catch(() => {});
         } else {
-          const statsData = statsDoc.data() || {};
-          const prevVisits = typeof statsData.visits === 'number' ? statsData.visits : 0;
-          if (!safeSessionStorage.getItem('siteVisited')) {
-            await updateDoc(statsRef, { visits: increment(1) });
-            currentVisits = prevVisits + 1;
-            safeSessionStorage.setItem('siteVisited', 'true');
-          } else {
-            currentVisits = prevVisits;
-          }
+          currentVisits = prevVisits;
         }
 
         // Get user count safely

@@ -15,6 +15,7 @@ import { useProfessionalSEO } from '../hooks/useProfessionalSEO';
 import { getProfessionalBadges } from '../utils/badgeUtils';
 import { ProfessionalBadges } from './ProfessionalBadges';
 import { semTracker } from '../utils/semTracker';
+import { analyticsService } from '../services/analyticsService';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -117,6 +118,7 @@ export const PublicProfile: React.FC = () => {
         if (docId) {
           // Increment profile views if not the owner (once per visit)
           if (currentUser?.uid !== docId) {
+            analyticsService.trackProfessionalProfileView(docId);
             try {
               await updateDoc(doc(db, 'usuarios', docId), {
                 'profesionalInfo.profileViews': increment(1)
@@ -129,7 +131,7 @@ export const PublicProfile: React.FC = () => {
                 date: today
               }, { merge: true });
             } catch (e) {
-              console.error("Error updating profile views", e);
+              // Handled by siteStats fallback
             }
           }
 
@@ -277,13 +279,14 @@ export const PublicProfile: React.FC = () => {
       profesionalNombre: professional.nombre,
       zona: professional.zona
     });
+    analyticsService.trackProfessionalContact(professional.uid, 'whatsapp');
     try {
       const userRef = doc(db, 'usuarios', professional.uid);
       await updateDoc(userRef, {
         'profesionalInfo.whatsappClicks': (professional.profesionalInfo.whatsappClicks || 0) + 1
       });
     } catch (error) {
-      console.error("Error updating whatsapp clicks:", error);
+      // Handled by siteStats
     }
   };
 

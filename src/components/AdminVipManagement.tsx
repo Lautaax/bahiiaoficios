@@ -41,6 +41,8 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
   const [selectedUserForHistory, setSelectedUserForHistory] = useState<User | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [confirmingVipRemovalUid, setConfirmingVipRemovalUid] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   // Filter only professionals
   const professionals = useMemo(() => {
@@ -159,21 +161,39 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
     }
   };
 
-  // Quitar VIP de forma manual
+  // Quitar VIP de forma manual (sin confirmación bloqueante)
   const handleRemoveVip = async (pro: User) => {
-    if (!window.confirm(`¿Estás seguro de que deseas quitar el VIP a ${pro.nombre} de forma manual?`)) return;
     try {
       const userRef = doc(db, 'usuarios', pro.uid);
-      await updateDoc(userRef, {
-        'profesionalInfo.isVip': false,
-        'profesionalInfo.vipExpiredAt': new Date(),
-        'profesionalInfo.vipExpiration': null
-      });
-      alert(`Se ha quitado la membresía VIP a ${pro.nombre} correctamente.`);
+      try {
+        await updateDoc(userRef, {
+          'profesionalInfo.isVip': false,
+          'profesionalInfo.vipExpiredAt': new Date().toISOString(),
+          'profesionalInfo.vipExpiration': null,
+          'isVip': false
+        });
+      } catch (innerErr) {
+        // Fallback with minimal field path
+        await updateDoc(userRef, {
+          'profesionalInfo.isVip': false,
+          'profesionalInfo.vipExpiration': null
+        });
+      }
+
+      // Background notification to server
+      fetch('/api/admin/toggle-vip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: pro.uid, isVip: false })
+      }).catch(() => {});
+
+      setConfirmingVipRemovalUid(null);
+      setActionFeedback(`Membresía VIP removida correctamente para ${pro.nombre}.`);
+      setTimeout(() => setActionFeedback(null), 5000);
       await onRefreshUsers();
     } catch (err) {
       console.error("Error al quitar VIP:", err);
-      alert("Error al quitar el estado VIP.");
+      setActionFeedback(`No se pudo quitar el VIP a ${pro.nombre}. Por favor intentá nuevamente.`);
     }
   };
 
@@ -203,6 +223,22 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
           {syncing ? "Auditando Base de Datos..." : "Auditar y Sincronizar Vencidos"}
         </button>
       </div>
+
+      {/* Action Feedback Banner */}
+      {actionFeedback && (
+        <div className="bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between gap-3 text-indigo-900 dark:text-indigo-200 text-sm animate-in fade-in duration-200 shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="font-semibold">{actionFeedback}</span>
+          </div>
+          <button 
+            onClick={() => setActionFeedback(null)} 
+            className="text-indigo-700 hover:text-indigo-900 dark:hover:text-indigo-100 text-xs font-bold uppercase cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
 
       {/* Sync Result Alert */}
       {syncResult && (
@@ -618,14 +654,31 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
                             </a>
                           )}
                           {(status === 'active' || status === 'expiring_soon' || pInfo?.isVip) && (
-                            <button
-                              onClick={() => handleRemoveVip(pro)}
-                              title="Quitar VIP de forma manual"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60 rounded-xl text-xs font-bold transition-colors"
-                            >
-                              <XCircle size={14} />
-                              Quitar VIP
-                            </button>
+                            confirmingVipRemovalUid === pro.uid ? (
+                              <div className="inline-flex items-center gap-1.5 p-1 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 rounded-xl animate-in zoom-in-95">
+                                <button
+                                  onClick={() => handleRemoveVip(pro)}
+                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                                >
+                                  ¿Confirmar Quitar?
+                                </button>
+                                <button
+                                  onClick={() => setConfirmingVipRemovalUid(null)}
+                                  className="px-2 py-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 text-xs font-semibold cursor-pointer"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmingVipRemovalUid(pro.uid)}
+                                title="Quitar VIP de forma manual"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                              >
+                                <XCircle size={14} />
+                                Quitar VIP
+                              </button>
+                            )
                           )}
                           <button
                             onClick={() => setSelectedUserForHistory(pro)}

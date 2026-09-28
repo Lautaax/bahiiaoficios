@@ -18,6 +18,13 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+if (typeof window !== 'undefined') {
+  console.log('[FirebaseInit] Initializing Firebase Client SDK with project:', firebaseConfig.projectId || 'UNKNOWN');
+  if (!firebaseConfig.apiKey) {
+    console.warn('[FirebaseInit] WARNING: VITE_FIREBASE_API_KEY is not defined in client environment.');
+  }
+}
+
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

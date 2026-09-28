@@ -17,7 +17,9 @@ service cloud.firestore {
         request.auth.token.email == "lautaroj.aguilera@gmail.com" ||
         request.auth.token.admin == true ||
         (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true)
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true) ||
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == "admin")
       );
     }
 
@@ -30,12 +32,14 @@ service cloud.firestore {
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       
       // User can update their own data, Admins have full access,
-      // and safe tracking updates (views, clicks, fcm tokens) are allowed without permission errors
+      // and safe tracking & status updates are allowed without permission errors
       allow update: if isOwner(userId) || 
                     isAdmin() ||
                     (
                       request.resource.data.diff(resource.data).affectedKeys().hasAny([
                         'profesionalInfo',
+                        'isVip',
+                        'updatedAt',
                         'fcmToken',
                         'fcmTokens',
                         'fcmPushEnabled',
@@ -131,7 +135,7 @@ service cloud.firestore {
     // 7. NOTIFICACIONES
     match /notificaciones/{notifId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() || isAdmin() || (request.resource.data.userId == 'admin');
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
@@ -156,19 +160,21 @@ service cloud.firestore {
     }
 
     match /analytics_events/{eventId} {
-      allow read: if isAdmin();
-      allow create: if true;
+      allow read, create: if true;
+      allow update, delete: if isAdmin();
     }
 
     // 11. FEEDBACK & REPORTES
     match /feedback/{feedbackId} {
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read: if true;
+      allow update, delete: if isAdmin();
     }
 
     match /reportes/{reporteId} {
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read: if true;
+      allow update, delete: if isAdmin();
     }
 
     // 12. PAYMENTS & SUBSCRIPTIONS

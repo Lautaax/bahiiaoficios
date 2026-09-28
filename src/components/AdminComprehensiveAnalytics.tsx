@@ -59,21 +59,36 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
   const [loading, setLoading] = useState(true);
   const [profSearchFilter, setProfSearchFilter] = useState('');
   const [selectedRubroFilter, setSelectedRubroFilter] = useState('todos');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadMetrics = async () => {
-    setLoading(true);
+  const loadMetrics = async (showFullLoading = true) => {
+    if (showFullLoading) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
       const data = await analyticsService.getAdminComprehensiveAnalytics(users);
       setAnalytics(data);
     } catch (e) {
       console.error("Error loading comprehensive analytics:", e);
     } finally {
-      setLoading(false);
+      if (showFullLoading) setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadMetrics();
+    loadMetrics(!analytics);
+
+    // Live subscription: when visits, searches, or feedback arrive, update automatically
+    const unsubscribe = analyticsService.subscribeToLiveStats(() => {
+      loadMetrics(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [users]);
 
   // Filter professionals
@@ -213,13 +228,14 @@ export const AdminComprehensiveAnalytics: React.FC<AdminComprehensiveAnalyticsPr
 
         <button
           onClick={() => {
-            loadMetrics();
+            loadMetrics(false);
             if (onRefreshData) onRefreshData();
           }}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 transition-colors ml-auto sm:ml-0"
+          disabled={isRefreshing}
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 transition-colors ml-auto sm:ml-0 disabled:opacity-60 cursor-pointer"
         >
-          <RefreshCw size={14} />
-          <span>Actualizar</span>
+          <RefreshCw size={14} className={isRefreshing ? "animate-spin text-indigo-600" : ""} />
+          <span>{isRefreshing ? 'Actualizando...' : 'Actualizar'}</span>
         </button>
       </div>
 

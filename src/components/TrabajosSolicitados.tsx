@@ -559,37 +559,7 @@ export const TrabajosSolicitados: React.FC = () => {
           </div>
         </div>
 
-        {/* Chips de Categorías Populares */}
-        <div>
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
-            Categorías más buscadas en Bahía Blanca:
-          </span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => setSelectedRubro('todos')}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
-                selectedRubro === 'todos'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-              }`}
-            >
-              Todos
-            </button>
-            {POPULAR_RUBROS.map(rubro => (
-              <button
-                key={rubro}
-                onClick={() => setSelectedRubro(rubro === selectedRubro ? 'todos' : rubro)}
-                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
-                  selectedRubro === rubro
-                    ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                {rubro}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Chips de Zonas Populares */}
         <div>

@@ -89,31 +89,57 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
     fetchPayments();
   }, [user.uid]);
 
+  const [confirmingRemoveVip, setConfirmingRemoveVip] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isRemovingVip, setIsRemovingVip] = useState(false);
+
   // Handle manual VIP removal
   const handleRemoveVipManual = async () => {
-    if (!window.confirm(`¿Estás seguro de que deseas quitar el VIP a ${currentUserData.nombre} de forma manual?`)) return;
+    setIsRemovingVip(true);
+    setActionFeedback(null);
     try {
-      await updateDoc(doc(db, 'usuarios', currentUserData.uid), {
-        'profesionalInfo.isVip': false,
-        'profesionalInfo.vipExpiredAt': new Date(),
-        'profesionalInfo.vipExpiration': null,
-        'updatedAt': Timestamp.now()
-      });
+      const userRef = doc(db, 'usuarios', currentUserData.uid);
+      try {
+        await updateDoc(userRef, {
+          'profesionalInfo.isVip': false,
+          'profesionalInfo.vipExpiredAt': new Date().toISOString(),
+          'profesionalInfo.vipExpiration': null,
+          'isVip': false
+        });
+      } catch (innerErr) {
+        // Fallback in case root isVip key throws in older rules
+        await updateDoc(userRef, {
+          'profesionalInfo.isVip': false,
+          'profesionalInfo.vipExpiration': null
+        });
+      }
+
+      // Also call server API in background
+      fetch('/api/admin/toggle-vip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserData.uid, isVip: false })
+      }).catch(() => {});
+
       const updated = {
         ...currentUserData,
+        isVip: false,
         profesionalInfo: {
           ...currentUserData.profesionalInfo,
           isVip: false,
-          vipExpiredAt: new Date(),
+          vipExpiredAt: new Date().toISOString(),
           vipExpiration: null
         } as any
       };
       setCurrentUserData(updated);
       onUserUpdated?.(updated);
-      alert("VIP quitado de forma manual exitosamente.");
-    } catch (e) {
+      setConfirmingRemoveVip(false);
+      setActionFeedback({ type: 'success', message: 'Membresía VIP removida correctamente de forma manual.' });
+    } catch (e: any) {
       console.error("Error al quitar VIP:", e);
-      alert("Error al quitar el estado VIP.");
+      setActionFeedback({ type: 'error', message: 'No se pudo quitar el VIP. Reintentá en unos segundos.' });
+    } finally {
+      setIsRemovingVip(false);
     }
   };
 
@@ -281,12 +307,31 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                   </a>
                 )}
                 {(vipStatus === 'active' || vipStatus === 'expiring_soon' || pInfo?.isVip) && (
-                  <button 
-                    onClick={handleRemoveVipManual}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900 transition-colors shadow-xs"
-                  >
-                    <XCircle size={15} /> Quitar VIP Manualmente
-                  </button>
+                  confirmingRemoveVip ? (
+                    <div className="inline-flex items-center gap-1.5 p-1.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 rounded-xl">
+                      <span className="text-xs font-bold text-rose-700 dark:text-rose-300">¿Quitar VIP ahora?</span>
+                      <button
+                        onClick={handleRemoveVipManual}
+                        disabled={isRemovingVip}
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
+                      >
+                        {isRemovingVip ? 'Quitando...' : 'Sí, Quitar'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmingRemoveVip(false)}
+                        className="px-2 py-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 text-xs font-semibold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setConfirmingRemoveVip(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900 transition-colors shadow-xs cursor-pointer"
+                    >
+                      <XCircle size={15} /> Quitar VIP Manualmente
+                    </button>
+                  )
                 )}
                 <button 
                   onClick={() => setShowAddPayment(!showAddPayment)}
@@ -295,6 +340,20 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
                   <Plus size={15} /> {showAddPayment ? 'Cancelar' : 'Registrar Pago / Renovar'}
                 </button>
               </div>
+
+              {/* Feedback Message */}
+              {actionFeedback && (
+                <div className={`mt-3 p-3 rounded-xl text-xs font-bold flex items-center justify-between gap-2 ${
+                  actionFeedback.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' 
+                    : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                }`}>
+                  <span>{actionFeedback.message}</span>
+                  <button onClick={() => setActionFeedback(null)} className="text-slate-400 hover:text-slate-600">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Visual comparison grid: Expiration vs Today */}

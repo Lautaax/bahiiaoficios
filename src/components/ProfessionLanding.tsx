@@ -20,6 +20,7 @@ import {
   getProfessionFaqs
 } from '../utils/seo';
 import { semTracker } from '../utils/semTracker';
+import { analyticsService } from '../services/analyticsService';
 
 // Aliases mapping so plural, slug, and informal queries land on the correct category
 const SLUG_ALIASES: Record<string, string> = {
@@ -110,6 +111,10 @@ export const ProfessionLanding: React.FC = () => {
     semTracker.trackConversion('search_performed', {
       rubro: professionName,
       searchTerm: `${professionName} Bahía Blanca`
+    });
+
+    analyticsService.trackSearch(professionName, {
+      category: professionName
     });
 
     // Inyectar FAQ Schema para que Google muestre las respuestas directamente en las búsquedas

@@ -1,7 +1,6 @@
 import { Category } from '../types';
 import { PROFESSIONS } from '../constants';
-import { db } from '../firebase';
-import { doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore';
+import { analyticsService } from './analyticsService';
 
 export const api = {
   getCategories: async (): Promise<Category[]> => {
@@ -14,21 +13,10 @@ export const api = {
   
   trackSearch: async (rubro: string) => {
     if (!rubro) return;
-    const rubroRef = doc(db, 'search_stats', rubro);
     try {
-      const docSnap = await getDoc(rubroRef);
-      if (docSnap.exists()) {
-        await updateDoc(rubroRef, {
-          searchCount: increment(1)
-        });
-      } else {
-        await setDoc(rubroRef, {
-          name: rubro,
-          searchCount: 1
-        });
-      }
+      await analyticsService.trackSearch(rubro);
     } catch (error) {
-      console.error("Error tracking search:", error);
+      console.error("Error tracking search in api:", error);
     }
   }
 };

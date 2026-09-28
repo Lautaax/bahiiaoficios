@@ -95,30 +95,66 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleToggleMatricula = async (userId: string, currentStatus: boolean) => {
-    if (!window.confirm(`¿Estás seguro de que quieres ${currentStatus ? 'quitar la verificación de matrícula' : 'verificar la matrícula'} de este profesional?`)) return;
-    
     try {
       await updateDoc(doc(db, 'usuarios', userId), {
         'profesionalInfo.matriculaVerified': !currentStatus,
         'profesionalInfo.matriculado': !currentStatus
       });
       setUsers(users.map(u => u.uid === userId && u.profesionalInfo ? { ...u, profesionalInfo: { ...u.profesionalInfo, matriculaVerified: !currentStatus, matriculado: !currentStatus } } : u));
-      alert(`Matrícula ${!currentStatus ? 'aprobada' : 'desaprobada'} correctamente.`);
     } catch (error) {
       console.error("Error toggling matricula:", error);
-      alert("Error al actualizar la matrícula.");
+    }
+  };
+
+  const handleToggleVip = async (targetUser: User) => {
+    const currentVip = !!(targetUser.profesionalInfo?.isVip || targetUser.isVip);
+    const newVip = !currentVip;
+    try {
+      const userRef = doc(db, 'usuarios', targetUser.uid);
+      try {
+        await updateDoc(userRef, {
+          'profesionalInfo.isVip': newVip,
+          'profesionalInfo.vipExpiredAt': newVip ? null : new Date().toISOString(),
+          'profesionalInfo.vipExpiration': newVip ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null,
+          'isVip': newVip
+        });
+      } catch (err1) {
+        await updateDoc(userRef, {
+          'profesionalInfo.isVip': newVip,
+          'profesionalInfo.vipExpiration': newVip ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null
+        });
+      }
+
+      fetch('/api/admin/toggle-vip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetUser.uid, isVip: newVip })
+      }).catch(() => {});
+
+      setUsers(users.map(u => {
+        if (u.uid !== targetUser.uid) return u;
+        return {
+          ...u,
+          isVip: newVip,
+          profesionalInfo: {
+            ...u.profesionalInfo,
+            isVip: newVip,
+            vipExpiration: newVip ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null,
+            vipExpiredAt: newVip ? null : new Date().toISOString()
+          } as any
+        };
+      }));
+    } catch (error) {
+      console.error("Error toggling VIP:", error);
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm("¿Estás seguro de que quieres ELIMINAR a este usuario? Esta acción no se puede deshacer.")) return;
-    
     try {
       await deleteDoc(doc(db, 'usuarios', userId));
       setUsers(users.filter(u => u.uid !== userId));
     } catch (error) {
       console.error("Error deleting user:", error);
-      alert("Error al eliminar el usuario.");
     }
   };
 
@@ -153,33 +189,37 @@ export const AdminDashboard: React.FC = () => {
       console.error("Error removing badge:", error);
     }
   };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
 
     try {
+      const isUserVip = Boolean(editingUser.isVip || editingUser.profesionalInfo?.isVip);
       const updateData: any = {
         nombre: editingUser.nombre,
         nombreNegocio: editingUser.nombreNegocio || null,
         telefono: editingUser.telefono,
         rol: editingUser.rol,
-        isAdmin: editingUser.isAdmin || false
+        isAdmin: editingUser.isAdmin || false,
+        isVip: isUserVip
       };
 
       if (editingUser.rol === 'profesional' && editingUser.profesionalInfo) {
         updateData.profesionalInfo = {
           ...editingUser.profesionalInfo,
-          nombreNegocio: editingUser.nombreNegocio || null
+          nombreNegocio: editingUser.nombreNegocio || null,
+          isVip: isUserVip,
+          vipExpiration: isUserVip ? (editingUser.profesionalInfo.vipExpiration || null) : null,
+          vipExpiredAt: isUserVip ? null : new Date().toISOString()
         };
       }
 
       await updateDoc(doc(db, 'usuarios', editingUser.uid), updateData);
-      setUsers(users.map(u => u.uid === editingUser.uid ? editingUser : u));
+      setUsers(users.map(u => u.uid === editingUser.uid ? { ...editingUser, ...updateData } : u));
       setEditingUser(null);
-      alert("Usuario actualizado correctamente.");
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("Error al actualizar el usuario.");
     }
   };
 
@@ -586,6 +626,7 @@ export const AdminDashboard: React.FC = () => {
                     <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Registro</th>
                     <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Identidad</th>
                     <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">Matrícula</th>
+                    <th className="p-4 font-semibold text-gray-700 dark:text-gray-300">VIP</th>
                     <th className="p-4 font-semibold text-gray-700 dark:text-gray-300 text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -615,13 +656,11 @@ export const AdminDashboard: React.FC = () => {
                           value={user.rol}
                           onChange={async (e) => {
                             const newRol = e.target.value as any;
-                            if (window.confirm(`¿Cambiar rol de ${user.nombre} a ${newRol}?`)) {
-                              try {
-                                await updateDoc(doc(db, 'usuarios', user.uid), { rol: newRol });
-                                setUsers(users.map(u => u.uid === user.uid ? { ...u, rol: newRol } : u));
-                              } catch (error) {
-                                console.error("Error updating role:", error);
-                              }
+                            try {
+                              await updateDoc(doc(db, 'usuarios', user.uid), { rol: newRol });
+                              setUsers(users.map(u => u.uid === user.uid ? { ...u, rol: newRol } : u));
+                            } catch (error) {
+                              console.error("Error updating role:", error);
                             }
                           }}
                           className={`px-2 py-1 rounded-lg text-xs font-bold uppercase outline-none bg-transparent border border-gray-200 dark:border-gray-700 ${user.rol === 'profesional' ? 'text-indigo-700' : 'text-gray-700'}`}
@@ -665,6 +704,24 @@ export const AdminDashboard: React.FC = () => {
                           </button>
                         ) : (
                           <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {user.rol === 'profesional' ? (
+                          <button 
+                            onClick={() => handleToggleVip(user)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              user.profesionalInfo?.isVip || user.isVip
+                                ? 'bg-amber-100 text-amber-800 hover:bg-rose-100 hover:text-rose-700 border border-amber-300 shadow-2xs' 
+                                : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-700 dark:bg-gray-800 dark:text-gray-400'
+                            }`}
+                            title={user.profesionalInfo?.isVip || user.isVip ? 'Hacé clic para quitar VIP manualmente' : 'Hacé clic para otorgar VIP'}
+                          >
+                            <Crown size={14} className={user.profesionalInfo?.isVip || user.isVip ? 'text-amber-600 fill-amber-500' : 'text-gray-400'} />
+                            {user.profesionalInfo?.isVip || user.isVip ? 'VIP Activo' : 'Sin VIP'}
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
@@ -1045,6 +1102,42 @@ export const AdminDashboard: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                       rows={3}
                     />
+                  </div>
+
+                  {/* Toggle Membresía VIP */}
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="modalIsVip"
+                        checked={editingUser.profesionalInfo?.isVip || editingUser.isVip || false} 
+                        onChange={(e) => {
+                          const isVipChecked = e.target.checked;
+                          setEditingUser({
+                            ...editingUser,
+                            isVip: isVipChecked,
+                            profesionalInfo: {
+                              ...editingUser.profesionalInfo,
+                              isVip: isVipChecked,
+                              vipExpiration: isVipChecked 
+                                ? (editingUser.profesionalInfo?.vipExpiration || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()) 
+                                : null,
+                              vipExpiredAt: isVipChecked ? null : new Date().toISOString()
+                            } as any
+                          });
+                        }}
+                        className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                      />
+                      <label htmlFor="modalIsVip" className="text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 cursor-pointer">
+                        <Crown size={15} className="text-amber-600 fill-amber-500" />
+                        Membresía VIP Activa
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                      {editingUser.profesionalInfo?.isVip || editingUser.isVip 
+                        ? 'El profesional figurará con corona dorada y prioridad máxima en búsquedas.' 
+                        : 'Desmarcado: perfil regular sin costo mensual ni prioridad especial.'}
+                    </p>
                   </div>
                 </>
               )}

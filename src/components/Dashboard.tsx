@@ -682,7 +682,7 @@ export const Dashboard: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 px-3 py-1 rounded-full mb-1.5 border border-indigo-100 dark:border-indigo-900">
               <Award size={13} className="text-indigo-600 dark:text-indigo-400" />
-              Guía Oficial de Prestadores
+              Directorio de Profesionales
             </div>
             <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               Profesionales en Bahía Blanca

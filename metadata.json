@@ -1,6 +1,6 @@
 {
   "name": "Bahia Oficios",
-  "description": "Plomero, Gasista, Electricista, Techista y Materiales de Construcción en Bahía Blanca. Contacto directo por WhatsApp y presupuestos gratis.",
+  "description": "Directorio de profesionales y oficios en Bahía Blanca. Contacto directo por WhatsApp y presupuestos transparentes sin comisiones.",
   "requestFramePermissions": [
     "microphone"
   ],
