@@ -166,18 +166,20 @@ export const CompleteProfile: React.FC = () => {
       }
 
       if (jobPhotos.length > 0) {
-        for (let i = 0; i < jobPhotos.length; i++) {
+        const uploadPromises = jobPhotos.map(async (photo, i) => {
           try {
-            const compressed = await imageCompression(jobPhotos[i], { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
+            const compressed = await imageCompression(photo, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, fileType: 'image/webp' });
             const webpFile = new File([compressed], `job_${i}.webp`, { type: 'image/webp' });
             const storageRef = ref(storage, `job_images/${currentUser.uid}/${i}`);
             await uploadBytes(storageRef, webpFile);
-            const url = await getDownloadURL(storageRef);
-            fotosTrabajos.push(url);
+            return await getDownloadURL(storageRef);
           } catch (err) {
             console.error("Error uploading job photo", i);
+            return null;
           }
-        }
+        });
+        const results = await Promise.all(uploadPromises);
+        fotosTrabajos.push(...results.filter((url): url is string => url !== null));
       }
 
       const baseSlug = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
