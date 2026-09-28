@@ -75,8 +75,6 @@ export const VipButton: React.FC = () => {
     setPaymentStep('processing');
     
     try {
-      console.log("Iniciando flujo de pago para:", currentUser.uid, "Plan:", selectedPlan.label);
-
       const response = await axios.post('/api/create_preference', {
         title: `Membresía VIP ${selectedPlan.label} - Portal de Oficios`,
         price: selectedPlan.price,
