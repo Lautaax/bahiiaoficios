@@ -4,14 +4,16 @@ import {
 } from 'lucide-react';
 
 export const PROFESSIONS = [
-  { name: 'Electricista', icon: Lightbulb, category: 'Hogar y Construcción' },
-  { name: 'Gasista', icon: Flame, category: 'Hogar y Construcción' },
   { name: 'Plomero', icon: Droplets, category: 'Hogar y Construcción' },
+  { name: 'Gasista', icon: Flame, category: 'Hogar y Construcción' },
+  { name: 'Electricista', icon: Lightbulb, category: 'Hogar y Construcción' },
+  { name: 'Techista', icon: House, category: 'Hogar y Construcción' },
+  { name: 'Materiales de Construcción', icon: BrickWall, category: 'Hogar y Construcción' },
+  { name: 'Corralón de Materiales', icon: Truck, category: 'Hogar y Construcción' },
   { name: 'Albañil', icon: BrickWall, category: 'Hogar y Construcción' },
   { name: 'Pintor', icon: Brush, category: 'Hogar y Construcción' },
   { name: 'Carpintero', icon: Hammer, category: 'Hogar y Construcción' },
   { name: 'Jardinero', icon: Sprout, category: 'Hogar y Construcción' },
-  { name: 'Techista', icon: House, category: 'Hogar y Construcción' },
   { name: 'Herrería', icon: Anvil, category: 'Hogar y Construcción' },
   { name: 'Aire Acondicionado', icon: Wind, category: 'Hogar y Construcción' },
   { name: 'Arquitecto', icon: PenTool, category: 'Hogar y Construcción' },
@@ -126,6 +128,23 @@ export const PROFESSION_TIPS: Record<string, string[]> = {
     'Define el tipo de herrajes y terminaciones (lustre, laca, melamina).',
     'Toma medidas precisas y pide un diseño o croquis previo.',
     'Consulta sobre el tiempo de entrega e instalación.'
+  ],
+  'Techista': [
+    'Solicitá una inspección previa para evaluar chapas, tirantes, selladores y pendientes.',
+    'Preguntá si realiza pruebas de estanqueidad o manguera tras reparar goteras o filtraciones.',
+    'Asegurate de que el presupuesto detalle zinguería, membranas asfálticas o líquidas y desagües pluviales.',
+    'Verificá que cuente con arnés y elementos de seguridad para trabajos en altura.'
+  ],
+  'Materiales de Construcción': [
+    'Compará precios por bolsón de áridos (arena, piedra, escombros) y pallet cerrado de cemento o ladrillos.',
+    'Consultá el costo y zona de cobertura del flete con pluma o descarga en tu barrio de Bahía Blanca.',
+    'Preguntá por descuentos exclusivos por pago contado efectivo o acuerdos para el gremio en Bahía Oficios.',
+    'Calculá siempre entre un 8% y 12% extra por desperdicio en cerámicos, áridos y perfiles.'
+  ],
+  'Corralón de Materiales': [
+    'Verificá tiempos de entrega garantizados en obra para evitar demoras con la cuadrilla.',
+    'Consultá si ofrecen acopio de materiales para congelar precios frente a la inflación.',
+    'Pedí factura y remito detallado de marcas homologadas (Loma Negra, Acindar, Klaukol).'
   ],
   'Default': [
     'Revisa las opiniones de otros clientes en su perfil.',

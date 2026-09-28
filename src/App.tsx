@@ -31,6 +31,7 @@ import { PublicidadComercio } from './components/PublicidadComercio';
 import { NotificationListener } from './components/NotificationListener';
 import { CachedImage } from './components/CachedImage';
 import { ProfessionLanding } from './components/ProfessionLanding';
+import { SemMarketingKit } from './components/SemMarketingKit';
 import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 import { Footer } from './components/Footer';
 
@@ -347,9 +348,27 @@ function AppContent() {
           </Layout>
         } />
 
+        <Route path="/rubro/:profession" element={
+          <Layout>
+            <ProfessionLanding />
+          </Layout>
+        } />
+
+        <Route path="/profesion/:profession" element={
+          <Layout>
+            <ProfessionLanding />
+          </Layout>
+        } />
+
         <Route path="/professions/:profession" element={
           <Layout>
             <ProfessionLanding />
+          </Layout>
+        } />
+
+        <Route path="/sem-marketing" element={
+          <Layout>
+            <SemMarketingKit />
           </Layout>
         } />
 

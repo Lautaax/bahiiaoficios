@@ -1,6 +1,6 @@
 {
   "name": "Bahia Oficios",
-  "description": "Plataforma para conectar clientes con profesionales de oficios y publicar trabajos requeridos en Bahía Blanca.",
+  "description": "Plomero, Gasista, Electricista, Techista y Materiales de Construcción en Bahía Blanca. Contacto directo por WhatsApp y presupuestos gratis.",
   "requestFramePermissions": [
     "microphone"
   ],

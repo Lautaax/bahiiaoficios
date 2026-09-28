@@ -11,6 +11,7 @@ import { CachedImage } from './CachedImage';
 import { safeLocalStorage } from '../utils/storage';
 import { getProfessionalBadges } from '../utils/badgeUtils';
 import { ProfessionalBadges } from './ProfessionalBadges';
+import { semTracker } from '../utils/semTracker';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -141,6 +142,12 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
 
   const handleWhatsAppClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    semTracker.trackConversion('whatsapp_contact', {
+      rubro,
+      profesionalId: uid,
+      profesionalNombre: nombre,
+      zona: professional.zona
+    });
     try {
       const userRef = doc(db, 'usuarios', uid);
       await updateDoc(userRef, {

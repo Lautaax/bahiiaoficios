@@ -14,6 +14,7 @@ import { safeLocalStorage } from '../utils/storage';
 import { useProfessionalSEO } from '../hooks/useProfessionalSEO';
 import { getProfessionalBadges } from '../utils/badgeUtils';
 import { ProfessionalBadges } from './ProfessionalBadges';
+import { semTracker } from '../utils/semTracker';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -270,6 +271,12 @@ export const PublicProfile: React.FC = () => {
 
   const handleWhatsAppClick = async () => {
     if (!professional?.uid || !professional?.profesionalInfo) return;
+    semTracker.trackConversion('whatsapp_contact', {
+      rubro: professional.profesionalInfo.rubro,
+      profesionalId: professional.uid,
+      profesionalNombre: professional.nombre,
+      zona: professional.zona
+    });
     try {
       const userRef = doc(db, 'usuarios', professional.uid);
       await updateDoc(userRef, {

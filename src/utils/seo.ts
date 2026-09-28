@@ -272,3 +272,127 @@ export function generateProfessionLandingSchema(
     })
   };
 }
+
+/**
+ * Trade specific FAQ answers that give Google rich FAQ accordions on search results
+ */
+export function getProfessionFaqs(professionName: string): { question: string; answer: string }[] {
+  const norm = professionName.toLowerCase();
+
+  if (norm.includes('plomer')) {
+    return [
+      {
+        question: '¿Cuánto cuesta un servicio de plomero en Bahía Blanca?',
+        answer: 'El costo varía según el tipo de trabajo (reparación de canillas, destapaciones cloacales con máquina, instalación de termotanques o cañerías termofusión). En Bahía Oficios podés pedir presupuestos sin cargo y comparar opciones.'
+      },
+      {
+        question: '¿Hacen destapaciones cloacales de urgencia en Bahía Blanca?',
+        answer: 'Sí, varios plomeros registrados cuentan con máquinas desobstructoras de resorte y atienden urgencias las 24 horas en todos los barrios bahienses.'
+      },
+      {
+        question: '¿Qué información conviene dar al plomero para cotizar?',
+        answer: 'Es útil enviar fotos o video del problema, indicar el barrio o zona de Bahía Blanca y si ya disponés de los repuestos o debe proveerlos el profesional.'
+      }
+    ];
+  }
+
+  if (norm.includes('gasist')) {
+    return [
+      {
+        question: '¿Por qué es indispensable contratar un Gasista Matriculado en Bahía Blanca?',
+        answer: 'Por seguridad familiar y normativa legal ante Camuzzi Gas del Sur. Solo los matriculados pueden presentar planos, realizar pruebas de hermeticidad certificadas y tramitar rehabilitación del servicio.'
+      },
+      {
+        question: '¿Qué trámites de gas se realizan con mayor frecuencia?',
+        answer: 'Instalación y conexión de cocinas, calefactores tiro balanceado, termotanques, calderas, detección de pérdidas y habilitaciones reglamentarias de medidor.'
+      },
+      {
+        question: '¿Cómo verificar la matrícula de un gasista en Bahía Blanca?',
+        answer: 'En su perfil de Bahía Oficios podés verificar si cuenta con matrícula verificada y su categoría (1ª, 2ª o 3ª categoría) según el porte de la instalación.'
+      }
+    ];
+  }
+
+  if (norm.includes('electric')) {
+    return [
+      {
+        question: '¿Qué trabajos realiza un electricista en Bahía Blanca?',
+        answer: 'Reparación de cortocircuitos, recableado general bajo norma IRAM, instalación de disyuntores y térmicas, armado de pilares de luz reglamentarios para EDES y colocación de artefactos de iluminación.'
+      },
+      {
+        question: '¿Tienen servicio de electricista para urgencias 24 horas?',
+        answer: 'Sí, contamos con electricistas de guardia para solucionar cortes de luz, recalentamiento de cables y tableros principales en Bahía Blanca de día y de noche.'
+      },
+      {
+        question: '¿El electricista otorga certificado de instalación para EDES?',
+        answer: 'Los electricistas matriculados emiten el Certificado de Aptitud Eléctrica (CAE) requerido por la distribuidora eléctrica EDES para la bajada de medidores nuevos.'
+      }
+    ];
+  }
+
+  if (norm.includes('tech') || norm.includes('techo')) {
+    return [
+      {
+        question: '¿Qué problemas resuelven los techistas en Bahía Blanca?',
+        answer: 'Reparación de filtraciones y goteras, colocación de chapas cincalum o trapezoidales, impermeabilización con membrana asfáltica, zinguería a medida, limpieza de canaletas y armado de tirantes o estructuras metálicas.'
+      },
+      {
+        question: '¿Cómo solucionar el levantamiento de chapas por los vientos de Bahía Blanca?',
+        answer: 'Los techistas refuerzan el clavado y atornillado con tornillos autoperforantes y arandelas de neopreno con fijación directa a perfiles C o tirantes reforzados.'
+      },
+      {
+        question: '¿Qué garantía ofrecen los techistas tras reparar una gotera?',
+        answer: 'Los profesionales suelen realizar pruebas de lluvia artificial con manguera y brindan garantía por escrito para la temporada invernal.'
+      }
+    ];
+  }
+
+  if (norm.includes('material') || norm.includes('corral')) {
+    return [
+      {
+        question: '¿Qué materiales de construcción puedo cotizar en Bahía Blanca?',
+        answer: 'Arena fina y gruesa por bolsón, piedra partida, cemento Loma Negra o Avellaneda, cal, ladrillos huecos y comunes, hierros para losas, viguetas pretensadas y perfiles C.'
+      },
+      {
+        question: '¿Los corralones hacen flete con grúa o pluma a domicilio?',
+        answer: 'Sí, la mayoría de los corralones asociados en Bahía Oficios ofrecen entrega directa en obra con camión hidrogrúa en toda Bahía Blanca, Ingeniero White, Cerri y Punta Alta.'
+      },
+      {
+        question: '¿Hay descuentos para profesionales y compras al por mayor?',
+        answer: 'Sí, registrándote en Bahía Oficios podés acceder a descuentos gremiales del 5% al 15% en corralones y ferreterías industriales bahienses.'
+      }
+    ];
+  }
+
+  return [
+    {
+      question: `¿Cómo pedir presupuesto a un ${professionName} en Bahía Blanca?`,
+      answer: `Podés contactar directamente por WhatsApp al ${professionName} desde su perfil en Bahía Oficios sin registrarte ni pagar comisión.`
+    },
+    {
+      question: `¿Los ${professionName}s trabajan en todos los barrios de Bahía Blanca?`,
+      answer: `Sí, cubren barrios como Centro, Macrocentro, Villa Mitre, Universitario, Patagonia, Palihue, Ing. White y alrededores.`
+    }
+  ];
+}
+
+/**
+ * Generates FAQPage schema for specific trades
+ */
+export function generateProfessionFaqSchema(professionName: string): Record<string, any> {
+  const faqs = getProfessionFaqs(professionName);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer
+      }
+    }))
+  };
+}
+
