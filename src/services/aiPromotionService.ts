@@ -1,6 +1,6 @@
 import { AiPromotionInsightsReport, CategoryPromotionInsight, User } from '../types';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { sendPushNotification } from '../utils/notifications';
 
 export async function getCategoryPromotionInsights(
@@ -172,10 +172,16 @@ export async function getCategoryPromotionInsights(
       };
     });
 
+    // Get auth token if user logged in
+    const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+
     // Call server API
     const response = await fetch('/api/admin/category-promotion-insights', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+      },
       body: JSON.stringify({
         force,
         categoriesData

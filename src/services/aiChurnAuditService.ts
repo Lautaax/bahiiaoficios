@@ -104,10 +104,16 @@ export async function getDailyChurnAudit(
       }
     });
 
+    // Get auth token if user logged in
+    const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+
     // 3. Post to backend to run Gemini
     const res = await fetch(`/api/admin/daily-churn-audit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+      },
       body: JSON.stringify({
         force,
         prosData,
@@ -136,7 +142,12 @@ export async function getDailyChurnAudit(
     return { fromCache: data.fromCache, audit };
   } catch (err: any) {
     console.warn('[aiChurnAuditService] POST with data failed, trying fallback GET:', err);
-    const fallbackRes = await fetch(`/api/admin/daily-churn-audit${force ? '?force=true' : ''}`);
+    const fallbackToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+    const fallbackRes = await fetch(`/api/admin/daily-churn-audit${force ? '?force=true' : ''}`, {
+      headers: {
+        ...(fallbackToken ? { 'Authorization': `Bearer ${fallbackToken}` } : {})
+      }
+    });
     if (fallbackRes.ok) {
       return await fallbackRes.json();
     }

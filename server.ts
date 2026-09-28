@@ -603,6 +603,58 @@ async function startServer() {
     }
   });
 
+  // Middleware to verify Admin Authentication for protected /api/admin/* routes
+  const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+      }
+
+      const token = authHeader.split('Bearer ')[1]?.trim();
+      if (!token) {
+        return res.status(401).json({ error: "Unauthorized: Token missing" });
+      }
+
+      if (!admin.apps.length) {
+        console.error("Authorization check failed: Firebase Admin app not initialized");
+        return res.status(503).json({ error: "Service Unavailable: Authentication service uninitialized" });
+      }
+
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        const email = decodedToken.email;
+        const uid = decodedToken.uid;
+        const SUPER_ADMIN_EMAIL = 'lautaroj.aguilera@gmail.com';
+
+        let isAdmin = decodedToken.isAdmin === true || email === SUPER_ADMIN_EMAIL;
+
+        if (!isAdmin && isServerFirestoreAvailable && serverDb) {
+          const userDoc = await serverDb.collection('usuarios').doc(uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            if (userData?.isAdmin === true || userData?.email === SUPER_ADMIN_EMAIL) {
+              isAdmin = true;
+            }
+          }
+        }
+
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Forbidden: Admin privileges required" });
+        }
+
+        (req as any).user = decodedToken;
+        return next();
+      } catch (verifyErr: any) {
+        console.error("Token verification failed:", verifyErr.message || verifyErr);
+        return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+      }
+    } catch (err: any) {
+      console.error("Error in requireAdmin middleware:", err);
+      return res.status(500).json({ error: "Internal Server Error in authorization check" });
+    }
+  };
+
   // Helper for lazy Gemini Client
   let geminiClient: GoogleGenAI | null = null;
   function getGeminiClient(): GoogleGenAI | null {
@@ -694,7 +746,7 @@ async function startServer() {
   }
 
   // AI Optimization Endpoint (Gemini 3.8 Flash)
-  app.post("/api/admin/ai-optimize", async (req, res) => {
+  app.post("/api/admin/ai-optimize", requireAdmin, async (req, res) => {
     try {
       const { metrics } = req.body;
       const ai = getGeminiClient();
@@ -1217,7 +1269,7 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
   }
 
   // Endpoints: GET and POST /api/admin/daily-churn-audit
-  app.all("/api/admin/daily-churn-audit", async (req, res) => {
+  app.all("/api/admin/daily-churn-audit", requireAdmin, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const providedPros = req.body?.prosData;
@@ -1579,7 +1631,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
   }
 
   // Endpoints: GET and POST /api/admin/category-promotion-insights
-  app.all("/api/admin/category-promotion-insights", async (req, res) => {
+  app.all("/api/admin/category-promotion-insights", requireAdmin, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const categoriesData = req.body?.categoriesData;
