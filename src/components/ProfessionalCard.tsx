@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { Star, MapPin, Phone, MessageSquare, MessageCircle, Mail, X, Briefcase, Heart, Share2, Check, BadgeCheck, Clock, Zap } from 'lucide-react';
@@ -18,7 +18,8 @@ interface ProfessionalCardProps {
   professional: User;
 }
 
-export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => {
+// ⚡ Bolt: Wrapped ProfessionalCard with React.memo to prevent unnecessary re-renders in large lists
+export const ProfessionalCard: React.FC<ProfessionalCardProps> = memo(({ professional }) => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
@@ -498,4 +499,6 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
       )}
     </>
   );
-};
+});
+
+ProfessionalCard.displayName = 'ProfessionalCard';
