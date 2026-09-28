@@ -15,7 +15,6 @@ export async function getCategoryPromotionInsights(
       const cacheSnap = await getDoc(doc(db, 'ai_promotion_insights', todayStr));
       if (cacheSnap.exists()) {
         const report = cacheSnap.data() as AiPromotionInsightsReport;
-        console.log('[aiPromotionService] Loaded report from client Firestore cache');
         return { fromCache: true, report };
       }
     } catch (cacheErr) {
