@@ -15,7 +15,6 @@ export async function getDailyChurnAudit(
       const cacheSnap = await getDoc(doc(db, 'daily_ai_audits', todayStr));
       if (cacheSnap.exists()) {
         const audit = cacheSnap.data() as ChurnAuditReport;
-        console.log('[aiChurnAuditService] Loaded audit from client Firestore cache');
         return { fromCache: true, audit };
       }
     } catch (cacheErr) {
