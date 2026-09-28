@@ -693,8 +693,55 @@ async function startServer() {
     };
   }
 
+  // Middleware to authenticate and authorize admin users for /api/admin endpoints
+  async function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    }
+
+    const token = authHeader.split('Bearer ')[1]?.trim();
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    try {
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'bahia-oficios'
+        });
+      }
+
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const uid = decodedToken.uid;
+      const email = decodedToken.email;
+
+      let isAdmin = email === 'lautaroj.aguilera@gmail.com' || decodedToken.isAdmin === true;
+
+      if (!isAdmin) {
+        const db = getServerDb();
+        if (db) {
+          const userDoc = await db.collection('usuarios').doc(uid).get();
+          if (userDoc.exists && userDoc.data()?.isAdmin === true) {
+            isAdmin = true;
+          }
+        }
+      }
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Forbidden: Admin access required" });
+      }
+
+      (req as any).user = decodedToken;
+      next();
+    } catch (error) {
+      console.error("Authentication error in admin endpoint:", error);
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+  }
+
   // AI Optimization Endpoint (Gemini 3.8 Flash)
-  app.post("/api/admin/ai-optimize", async (req, res) => {
+  app.post("/api/admin/ai-optimize", requireAdminAuth, async (req, res) => {
     try {
       const { metrics } = req.body;
       const ai = getGeminiClient();
@@ -1217,7 +1264,7 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
   }
 
   // Endpoints: GET and POST /api/admin/daily-churn-audit
-  app.all("/api/admin/daily-churn-audit", async (req, res) => {
+  app.all("/api/admin/daily-churn-audit", requireAdminAuth, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const providedPros = req.body?.prosData;
@@ -1579,7 +1626,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
   }
 
   // Endpoints: GET and POST /api/admin/category-promotion-insights
-  app.all("/api/admin/category-promotion-insights", async (req, res) => {
+  app.all("/api/admin/category-promotion-insights", requireAdminAuth, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const categoriesData = req.body?.categoriesData;
