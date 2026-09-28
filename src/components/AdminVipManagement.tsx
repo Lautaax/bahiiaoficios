@@ -135,18 +135,22 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
     });
   }, [professionals, statusFilter, selectedTrade, searchTerm]);
 
-  // Batch sync/clean expired VIPs
+  // Batch sync/clean expired VIPs concurrently in chunks
   const handleSyncAllExpired = async () => {
     setSyncing(true);
     setSyncResult(null);
     let expiredCount = 0;
 
     try {
-      for (const pro of professionals) {
-        if (pro.profesionalInfo?.isVip) {
-          const expired = await checkAndExpireUserVip(pro.uid, pro.profesionalInfo);
-          if (expired) expiredCount++;
-        }
+      const vipPros = professionals.filter(pro => pro.profesionalInfo?.isVip);
+      const BATCH_SIZE = 10;
+
+      for (let i = 0; i < vipPros.length; i += BATCH_SIZE) {
+        const chunk = vipPros.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          chunk.map(pro => checkAndExpireUserVip(pro.uid, pro.profesionalInfo))
+        );
+        expiredCount += results.filter(Boolean).length;
       }
 
       await onRefreshUsers();
