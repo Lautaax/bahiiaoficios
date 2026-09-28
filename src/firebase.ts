@@ -8,14 +8,16 @@ import { getStorage } from 'firebase/storage';
 // En un entorno real, estas variables vendrían de import.meta.env
 import { getFunctions } from 'firebase/functions';
 
+const env = (import.meta as any).env || process.env || {};
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyDummyKeyForTestingPurposes1234567',
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'demo-app.firebaseapp.com',
+  projectId: env.VITE_FIREBASE_PROJECT_ID || 'demo-app',
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'demo-app.appspot.com',
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1234567890',
+  appId: env.VITE_FIREBASE_APP_ID || '1:1234567890:web:abcdef123456',
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
