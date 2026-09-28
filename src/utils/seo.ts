@@ -5,7 +5,7 @@ import { User, Review } from '../types';
  */
 export function getLocalBusinessSchemaType(rubro?: string): string[] {
   if (!rubro) return ['LocalBusiness', 'ProfessionalService'];
-  const r = rubro.toLowerCase();
+  const r = rubro.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const types = ['LocalBusiness'];
 
@@ -17,12 +17,12 @@ export function getLocalBusinessSchemaType(rubro?: string): string[] {
     types.unshift('RoofingContractor');
   } else if (r.includes('cerraj')) {
     types.unshift('Locksmith');
-  } else if (r.includes('pint')) {
-    types.unshift('GeneralContractor');
-  } else if (r.includes('albañ') || r.includes('construc') || r.includes('reforma')) {
-    types.unshift('GeneralContractor');
   } else if (r.includes('mecanic') || r.includes('taller') || r.includes('chapa') || r.includes('gomer')) {
     types.unshift('AutoRepair');
+  } else if (r.includes('pintor') || r.includes('pintur')) {
+    types.unshift('GeneralContractor');
+  } else if (r.includes('alban') || r.includes('construc') || r.includes('reforma')) {
+    types.unshift('GeneralContractor');
   } else if (r.includes('limp') || r.includes('limpieza')) {
     types.unshift('ProfessionalService');
   } else if (r.includes('abog')) {
