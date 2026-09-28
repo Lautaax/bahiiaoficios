@@ -116,6 +116,55 @@ async function getMpClient(): Promise<MercadoPagoConfig | null> {
     return null;
 }
 
+// Helper to log failed DB updates for manual fix
+async function logFailedDbUpdate(context: {
+  paymentId: string | number;
+  type?: string;
+  metadata?: any;
+  payment?: any;
+  error?: any;
+  description: string;
+}) {
+  const logEntry = {
+    paymentId: String(context.paymentId),
+    type: context.type || context.metadata?.type || 'unknown',
+    metadata: context.metadata || {},
+    paymentDetails: context.payment ? {
+      status: context.payment.status,
+      transaction_amount: (context.payment as any).transaction_amount,
+      payer_email: (context.payment as any).payer?.email
+    } : null,
+    error: context.error instanceof Error ? context.error.message : String(context.error || 'Unknown error'),
+    description: context.description,
+    status: 'pending_manual_fix',
+    timestamp: new Date().toISOString()
+  };
+
+  console.error("⚠️ [MANUAL FIX REQUIRED] Failed DB update for payment:", JSON.stringify(logEntry, null, 2));
+
+  const db = getServerDb();
+  if (db) {
+    try {
+      await db.collection('failed_db_updates').add({
+        ...logEntry,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      await db.collection('notificaciones').add({
+        tipo: 'error_webhook_db_update',
+        userId: 'admin',
+        titulo: '⚠️ Requiere Corrección Manual: Falló actualización de BD',
+        mensaje: `${context.description}. Pago ID: ${context.paymentId}. Error: ${logEntry.error}`,
+        leida: false,
+        fecha: admin.firestore.FieldValue.serverTimestamp(),
+        paymentId: String(context.paymentId)
+      }).catch(() => {});
+    } catch (saveErr) {
+      console.error("Critical: Could not save failed DB update log to Firestore:", saveErr);
+    }
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -643,10 +692,28 @@ async function startServer() {
                     });
                     console.log(`Deposit paid for request ${request_id} to professional ${profesional_id}`);
                   }
+                } else {
+                  console.warn(`Quote request ${request_id} not found for deposit payment ${id}`);
+                  await logFailedDbUpdate({
+                    paymentId: id,
+                    type: 'deposit',
+                    metadata,
+                    payment,
+                    error: `Quote request document ${request_id} does not exist in Firestore`,
+                    description: `Deposit payment received but quote request ${request_id} was not found`
+                  });
                 }
               }
             } catch (dbError) {
               console.error("Error updating Firestore for deposit:", dbError);
+              await logFailedDbUpdate({
+                paymentId: id,
+                type: 'deposit',
+                metadata,
+                payment,
+                error: dbError,
+                description: `Failed to update Firestore deposit for request ${request_id} and professional ${profesional_id}`
+              });
             }
           } else if (type === 'ad_payment' && adId && months) {
             try {
@@ -669,6 +736,14 @@ async function startServer() {
               }
             } catch (dbError) {
               console.error("Error updating Firestore for ad:", dbError);
+              await logFailedDbUpdate({
+                paymentId: id,
+                type: 'ad_payment',
+                metadata,
+                payment,
+                error: dbError,
+                description: `Failed to update Firestore ad payment for ad ${adId}`
+              });
             }
           } else if (user_id && months) {
             try {
@@ -715,15 +790,40 @@ async function startServer() {
                   });
 
                   console.log(`User ${user_id} upgraded/extended VIP until ${expirationDate} and logged to pagos`);
+                } else {
+                  console.warn(`User ${user_id} not found for VIP subscription payment ${id}`);
+                  await logFailedDbUpdate({
+                    paymentId: id,
+                    type: 'vip_subscription',
+                    metadata,
+                    payment,
+                    error: `User document ${user_id} does not exist in Firestore`,
+                    description: `VIP payment received but user ${user_id} was not found`
+                  });
                 }
               }
             } catch (dbError) {
               console.error("Error updating Firestore:", dbError);
               // We don't return 500 here because we want to acknowledge the webhook
               // even if our internal DB update failed (we should log it for manual fix)
+              await logFailedDbUpdate({
+                paymentId: id,
+                type: 'vip_subscription',
+                metadata,
+                payment,
+                error: dbError,
+                description: `Failed to update VIP status in Firestore for user ${user_id}`
+              });
             }
           } else {
             console.warn("Missing required metadata for payment processing");
+            await logFailedDbUpdate({
+              paymentId: id,
+              metadata,
+              payment,
+              error: 'Missing required metadata fields (user_id/months or request_id/profesional_id or adId/months)',
+              description: 'Payment approved but missing required metadata for automated processing'
+            });
           }
         } else {
             console.log(`Payment ${id} status: ${payment.status}`);
