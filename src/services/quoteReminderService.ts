@@ -5,8 +5,7 @@ import {
   query, 
   where, 
   doc, 
-  updateDoc, 
-  addDoc, 
+  writeBatch,
   serverTimestamp, 
   increment,
   limit,
@@ -94,11 +93,14 @@ export const quoteReminderService = {
 
         if (pendingPros.length === 0) continue;
 
-        // Notify each pending professional
-        for (const proId of pendingPros) {
-          // Send in-app notification to Firestore collection 'notificaciones'
-          try {
-            await addDoc(collection(db, 'notificaciones'), {
+        // Notify pending professionals using writeBatch for atomic and optimized bulk write
+        try {
+          const batch = writeBatch(db);
+
+          for (const proId of pendingPros) {
+            // Send in-app notification to Firestore collection 'notificaciones'
+            const notifRef = doc(collection(db, 'notificaciones'));
+            batch.set(notifRef, {
               userId: proId,
               tipo: 'recordatorio_presupuesto_24h',
               titulo: '⏰ Presupuesto pendiente (+24hs)',
@@ -115,7 +117,8 @@ export const quoteReminderService = {
             });
 
             // Store in Firestore collection 'recordatorios_presupuestos' for AI auditing and analytics
-            await addDoc(collection(db, 'recordatorios_presupuestos'), {
+            const recordatorioRef = doc(collection(db, 'recordatorios_presupuestos'));
+            batch.set(recordatorioRef, {
               solicitudId: requestId,
               tipo: 'quote_request',
               profesionalId: proId,
@@ -142,20 +145,19 @@ export const quoteReminderService = {
               rubro: data.rubro || '',
               hoursPending
             });
-          } catch (notifErr) {
-            console.warn(`Error sending notification to pro ${proId}:`, notifErr);
           }
-        }
 
-        // Mark the quoteRequest as reminded
-        try {
-          await updateDoc(doc(db, 'quoteRequests', requestId), {
+          // Mark the quoteRequest as reminded
+          const quoteReqRef = doc(db, 'quoteRequests', requestId);
+          batch.update(quoteReqRef, {
             recordatorio24hEnviado: true,
             fechaUltimoRecordatorio: serverTimestamp(),
             recordatoriosEnviadosCount: increment(1)
           });
-        } catch (updateErr) {
-          console.warn(`Error updating quoteRequest ${requestId}:`, updateErr);
+
+          await batch.commit();
+        } catch (batchErr) {
+          console.warn(`Error sending notification batch for request ${requestId}:`, batchErr);
         }
       }
     } catch (error) {
