@@ -1,6 +1,6 @@
 import { ChurnAuditReport, ChurnRiskAlert, User } from '../types';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { sendPushNotification } from '../utils/notifications';
 
 export async function getDailyChurnAudit(
@@ -22,6 +22,8 @@ export async function getDailyChurnAudit(
       console.warn('[aiChurnAuditService] Could not read Firestore cache:', cacheErr);
     }
   }
+
+  const token = await auth.currentUser?.getIdToken().catch(() => undefined);
 
   // 2. Prepare payload from existingUsers or fetch from Firestore
   try {
@@ -107,7 +109,10 @@ export async function getDailyChurnAudit(
     // 3. Post to backend to run Gemini
     const res = await fetch(`/api/admin/daily-churn-audit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({
         force,
         prosData,
@@ -136,7 +141,11 @@ export async function getDailyChurnAudit(
     return { fromCache: data.fromCache, audit };
   } catch (err: any) {
     console.warn('[aiChurnAuditService] POST with data failed, trying fallback GET:', err);
-    const fallbackRes = await fetch(`/api/admin/daily-churn-audit${force ? '?force=true' : ''}`);
+    const fallbackRes = await fetch(`/api/admin/daily-churn-audit${force ? '?force=true' : ''}`, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
     if (fallbackRes.ok) {
       return await fallbackRes.json();
     }
