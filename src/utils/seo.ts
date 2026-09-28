@@ -6,28 +6,29 @@ import { User, Review } from '../types';
 export function getLocalBusinessSchemaType(rubro?: string): string[] {
   if (!rubro) return ['LocalBusiness', 'ProfessionalService'];
   const r = rubro.toLowerCase();
+  const rNormalized = r.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const types = ['LocalBusiness'];
 
-  if (r.includes('electric')) {
+  if (rNormalized.includes('electric')) {
     types.unshift('Electrician');
-  } else if (r.includes('plomer') || r.includes('gasist') || r.includes('destapacion')) {
+  } else if (rNormalized.includes('plomer') || rNormalized.includes('gasist') || rNormalized.includes('destapacion')) {
     types.unshift('Plumber');
-  } else if (r.includes('tech') || r.includes('techo')) {
+  } else if (rNormalized.includes('tech') || rNormalized.includes('techo')) {
     types.unshift('RoofingContractor');
-  } else if (r.includes('cerraj')) {
+  } else if (rNormalized.includes('cerraj')) {
     types.unshift('Locksmith');
-  } else if (r.includes('pint')) {
-    types.unshift('GeneralContractor');
-  } else if (r.includes('albañ') || r.includes('construc') || r.includes('reforma')) {
-    types.unshift('GeneralContractor');
-  } else if (r.includes('mecanic') || r.includes('taller') || r.includes('chapa') || r.includes('gomer')) {
+  } else if (rNormalized.includes('mecanic') || rNormalized.includes('taller') || rNormalized.includes('chapa') || rNormalized.includes('gomer')) {
     types.unshift('AutoRepair');
-  } else if (r.includes('limp') || r.includes('limpieza')) {
+  } else if (rNormalized.includes('pint')) {
+    types.unshift('GeneralContractor');
+  } else if (rNormalized.includes('alban') || rNormalized.includes('albañ') || rNormalized.includes('construc') || rNormalized.includes('reforma')) {
+    types.unshift('GeneralContractor');
+  } else if (rNormalized.includes('limp') || rNormalized.includes('limpieza')) {
     types.unshift('ProfessionalService');
-  } else if (r.includes('abog')) {
+  } else if (rNormalized.includes('abog')) {
     types.unshift('LegalService');
-  } else if (r.includes('contad')) {
+  } else if (rNormalized.includes('contad')) {
     types.unshift('AccountingService');
   } else {
     types.unshift('ProfessionalService');
@@ -86,7 +87,7 @@ export function generateLocalBusinessSchema(
     description,
     telephone: info.telefono || undefined,
     email: professional.email || undefined,
-    priceRange: info.precioMinimo ? `$${Number(info.precioMinimo).toLocaleString('es-AR')}+` : '$$',
+    priceRange: (info.precioMinimo && !isNaN(Number(info.precioMinimo))) ? `$${Number(info.precioMinimo).toLocaleString('es-AR')}+` : '$$',
     currenciesAccepted: 'ARS',
     paymentAccepted: 'Efectivo, Transferencia Bancaria, Mercado Pago',
     address: {
@@ -152,8 +153,13 @@ export function generateLocalBusinessSchema(
       try {
         if (rev.fecha instanceof Date) {
           publishedDate = rev.fecha.toISOString().split('T')[0];
-        } else if (typeof rev.fecha === 'string') {
-          publishedDate = new Date(rev.fecha).toISOString().split('T')[0];
+        } else if (rev.fecha && typeof (rev.fecha as any).toDate === 'function') {
+          publishedDate = (rev.fecha as any).toDate().toISOString().split('T')[0];
+        } else if (typeof rev.fecha === 'number' || typeof rev.fecha === 'string') {
+          const d = new Date(rev.fecha);
+          if (!isNaN(d.getTime())) {
+            publishedDate = d.toISOString().split('T')[0];
+          }
         }
       } catch {
         // use default
