@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { User } from '../types';
 import { 
   Crown, 
@@ -142,6 +142,30 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
     let expiredCount = 0;
 
     try {
+      // Attempt backend server sync with authentication token
+      const token = await auth.currentUser?.getIdToken();
+      if (token) {
+        try {
+          const res = await fetch('/api/sync-vips', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.expiredCount !== undefined) {
+              await onRefreshUsers();
+              setSyncResult(`Auditoría completada: Se actualizaron ${data.expiredCount} usuario(s) que tenían membresía vencida a estado regular.`);
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn("Backend sync-vips call failed, falling back to client-side sync:", apiErr);
+        }
+      }
+
       for (const pro of professionals) {
         if (pro.profesionalInfo?.isVip) {
           const expired = await checkAndExpireUserVip(pro.uid, pro.profesionalInfo);

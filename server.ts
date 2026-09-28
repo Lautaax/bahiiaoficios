@@ -53,6 +53,61 @@ function getServerDb(): admin.firestore.Firestore | null {
   return isServerFirestoreAvailable && serverDb ? serverDb : null;
 }
 
+/**
+ * Helper middleware/function to verify that a request is authenticated and authorized as an Admin.
+ */
+async function verifyAdminAuth(req: express.Request): Promise<{ authorized: boolean; status: number; message: string }> {
+  // 1. Check for Admin Secret Key header (e.g. for server-to-server / cron triggers)
+  const adminKeyHeader = req.headers['x-admin-key'] || req.headers['x-api-key'];
+  const expectedAdminKey = process.env.ADMIN_SECRET_KEY || process.env.CRON_SECRET;
+  if (expectedAdminKey && adminKeyHeader === expectedAdminKey) {
+    return { authorized: true, status: 200, message: "Authorized by admin secret key" };
+  }
+
+  // 2. Extract Authorization Bearer token or token from body/headers
+  const authHeader = req.headers.authorization;
+  let idToken: string | null = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    idToken = authHeader.split('Bearer ')[1];
+  } else if (req.body && req.body.idToken) {
+    idToken = req.body.idToken;
+  }
+
+  if (!idToken) {
+    return { authorized: false, status: 401, message: "Autenticación requerida. Token de autorización no provisto." };
+  }
+
+  try {
+    if (!admin.apps.length) {
+      return { authorized: false, status: 401, message: "Servicio de autenticación no inicializado en el servidor." };
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    // Check if user is superadmin by email or admin claim
+    const isSuperAdmin = decodedToken.email === 'lautaroj.aguilera@gmail.com';
+    const hasAdminClaim = decodedToken.admin === true || decodedToken.isAdmin === true;
+
+    if (isSuperAdmin || hasAdminClaim) {
+      return { authorized: true, status: 200, message: "Authorized admin user" };
+    }
+
+    // Check Firestore user document for isAdmin field
+    const db = getServerDb();
+    if (db) {
+      const userDoc = await db.collection('usuarios').doc(decodedToken.uid).get();
+      if (userDoc.exists && userDoc.data()?.isAdmin === true) {
+        return { authorized: true, status: 200, message: "Authorized admin user" };
+      }
+    }
+
+    return { authorized: false, status: 403, message: "Acceso denegado. Se requieren permisos de administrador." };
+  } catch (error: any) {
+    console.error("Error al verificar token de autenticación:", error);
+    return { authorized: false, status: 401, message: "Token de autenticación inválido o expirado." };
+  }
+}
+
 // Mercado Pago Client Management
 let mpClient: MercadoPagoConfig | null = null;
 let mpAccessToken: string | null = null;
@@ -511,8 +566,13 @@ async function startServer() {
     }
   });
 
-  // Endpoint para depurar y sincronizar masivamente todos los VIPs caducados
+  // Endpoint para depurar y sincronizar masivamente todos los VIPs caducados (requiere autenticación de administrador)
   app.post("/api/sync-vips", async (req, res) => {
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.authorized) {
+      return res.status(authResult.status).json({ error: authResult.message });
+    }
+
     const db = getServerDb();
     if (!db) {
       return res.json({ success: true, expiredCount: 0, message: "Client-side VIP sync enabled" });
