@@ -113,7 +113,7 @@ export const BADGE_DEFINITIONS: Record<string, Omit<ProfessionalBadge, 'acquired
  * Calculates and returns all active badges for a professional based on real data & profile badges.
  */
 export function getProfessionalBadges(professional: User): ProfessionalBadge[] {
-  if (professional.rol !== 'profesional' || !professional.profesionalInfo) {
+  if (!professional || professional.rol !== 'profesional' || !professional.profesionalInfo) {
     return [];
   }
 
