@@ -72,7 +72,7 @@ service cloud.firestore {
     }
 
     match /reportes/{reporteId} {
-      allow create: if true;
+      allow create: if isAuthenticated();
       allow read, update, delete: if isAdmin();
     }
 
