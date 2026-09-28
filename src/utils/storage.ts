@@ -4,7 +4,7 @@
  * Prevents SecurityError / DOMException crashes in restricted iframes or private browsing.
  */
 
-class MemoryStorage implements Storage {
+export class MemoryStorage implements Storage {
   private store: Map<string, string> = new Map();
 
   get length(): number {
@@ -20,7 +20,11 @@ class MemoryStorage implements Storage {
   }
 
   key(index: number): string | null {
-    return Array.from(this.store.keys())[index] || null;
+    if (index < 0 || index >= this.store.size || !Number.isInteger(index)) {
+      return null;
+    }
+    const keys = Array.from(this.store.keys());
+    return keys[index] ?? null;
   }
 
   removeItem(key: string): void {
