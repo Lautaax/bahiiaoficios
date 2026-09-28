@@ -511,6 +511,32 @@ async function startServer() {
     }
   });
 
+  // Authentication Middleware
+  const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    if (!idToken) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    if (!admin.apps.length) {
+      return res.status(500).json({ error: "Authentication server not configured" });
+    }
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      (req as any).user = decodedToken;
+      next();
+    } catch (error) {
+      console.error("Auth token verification failed:", error);
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+  };
+
   // Endpoint para depurar y sincronizar masivamente todos los VIPs caducados
   app.post("/api/sync-vips", async (req, res) => {
     const db = getServerDb();
@@ -555,7 +581,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/upload-github", async (req, res) => {
+  app.post("/api/upload-github", requireAuth, async (req, res) => {
     const { image, filename } = req.body;
     const token = process.env.GITHUB_TOKEN;
     const repo = process.env.GITHUB_REPO;
