@@ -88,6 +88,53 @@ async function getMpClient(): Promise<MercadoPagoConfig | null> {
     return null;
 }
 
+// Helper to log failed DB updates for manual fix
+async function logFailedDbUpdate(context: {
+  paymentId: string | number;
+  type?: string;
+  metadata?: any;
+  payment?: any;
+  error?: any;
+  description: string;
+}) {
+  const logEntry = {
+    paymentId: String(context.paymentId),
+    type: context.type || context.metadata?.type || 'unknown',
+    metadata: context.metadata || {},
+    paymentDetails: context.payment ? {
+      status: context.payment.status,
+      transaction_amount: (context.payment as any).transaction_amount,
+      payer_email: (context.payment as any).payer?.email
+    } : null,
+    error: context.error instanceof Error ? context.error.message : String(context.error || 'Unknown error'),
+    description: context.description,
+    status: 'pending_manual_fix',
+    timestamp: new Date().toISOString()
+  };
+
+  console.error("⚠️ [MANUAL FIX REQUIRED] Failed DB update for payment:", JSON.stringify(logEntry, null, 2));
+
+  try {
+    const db = admin.firestore();
+    await db.collection('failed_db_updates').add({
+      ...logEntry,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    await db.collection('notificaciones').add({
+      tipo: 'error_webhook_db_update',
+      userId: 'admin',
+      titulo: '⚠️ Requiere Corrección Manual: Falló actualización de BD',
+      mensaje: `${context.description}. Pago ID: ${context.paymentId}. Error: ${logEntry.error}`,
+      leida: false,
+      fecha: admin.firestore.FieldValue.serverTimestamp(),
+      paymentId: String(context.paymentId)
+    }).catch(() => {});
+  } catch (saveErr) {
+    console.error("Critical: Could not save failed DB update log to Firestore:", saveErr);
+  }
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: "vercel" });
 });
@@ -179,9 +226,24 @@ app.post("/api/webhook", async (req, res) => {
               console.log(`User ${user_id} upgraded to VIP until ${expirationDate}`);
             } catch (dbError) {
               console.error("Error updating Firestore:", dbError);
+              await logFailedDbUpdate({
+                paymentId: id,
+                type: 'vip_subscription',
+                metadata: payment.metadata,
+                payment,
+                error: dbError,
+                description: `Failed to update VIP status in Vercel webhook for user ${user_id}`
+              });
             }
           } else {
             console.warn("Missing userId or months in payment metadata");
+            await logFailedDbUpdate({
+              paymentId: id,
+              metadata: payment.metadata,
+              payment,
+              error: 'Missing required user_id or months in payment metadata',
+              description: 'Missing payment metadata in Vercel webhook'
+            });
           }
         } else {
             console.log(`Payment ${id} status: ${payment.status}`);
