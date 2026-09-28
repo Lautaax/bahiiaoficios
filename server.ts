@@ -137,6 +137,65 @@ async function startServer() {
     next();
   });
 
+  // Admin Authentication & Authorization Middleware
+  const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization || (req.headers['x-admin-token'] as string);
+    let token: string | undefined;
+
+    if (authHeader) {
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      } else {
+        token = authHeader;
+      }
+    } else if (req.query.token) {
+      token = req.query.token as string;
+    } else if (req.body?.token) {
+      token = req.body.token;
+    }
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Missing authentication token" });
+    }
+
+    // Support ADMIN_SECRET environment variable
+    if (process.env.ADMIN_SECRET && token === process.env.ADMIN_SECRET) {
+      return next();
+    }
+
+    // Verify Firebase ID Token if Firebase Admin is initialized
+    if (admin.apps.length > 0) {
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+
+        // Check custom claims
+        if (decodedToken.admin === true || decodedToken.isAdmin === true) {
+          (req as any).user = decodedToken;
+          return next();
+        }
+
+        // Check user document in Firestore
+        const db = getServerDb();
+        if (db) {
+          const userDoc = await db.collection('usuarios').doc(decodedToken.uid).get();
+          if (userDoc.exists && (userDoc.data()?.isAdmin === true || userDoc.data()?.rol === 'admin')) {
+            (req as any).user = decodedToken;
+            return next();
+          }
+        }
+
+        return res.status(403).json({ error: "Forbidden: Admin privileges required" });
+      } catch (err) {
+        return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+      }
+    }
+
+    return res.status(401).json({ error: "Unauthorized: Admin authentication failed" });
+  };
+
+  // Protect all /api/admin routes with requireAdmin middleware
+  app.use("/api/admin", requireAdmin);
+
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
