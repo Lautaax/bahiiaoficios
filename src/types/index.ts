@@ -15,6 +15,7 @@ export interface ProfesionalInfo {
   ratingAvg: number;
   reviewCount: number;
   fotosTrabajos: string[];
+  precioMinimo?: number;
   vipExpiration?: any;
   vipExpiredAt?: any;
   telefono?: string;
