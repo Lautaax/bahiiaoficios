@@ -23,7 +23,6 @@ try {
       registerSW({
         immediate: true,
         onOfflineReady() {
-          console.log('Bahía Oficios: Caché sin conexión activada.');
         },
       });
     } else {
