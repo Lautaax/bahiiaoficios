@@ -44,6 +44,11 @@ export const FeedbackWidget: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      setErrorMsg('Debes iniciar sesión para enviar tus comentarios o sugerencias.');
+      return;
+    }
+
     if (!mensaje.trim()) {
       setErrorMsg('Por favor contanos brevemente qué te gustaría sugerir o qué error ocurrió.');
       return;
@@ -60,10 +65,10 @@ export const FeedbackWidget: React.FC = () => {
         rating,
         url: window.location.href,
         ruta: window.location.pathname,
-        usuarioId: currentUser?.uid || null,
-        usuarioEmail: currentUser?.email || contactEmail.trim() || null,
-        usuarioNombre: currentUser?.nombre || null,
-        usuarioRol: currentUser?.rol || 'visitante',
+        usuarioId: currentUser.uid,
+        usuarioEmail: currentUser.email || contactEmail.trim() || null,
+        usuarioNombre: currentUser.nombre || null,
+        usuarioRol: currentUser.rol || 'visitante',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         pantalla: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : '',
         estado: 'pendiente',
@@ -326,7 +331,7 @@ export const FeedbackWidget: React.FC = () => {
                       />
                     </div>
 
-                    {/* Email for Guests or User Confirmation */}
+                    {/* User status info */}
                     {currentUser ? (
                       <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700">
                         <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -335,17 +340,8 @@ export const FeedbackWidget: React.FC = () => {
                         </span>
                       </div>
                     ) : (
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Tu email (opcional, si querés que te avisemos la resolución)
-                        </label>
-                        <input
-                          type="email"
-                          value={contactEmail}
-                          onChange={(e) => setContactEmail(e.target.value)}
-                          placeholder="nombre@ejemplo.com"
-                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs">
+                        Para enviar un mensaje de feedback o reportar un error, por favor iniciá sesión en tu cuenta.
                       </div>
                     )}
 
