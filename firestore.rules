@@ -31,21 +31,12 @@ service cloud.firestore {
       // User can create their own profile during signup
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       
-      // User can update their own data, Admins have full access,
-      // and safe tracking & status updates are allowed without permission errors
-      allow update: if isOwner(userId) || 
-                    isAdmin() ||
-                    (
-                      request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                        'profesionalInfo',
-                        'isVip',
-                        'updatedAt',
-                        'fcmToken',
-                        'fcmTokens',
-                        'fcmPushEnabled',
-                        'fcmUpdatedAt'
-                      ])
-                    );
+      // User can update their own data (excluding protected privileges like isVip and isAdmin),
+      // and Admins have full access.
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVip', 'isAdmin'])
+      );
                     
       // Only Admins can delete users
       allow delete: if isAdmin();
