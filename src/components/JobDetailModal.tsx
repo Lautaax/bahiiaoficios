@@ -137,6 +137,7 @@ export const JobDetailModal: React.FC<JobDetailModalProps> = ({
               type="button"
               onClick={handleShare}
               title="Copiar enlace de este trabajo"
+              aria-label="Copiar enlace de este trabajo"
               className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               {copiedLink ? <Check size={18} className="text-emerald-500" /> : <Share2 size={18} />}
@@ -144,6 +145,7 @@ export const JobDetailModal: React.FC<JobDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cerrar detalles del trabajo"
               className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               <X size={20} />
