@@ -295,6 +295,7 @@ export const Chat: React.FC = () => {
           <button
             type="submit"
             disabled={!newMessage.trim()}
+            aria-label="Enviar mensaje"
             className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-10 h-10"
           >
             <Send size={18} />
@@ -311,7 +312,7 @@ export const Chat: React.FC = () => {
                 <FileText className="text-indigo-600" />
                 Enviar Presupuesto
               </h3>
-              <button onClick={() => setShowQuoteModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <button onClick={() => setShowQuoteModal(false)} aria-label="Cerrar modal de presupuesto" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                 <X size={24} />
               </button>
             </div>
