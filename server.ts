@@ -838,8 +838,14 @@ async function startServer() {
       return res.status(500).json({ error: "GitHub storage not configured (missing GITHUB_TOKEN or GITHUB_REPO)" });
     }
 
-    if (!image || !filename) {
+    if (!image || !filename || typeof filename !== 'string') {
       return res.status(400).json({ error: "Missing image or filename" });
+    }
+
+    // SECURITY: Sanitize filename to prevent path traversal vulnerability (e.g. ../../)
+    const safeFilename = path.basename(filename).replace(/[^a-zA-Z0-9_.-]/g, '');
+    if (!safeFilename || !/\.(jpg|jpeg|png|gif|webp)$/i.test(safeFilename)) {
+      return res.status(400).json({ error: "Invalid image filename or extension" });
     }
 
     try {
@@ -847,10 +853,10 @@ async function startServer() {
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
       
       // GitHub API URL: https://api.github.com/repos/{owner}/{repo}/contents/{path}
-      const url = `https://api.github.com/repos/${repo}/contents/profile_images/${filename}`;
+      const url = `https://api.github.com/repos/${repo}/contents/profile_images/${safeFilename}`;
       
       const response = await axios.put(url, {
-        message: `Upload profile image: ${filename}`,
+        message: `Upload profile image: ${safeFilename}`,
         content: base64Data,
         branch: branch
       }, {
@@ -862,7 +868,7 @@ async function startServer() {
 
       // Construct the raw URL (or jsdelivr for better CDN)
       // Raw: https://raw.githubusercontent.com/{owner}/{repo}/{branch}/profile_images/{filename}
-      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/profile_images/${filename}`;
+      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/profile_images/${safeFilename}`;
       
       res.json({ url: rawUrl });
     } catch (error) {
