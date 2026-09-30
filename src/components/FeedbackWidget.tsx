@@ -262,6 +262,7 @@ export const FeedbackWidget: React.FC = () => {
                             onClick={() => setRating(star)}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(null)}
+                            aria-label={`Calificar ${star} de 5 estrellas`}
                             className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer"
                           >
                             <Star
