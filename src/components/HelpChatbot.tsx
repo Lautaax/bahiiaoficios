@@ -103,7 +103,7 @@ export const HelpChatbot: React.FC = () => {
                   <p className="text-[10px] opacity-80">Bahia Oficios AI</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+              <button aria-label="Cerrar asistente virtual" onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -174,6 +174,7 @@ export const HelpChatbot: React.FC = () => {
                   className="flex-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                 />
                 <button
+                  aria-label="Enviar mensaje"
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
                   className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors"
@@ -187,6 +188,7 @@ export const HelpChatbot: React.FC = () => {
       </AnimatePresence>
 
       <button
+        aria-label={isOpen ? "Cerrar asistente virtual" : "Abrir asistente virtual"}
         onClick={() => setIsOpen(!isOpen)}
         className={`p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center gap-2 ${isOpen ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-white' : 'bg-indigo-600 text-white'}`}
       >
