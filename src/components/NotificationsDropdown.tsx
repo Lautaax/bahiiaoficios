@@ -74,9 +74,19 @@ export const NotificationsDropdown: React.FC = () => {
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -99,11 +109,18 @@ export const NotificationsDropdown: React.FC = () => {
 
   if (!currentUser) return null;
 
+  const ariaLabelText = unreadCount > 0
+    ? `Notificaciones (${unreadCount} sin leer)`
+    : 'Notificaciones';
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 relative"
+        aria-label={ariaLabelText}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 relative rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
         title="Notificaciones"
       >
         <Bell size={20} />
@@ -115,7 +132,11 @@ export const NotificationsDropdown: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-x-4 top-20 sm:absolute sm:inset-auto sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200">
+        <div
+          role="region"
+          aria-label="Lista de notificaciones"
+          className="fixed inset-x-4 top-20 sm:absolute sm:inset-auto sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200"
+        >
           <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
             <div className="flex items-center gap-2">
               <Bell size={18} className="text-indigo-600" />
