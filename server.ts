@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from "@google/genai";
+import { sanitizeFilename } from './src/utils/security.js';
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -838,8 +839,14 @@ async function startServer() {
       return res.status(500).json({ error: "GitHub storage not configured (missing GITHUB_TOKEN or GITHUB_REPO)" });
     }
 
-    if (!image || !filename) {
+    if (!image || !filename || typeof filename !== 'string') {
       return res.status(400).json({ error: "Missing image or filename" });
+    }
+
+    // Sanitize filename to prevent path traversal attack (CWE-22)
+    const safeFilename = sanitizeFilename(filename);
+    if (!safeFilename) {
+      return res.status(400).json({ error: "Invalid filename" });
     }
 
     try {
@@ -847,10 +854,10 @@ async function startServer() {
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
       
       // GitHub API URL: https://api.github.com/repos/{owner}/{repo}/contents/{path}
-      const url = `https://api.github.com/repos/${repo}/contents/profile_images/${filename}`;
+      const url = `https://api.github.com/repos/${repo}/contents/profile_images/${safeFilename}`;
       
       const response = await axios.put(url, {
-        message: `Upload profile image: ${filename}`,
+        message: `Upload profile image: ${safeFilename}`,
         content: base64Data,
         branch: branch
       }, {
@@ -860,9 +867,8 @@ async function startServer() {
         }
       });
 
-      // Construct the raw URL (or jsdelivr for better CDN)
-      // Raw: https://raw.githubusercontent.com/{owner}/{repo}/{branch}/profile_images/{filename}
-      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/profile_images/${filename}`;
+      // Construct the raw URL
+      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/profile_images/${safeFilename}`;
       
       res.json({ url: rawUrl });
     } catch (error) {
