@@ -18,7 +18,12 @@ interface ProfessionalCardProps {
   professional: User;
 }
 
-export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => {
+// ⚡ Bolt: Added React.memo to ProfessionalCard to prevent unnecessary re-renders.
+// Since it's often rendered in long lists (e.g., search results, dashboards) and its props
+// are generally immutable data objects, memoization avoids O(n) re-renders when the parent updates.
+// Expected Impact: Reduces unnecessary component re-renders and speeds up list scrolling and filtering.
+export const ProfessionalCard: React.FC<ProfessionalCardProps> = React.memo(
+  function ProfessionalCard({ professional }) {
   const [showContactModal, setShowContactModal] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
@@ -498,4 +503,4 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
       )}
     </>
   );
-};
+});
