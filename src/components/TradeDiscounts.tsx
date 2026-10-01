@@ -3,7 +3,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { TradeDiscount } from '../types';
 import { Tag, MapPin, ExternalLink, Search, Filter } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 export const TradeDiscounts: React.FC = () => {
   const [discounts, setDiscounts] = useState<TradeDiscount[]>([]);
