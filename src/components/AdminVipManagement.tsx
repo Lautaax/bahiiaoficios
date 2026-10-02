@@ -22,6 +22,7 @@ import {
   Zap,
   Info
 } from 'lucide-react';
+import { auth } from '../firebase';
 import { getVipStatus, getVipDiffInfo, checkAndExpireUserVip, isVipActive } from '../utils/vipUtils';
 import { ProfessionalPaymentHistoryModal } from './ProfessionalPaymentHistoryModal';
 import { CachedImage } from './CachedImage';
@@ -181,9 +182,13 @@ export const AdminVipManagement: React.FC<AdminVipManagementProps> = ({
       }
 
       // Background notification to server
+      const token = await auth.currentUser?.getIdToken();
       fetch('/api/admin/toggle-vip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ userId: pro.uid, isVip: false })
       }).catch(() => {});
 

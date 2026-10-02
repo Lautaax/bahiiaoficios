@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { ShieldCheck, Trash2, Edit, CheckCircle, XCircle, X, Image as ImageIcon, Megaphone, Tag, Plus, Save, BadgeCheck, Eye, EyeOff, Crown, CreditCard, BarChart3, Flame, Bell, Mail, Copy, Check, Sparkles } from 'lucide-react';
@@ -125,9 +125,13 @@ export const AdminDashboard: React.FC = () => {
         });
       }
 
+      const token = await auth.currentUser?.getIdToken();
       fetch('/api/admin/toggle-vip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ userId: targetUser.uid, isVip: newVip })
       }).catch(() => {});
 

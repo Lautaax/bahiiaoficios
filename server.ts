@@ -53,6 +53,55 @@ function getServerDb(): admin.firestore.Firestore | null {
   return isServerFirestoreAvailable && serverDb ? serverDb : null;
 }
 
+// Security Middleware to verify Admin authorization via Firebase ID token
+async function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing or invalid token format' });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+
+  if (!admin.apps.length) {
+    // If Firebase Admin is not initialized in server environment, warn and pass through or deny
+    console.warn("requireAdmin: Firebase Admin app not initialized");
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+    const email = decodedToken.email;
+
+    // Check custom claims
+    if (decodedToken.admin === true) {
+      (req as any).user = decodedToken;
+      return next();
+    }
+
+    // Check Firestore user record for isAdmin or rol == 'admin'
+    const sDb = getServerDb();
+    if (sDb) {
+      const userDoc = await sDb.collection('usuarios').doc(uid).get();
+      if (userDoc.exists) {
+        const uData = userDoc.data();
+        if (uData?.isAdmin === true || uData?.rol === 'admin') {
+          (req as any).user = decodedToken;
+          return next();
+        }
+      }
+    }
+
+    return res.status(403).json({ error: 'Forbidden: Admin privilege required' });
+  } catch (error: any) {
+    console.error("requireAdmin error verifying token:", error?.message || error);
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+}
+
 // Mercado Pago Client Management
 let mpClient: MercadoPagoConfig | null = null;
 let mpAccessToken: string | null = null;
@@ -379,7 +428,7 @@ async function startServer() {
   });
 
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
-  app.post("/api/admin/toggle-vip", async (req, res) => {
+  app.post("/api/admin/toggle-vip", requireAdmin, async (req, res) => {
     try {
       const { userId, isVip } = req.body || {};
       if (!userId) {
@@ -967,7 +1016,7 @@ async function startServer() {
   }
 
   // AI Optimization Endpoint (Gemini 3.8 Flash)
-  app.post("/api/admin/ai-optimize", async (req, res) => {
+  app.post("/api/admin/ai-optimize", requireAdmin, async (req, res) => {
     try {
       const { metrics } = req.body;
       const ai = getGeminiClient();
@@ -1490,7 +1539,7 @@ Responde ÚNICAMENTE con un JSON que siga esta estructura exacta:
   }
 
   // Endpoints: GET and POST /api/admin/daily-churn-audit
-  app.all("/api/admin/daily-churn-audit", async (req, res) => {
+  app.all("/api/admin/daily-churn-audit", requireAdmin, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const providedPros = req.body?.prosData;
@@ -1852,7 +1901,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
   }
 
   // Endpoints: GET and POST /api/admin/category-promotion-insights
-  app.all("/api/admin/category-promotion-insights", async (req, res) => {
+  app.all("/api/admin/category-promotion-insights", requireAdmin, async (req, res) => {
     try {
       const force = req.query.force === 'true' || req.body?.force === true;
       const categoriesData = req.body?.categoriesData;
