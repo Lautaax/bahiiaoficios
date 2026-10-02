@@ -86,6 +86,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cerrar modal de instalación"
               className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
             >
               <X size={20} />

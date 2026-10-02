@@ -145,7 +145,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
               <button
                 key={star}
                 type="button"
-                className="focus:outline-none transition-transform hover:scale-110"
+                aria-label={`Calificar con ${star} estrella${star > 1 ? 's' : ''}`}
+                aria-pressed={star === rating}
+                className="focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-lg transition-transform hover:scale-110"
                 onMouseEnter={() => setHoverRating(star)}
                 onMouseLeave={() => setHoverRating(0)}
                 onClick={() => setRating(star)}
@@ -181,6 +183,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
                 <button
                   key={badge}
                   type="button"
+                  aria-pressed={selectedBadges.includes(badge)}
                   onClick={() => {
                     if (selectedBadges.includes(badge)) {
                       setSelectedBadges(selectedBadges.filter(b => b !== badge));
@@ -208,6 +211,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
                   <button
                     type="button"
                     onClick={() => removeImage(idx)}
+                    aria-label={`Eliminar foto ${idx + 1}`}
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
                   >
                     <X size={12} />
