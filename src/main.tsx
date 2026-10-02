@@ -2,7 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { registerSW } from 'virtual:pwa-register';
+// import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
@@ -20,12 +20,7 @@ if (rootElement) {
 try {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     if (import.meta.env.PROD) {
-      registerSW({
-        immediate: true,
-        onOfflineReady() {
-          console.log('Bahía Oficios: Caché sin conexión activada.');
-        },
-      });
+      // PWA service worker registered via vite-plugin-pwa script injection
     } else {
       // En modo desarrollo/preview, desregistrar cualquier Service Worker previo para evitar pantalla en blanco
       navigator.serviceWorker.getRegistrations().then((registrations) => {
