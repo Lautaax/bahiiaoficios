@@ -156,10 +156,24 @@ export const Dashboard: React.FC = () => {
   // Client-side filtering for Rubro, Zona, and Search Term
   // (Doing this client-side allows for more flexible text search without Algolia/Elasticsearch)
   const filteredProfessionals = useMemo(() => {
-    return professionals.filter(p => {
-      const isCategory = PROFESSIONS.some(prof => prof.category === selectedRubro);
-      const professionsInCategory = isCategory ? PROFESSIONS.filter(prof => prof.category === selectedRubro).map(prof => prof.name) : [];
+    // ⚡ Bolt Optimization: Hoist invariant calculations and blocking I/O out of the .filter() loop
+    // This reduces redundant work and prevents JSON.parse from blocking the main thread on every item.
+    // Expected impact: Significant reduction in time complexity during large array filtering.
+    const isCategory = PROFESSIONS.some(prof => prof.category === selectedRubro);
+    const professionsInCategory = isCategory ? PROFESSIONS.filter(prof => prof.category === selectedRubro).map(prof => prof.name) : [];
+    const normalizedZona = selectedZona !== 'Todas' ? normalizeString(selectedZona) : '';
+    const term = normalizeString(searchTerm.trim());
 
+    let localFavorites: string[] = [];
+    if (showFavoritesOnly && (!currentUser || !currentUser.favoritos)) {
+      try {
+        localFavorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
+      } catch {
+        localFavorites = [];
+      }
+    }
+
+    return professionals.filter(p => {
       const matchesRubro = selectedRubro === 'Todos' || 
         (isCategory ? 
           ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.some(r => professionsInCategory.includes(r))) || 
@@ -168,9 +182,8 @@ export const Dashboard: React.FC = () => {
           ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.includes(selectedRubro)) || 
           p.profesionalInfo?.rubro === selectedRubro)
         );
-      const matchesZona = !selectedZona || selectedZona === 'Todas' || (p.zona && normalizeString(p.zona).includes(normalizeString(selectedZona)));
+      const matchesZona = !selectedZona || selectedZona === 'Todas' || (p.zona && normalizeString(p.zona).includes(normalizedZona));
       
-      const term = normalizeString(searchTerm.trim());
       const matchesSearch = !term || 
         normalizeString(p.nombre).includes(term) || 
         normalizeString(p.profesionalInfo?.descripcion || '').includes(term) ||
@@ -186,12 +199,7 @@ export const Dashboard: React.FC = () => {
         if (currentUser && currentUser.favoritos) {
           isFav = currentUser.favoritos.includes(p.uid);
         } else {
-          try {
-            const favorites = JSON.parse(safeLocalStorage.getItem('favorites') || '[]');
-            isFav = Array.isArray(favorites) && favorites.includes(p.uid);
-          } catch {
-            isFav = false;
-          }
+          isFav = Array.isArray(localFavorites) && localFavorites.includes(p.uid);
         }
       }
       const matchesFavorites = !showFavoritesOnly || isFav;
