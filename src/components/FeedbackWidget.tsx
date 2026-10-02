@@ -202,6 +202,7 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('error')}
+                          aria-pressed={tipo === 'error'}
                           className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
                             tipo === 'error'
                               ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
@@ -215,6 +216,7 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('mejora')}
+                          aria-pressed={tipo === 'mejora'}
                           className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
                             tipo === 'mejora'
                               ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20'
@@ -228,6 +230,7 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('calificacion')}
+                          aria-pressed={tipo === 'calificacion'}
                           className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
                             tipo === 'calificacion'
                               ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20'
@@ -262,7 +265,9 @@ export const FeedbackWidget: React.FC = () => {
                             onClick={() => setRating(star)}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(null)}
-                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer"
+                            aria-label={`Calificar con ${star} estrella${star > 1 ? 's' : ''}`}
+                            aria-pressed={star === rating}
+                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                           >
                             <Star
                               size={24}
