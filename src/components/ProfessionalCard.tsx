@@ -19,7 +19,9 @@ interface ProfessionalCardProps {
   professional: User;
 }
 
-export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => {
+// ⚡ Bolt Optimization: Added React.memo to prevent unnecessary re-renders in large lists
+// (e.g., Search results, Dashboard, Home) when parent components update unrelated state.
+export const ProfessionalCard: React.FC<ProfessionalCardProps> = React.memo(({ professional }) => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showNeighborhoodShare, setShowNeighborhoodShare] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -528,4 +530,4 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
       />
     </>
   );
-};
+});
