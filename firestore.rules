@@ -32,18 +32,17 @@ service cloud.firestore {
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       
       // User can update their own data, Admins have full access,
-      // and safe tracking & status updates are allowed without permission errors
+      // or authenticated safe FCM tracking updates are allowed (restricted strictly to non-sensitive fields via hasOnly)
       allow update: if isOwner(userId) || 
                     isAdmin() ||
                     (
-                      request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                        'profesionalInfo',
-                        'isVip',
-                        'updatedAt',
+                      isAuthenticated() &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                         'fcmToken',
                         'fcmTokens',
                         'fcmPushEnabled',
-                        'fcmUpdatedAt'
+                        'fcmUpdatedAt',
+                        'updatedAt'
                       ])
                     );
                     
