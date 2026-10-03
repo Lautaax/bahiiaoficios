@@ -99,8 +99,11 @@ export async function notificarProfesionalEstadoOferta({
   }
 }
 
+import { isVipActive } from './vipUtils';
+
 /**
  * Notifica a los profesionales del rubro cuando se publica un nuevo trabajo en Bahía Blanca.
+ * Los profesionales con membresía VIP reciben la alerta anticipada prioritaria de 15 minutos.
  */
 export async function notificarProfesionalesNuevoTrabajo({
   trabajoId,
@@ -118,15 +121,44 @@ export async function notificarProfesionalesNuevoTrabajo({
     let count = 0;
 
     for (const profDoc of profSnap.docs) {
-      await addDoc(collection(db, 'notificaciones'), {
-        userId: profDoc.id,
-        tipo: 'nuevo_trabajo_publicado',
-        titulo: `💼 Nuevo trabajo solicitado: ${rubro}`,
-        mensaje: `Se ha publicado un pedido en ${zona}: "${titulo}". ¡Enviá tu presupuesto antes que otros profesionales!`,
-        leida: false,
-        fecha: serverTimestamp(),
-        referenciaId: trabajoId
-      });
+      const profData = profDoc.data();
+      const isVip = isVipActive((profData?.profesionalInfo || profData) as any);
+
+      if (isVip) {
+        // Alerta prioritaria VIP con 15 minutos de ventaja
+        await addDoc(collection(db, 'notificaciones'), {
+          userId: profDoc.id,
+          tipo: 'alerta_vip_nuevo_trabajo',
+          titulo: `⚡ ALERTA VIP (15 min antes): ${rubro}`,
+          mensaje: `¡Acceso prioritario exclusivo! Nuevo pedido en ${zona}: "${titulo}". Cotizá ahora con ventaja antes de la liberación pública general.`,
+          leida: false,
+          fecha: serverTimestamp(),
+          referenciaId: trabajoId,
+          metadata: {
+            esVipAnticipada: true,
+            trabajoId,
+            rubro,
+            zona
+          }
+        });
+      } else {
+        // Alerta estándar
+        await addDoc(collection(db, 'notificaciones'), {
+          userId: profDoc.id,
+          tipo: 'nuevo_trabajo_publicado',
+          titulo: `💼 Nuevo trabajo solicitado: ${rubro}`,
+          mensaje: `Se ha publicado un pedido en ${zona}: "${titulo}". Disponible en Bahía Oficios.`,
+          leida: false,
+          fecha: serverTimestamp(),
+          referenciaId: trabajoId,
+          metadata: {
+            esVipAnticipada: false,
+            trabajoId,
+            rubro,
+            zona
+          }
+        });
+      }
       count++;
     }
 

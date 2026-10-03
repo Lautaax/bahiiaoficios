@@ -5,9 +5,10 @@ import { useAuth } from '../context/AuthContext';
 interface PrivateRouteProps {
   children: React.ReactNode;
   allowNewUser?: boolean;
+  adminOnly?: boolean;
 }
 
-export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowNewUser = false }) => {
+export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowNewUser = false, adminOnly = false }) => {
   const { currentUser, loading } = useAuth();
   const location = useLocation();
 
@@ -21,6 +22,10 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowNewUs
 
   if (!currentUser) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (adminOnly && !currentUser.isAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   if (currentUser.isNewUser && !allowNewUser) {

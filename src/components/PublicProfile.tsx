@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, addDoc, serverTimestamp, updateDoc, deleteDoc, setDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User, Review } from '../types';
-import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check, Crown, Flag } from 'lucide-react';
+import { Star, MapPin, ShieldCheck, Phone, Mail, ArrowLeft, MessageSquare, MessageCircle, Calendar, User as UserIcon, Image as IconImage, AlertCircle, CheckCircle, Briefcase, FileText, QrCode, Download, Heart, Share2, Check, Crown, Flag } from 'lucide-react';
 import { ReviewForm } from './ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
@@ -16,6 +16,7 @@ import { getProfessionalBadges } from '../utils/badgeUtils';
 import { ProfessionalBadges } from './ProfessionalBadges';
 import { semTracker } from '../utils/semTracker';
 import { analyticsService } from '../services/analyticsService';
+import { NeighborhoodWhatsAppShareModal } from './NeighborhoodWhatsAppShareModal';
 
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,6 +29,7 @@ export const PublicProfile: React.FC = () => {
   const { currentUser } = useAuth();
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showNeighborhoodShare, setShowNeighborhoodShare] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
 
@@ -461,7 +463,7 @@ export const PublicProfile: React.FC = () => {
                 <button
                   onClick={handleShare}
                   className="p-2.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-all transform hover:scale-105 group relative"
-                  title="Compartir perfil"
+                  title="Copiar enlace del perfil"
                 >
                   {showShareFeedback ? (
                     <Check size={18} className="text-emerald-600 animate-in zoom-in" />
@@ -473,6 +475,14 @@ export const PublicProfile: React.FC = () => {
                       ¡Enlace copiado!
                     </span>
                   )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNeighborhoodShare(true)}
+                  className="p-2.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600 transition-all transform hover:scale-105 group"
+                  title="Compartir en grupos de WhatsApp del barrio"
+                >
+                  <MessageCircle size={18} className="fill-emerald-500/20 text-emerald-600" />
                 </button>
                 <button
                   onClick={() => setShowReportModal(true)}
@@ -726,6 +736,14 @@ export const PublicProfile: React.FC = () => {
                   </a>
                 )}
                 <button
+                  type="button"
+                  onClick={() => setShowNeighborhoodShare(true)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
+                >
+                  <MessageCircle size={18} />
+                  <span>Recomendar en WhatsApp de Barrio</span>
+                </button>
+                <button
                   onClick={handleContactClick}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
@@ -964,6 +982,23 @@ export const PublicProfile: React.FC = () => {
         <ReportModal
           professional={professional}
           onClose={() => setShowReportModal(false)}
+        />
+      )}
+
+      {professional && (
+        <NeighborhoodWhatsAppShareModal
+          isOpen={showNeighborhoodShare}
+          onClose={() => setShowNeighborhoodShare(false)}
+          professional={{
+            uid: professional.uid,
+            nombre: professional.nombre,
+            rubro: professional.profesionalInfo?.rubro || '',
+            zona: professional.zona,
+            ratingAvg: professional.profesionalInfo?.ratingAvg,
+            slug: professional.slug,
+            haceUrgencias: professional.profesionalInfo?.haceUrgencias
+          }}
+          initialBarrio={professional.zona}
         />
       )}
     </div>

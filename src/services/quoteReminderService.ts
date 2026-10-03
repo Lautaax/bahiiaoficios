@@ -166,7 +166,96 @@ export const quoteReminderService = {
   },
 
   /**
-   * Throttled check: only runs at most once every 30 minutes per browser session
+   * Scans requests and jobs older than 5 days and sends a review reminder to the client.
+   * Encourages organic 5-star ratings and generates WhatsApp follow-up links.
+   */
+  processFiveDayReviewReminders: async (currentUserId?: string): Promise<number> => {
+    let sentCount = 0;
+    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    try {
+      // 1. Check quoteRequests
+      const q = query(
+        collection(db, 'quoteRequests'),
+        limit(40)
+      );
+      const snap = await getDocs(q);
+
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        if (data.recordatorioCalificacion5dEnviado) continue;
+
+        let createdMs = 0;
+        if (data.fecha?.toMillis) createdMs = data.fecha.toMillis();
+        else if (data.createdAt?.toMillis) createdMs = data.createdAt.toMillis();
+        else if (data.fecha) createdMs = new Date(data.fecha).getTime();
+
+        if (!createdMs) continue;
+
+        const ageMs = now - createdMs;
+        if (ageMs < FIVE_DAYS_MS) continue;
+
+        const clienteId = data.clienteId;
+        if (!clienteId || clienteId === 'invitado') continue;
+
+        const proName = data.profesionalDirectoNombre || (data.respuestas?.[0]?.profesionalNombre) || 'tu profesional';
+        const rubro = data.rubro || 'el trabajo';
+
+        // Send in-app notification to client
+        await addDoc(collection(db, 'notificaciones'), {
+          userId: clienteId,
+          tipo: 'recordatorio_calificacion_5d',
+          titulo: `⭐ ¿Pudiste realizar tu trabajo de ${rubro}?`,
+          mensaje: `Pasaron 5 días desde tu pedido de presupuesto. ¿Cómo fue tu experiencia con ${proName}? Tu reseña ayuda a los vecinos de Bahía Blanca.`,
+          referenciaId: docSnap.id,
+          leida: false,
+          fecha: serverTimestamp(),
+          metadata: {
+            requestId: docSnap.id,
+            rubro,
+            profesionalNombre: proName,
+            profesionalId: data.profesionalDirectoId || data.respuestas?.[0]?.profesionalId || null,
+            clienteTelefono: data.clienteTelefono || null
+          }
+        });
+
+        // If client is current user, send push notification
+        if (currentUserId && currentUserId === clienteId) {
+          sendPushNotification(`⭐ ¿Pudiste realizar tu trabajo de ${rubro}?`, {
+            body: `Calificá la atención de ${proName} y contanos qué tal te fue en Bahía Oficios.`,
+            icon: '/icon.svg'
+          });
+        }
+
+        // Mark as reminded
+        await updateDoc(doc(db, 'quoteRequests', docSnap.id), {
+          recordatorioCalificacion5dEnviado: true,
+          fechaRecordatorioCalificacion: serverTimestamp()
+        }).catch(() => {});
+
+        sentCount++;
+      }
+    } catch (err) {
+      console.warn('Error in processFiveDayReviewReminders:', err);
+    }
+
+    return sentCount;
+  },
+
+  /**
+   * Generates a pre-filled WhatsApp message link to follow up on job completion & review
+   */
+  generateReviewWhatsAppLink: (clientPhone: string, clientName: string, rubro: string, proName?: string): string => {
+    const cleanPhone = clientPhone.replace(/\D/g, '');
+    const phoneWithCountry = cleanPhone.startsWith('54') ? cleanPhone : `549${cleanPhone}`;
+    const targetPro = proName ? `con ${proName}` : '';
+    const message = `Hola ${clientName}! Te escribimos de Bahía Oficios para consultarte: ¿Pudiste realizar el trabajo de ${rubro} ${targetPro}? ¡Contanos cómo te fue y si pudiste resolverlo!`;
+    return `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`;
+  },
+
+  /**
+   * Throttled check: runs at most once every 30 minutes per browser session
    */
   checkIfDueAndRun: async (userId?: string): Promise<ReminderResult | null> => {
     try {
@@ -179,6 +268,9 @@ export const quoteReminderService = {
       }
 
       localStorage.setItem(LAST_CHECK_KEY, String(now));
+      
+      // Run both quote pending reminder & 5-day review reminder
+      await quoteReminderService.processFiveDayReviewReminders(userId);
       return await quoteReminderService.processPendingQuoteReminders(userId);
     } catch {
       return null;

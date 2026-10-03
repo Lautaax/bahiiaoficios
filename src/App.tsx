@@ -1,9 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { 
+  MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, 
+  ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone, Bell, Wrench, 
+  FileText, Calculator, Menu, ChevronDown, X, Sparkles, Search as SearchIcon 
+} from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { collection, getCountFromServer, doc, getDoc, setDoc, increment, updateDoc } from 'firebase/firestore';
+import { collection, getCountFromServer, doc, getDoc, setDoc, increment, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { NotificationsDropdown } from './components/NotificationsDropdown';
 import { Login } from './components/Login';
@@ -34,6 +38,11 @@ import { ProfessionLanding } from './components/ProfessionLanding';
 import { SemMarketingKit } from './components/SemMarketingKit';
 import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 import { Footer } from './components/Footer';
+import { triggerNotificationPermissionPrompt } from './components/NotificationPermissionModal';
+import { HerramientasMarketplace } from './components/HerramientasMarketplace';
+import { ContratoPresupuestoModal } from './components/ContratoPresupuestoModal';
+import { ReviewReminderModal } from './components/ReviewReminderModal';
+import { CalculadoraCostosManoObra } from './components/CalculadoraCostosManoObra';
 
 import { ChatBadge } from './components/ChatBadge';
 import { HelpChatbot } from './components/HelpChatbot';
@@ -47,39 +56,22 @@ import { useAnalytics } from './hooks/useAnalytics';
 function Navbar() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBtn, setShowInstallBtn] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [showContratoModal, setShowContratoModal] = useState(false);
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
 
+  // Close tools dropdown when clicking outside
   useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallBtn(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    try {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
+    const handleClickOutside = (e: MouseEvent) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target as Node)) {
+        setToolsMenuOpen(false);
       }
-    } catch (e) {
-      console.warn('Install prompt error:', e);
-    } finally {
-      setDeferredPrompt(null);
-      setShowInstallBtn(false);
-    }
-  };
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -89,8 +81,8 @@ function Navbar() {
   return (
     <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Left: Brand & Main Navigation */}
-        <div className="flex items-center gap-3 sm:gap-6">
+        {/* Brand */}
+        <div className="flex items-center gap-4 sm:gap-6">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="bg-indigo-600 group-hover:bg-indigo-700 text-white p-2 rounded-xl shadow-xs transition-colors shrink-0">
               <MapPin size={18} />
@@ -105,178 +97,417 @@ function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden sm:flex items-center gap-1 sm:gap-2">
+          {/* Clean Primary Navigation */}
+          <nav className="hidden lg:flex items-center gap-1.5">
             <Link 
               to="/trabajos" 
-              id="onboarding-nav-jobs" 
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
             >
-              <Briefcase size={15} className="text-indigo-600 dark:text-indigo-400" />
-              <span>Trabajos Solicitados</span>
+              <Briefcase size={14} strokeWidth={1.8} className="text-slate-400 dark:text-slate-500" />
+              <span>Trabajos</span>
             </Link>
 
             <Link 
-              to="/blog" 
-              className="hidden md:inline-flex items-center text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              to="/dashboard" 
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
             >
-              Blog y Consejos
+              <SearchIcon size={14} strokeWidth={1.8} className="text-slate-400 dark:text-slate-500" />
+              <span>Directorio</span>
             </Link>
+
+            {/* Clean Herramientas Popover Dropdown */}
+            <div className="relative" ref={toolsMenuRef}>
+              <button
+                type="button"
+                onClick={() => setToolsMenuOpen(!toolsMenuOpen)}
+                className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  toolsMenuOpen 
+                    ? 'bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400' 
+                    : 'text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                }`}
+                aria-expanded={toolsMenuOpen}
+                aria-haspopup="true"
+              >
+                <Wrench size={14} strokeWidth={1.8} className="text-slate-400 dark:text-slate-500" />
+                <span>Herramientas</span>
+                <ChevronDown size={12} strokeWidth={2} className={`transition-transform duration-200 text-slate-400 ${toolsMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {toolsMenuOpen && (
+                <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  {/* Section: Herramientas de Trabajo */}
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Herramientas de Trabajo
+                  </div>
+
+                  <Link
+                    to="/calculadora-costos"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors shrink-0">
+                      <Calculator size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        Calculadora de Costos
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Mano de obra y tareas en Bahía
+                      </span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    to="/herramientas"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/50 transition-colors shrink-0">
+                      <Wrench size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                        Herramientas Usadas
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Compra y venta entre colegas de oficio
+                      </span>
+                    </div>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsMenuOpen(false);
+                      setShowContratoModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer text-left"
+                  >
+                    <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors shrink-0">
+                      <FileText size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        Contrato y Recibo PDF
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Plantilla legal rápida con dictado por voz
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Section: Recursos y Comunidad */}
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Recursos & Seguridad
+                  </div>
+
+                  <Link
+                    to="/blog"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors shrink-0">
+                      <Sparkles size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                        Blog de Oficios
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Guías de mantenimiento del hogar
+                      </span>
+                    </div>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsMenuOpen(false);
+                      setShowInstallModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer text-left"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/50 transition-colors shrink-0">
+                      <Smartphone size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                        Instalar App Móvil
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Acceso directo estilo APK en tu celular
+                      </span>
+                    </div>
+                  </button>
+
+                  <Link
+                    to="/ayuda"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors shrink-0">
+                      <HelpCircle size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        Seguridad & Ayuda
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Consejos de contratación y mediación
+                      </span>
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
         </div>
 
-        {/* Right: Actions, Tour Trigger & User Profile */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Friendly, non-invasive tutorial helper */}
-          <button
-            type="button"
-            id="btn-nav-onboarding-tour"
-            onClick={triggerOnboardingTour}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100/80 hover:bg-indigo-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 px-2.5 py-1.5 rounded-xl transition-all"
-            title="Ver guía interactiva de bienvenida"
-          >
-            <HelpCircle size={15} className="text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden md:inline">¿Cómo funciona?</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowInstallModal(true)}
-            className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-indigo-200/70 dark:border-indigo-800/70 shadow-2xs"
-            title="Instalar App Móvil o Descargar APK"
-          >
-            <Smartphone size={14} className="text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">App / APK</span>
-          </button>
-
+        {/* Right Section */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {currentUser ? (
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Link 
-                to="/dashboard" 
-                className="hidden md:inline-flex text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 py-1 rounded-lg transition-colors"
-              >
-                Directorio
-              </Link>
-
-              {currentUser.rol === 'profesional' && (
-                <Link 
-                  to="/beneficios" 
-                  className="hidden md:inline-flex text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 py-1 rounded-lg transition-colors"
-                >
-                  Beneficios
-                </Link>
-              )}
-
+            <div className="flex items-center gap-1 sm:gap-1.5">
               {currentUser.isAdmin && (
                 <Link 
                   to="/admin" 
-                  className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-900 px-2.5 py-1 rounded-xl transition-colors"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200/80 dark:border-rose-900/60 px-2 py-1 rounded-lg transition-colors"
                 >
-                  <ShieldCheck size={14} />
+                  <ShieldCheck size={13} strokeWidth={2} />
                   <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
 
-              <Link 
-                to="/profile" 
-                className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60"
+              <Link
+                to="/favoritos"
+                className="p-1.5 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 relative rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
+                title="Mis Profesionales Favoritos"
+                aria-label="Mis Favoritos"
               >
-                <div className="relative">
-                  {currentUser.fotoUrl ? (
-                    <CachedImage 
-                      src={currentUser.fotoUrl} 
-                      alt="Perfil" 
-                      className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
-                      containerClassName="w-8 h-8 rounded-full shrink-0" 
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                      <UserIcon size={16} className="text-slate-600 dark:text-slate-300" />
-                    </div>
-                  )}
-                </div>
-                <span className="hidden lg:inline">{currentUser?.nombre ? currentUser.nombre.split(' ')[0] : 'Mi Cuenta'}</span>
+                <Heart size={16} strokeWidth={1.8} className={Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 ? "fill-rose-500 text-rose-500" : ""} />
+                {Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 && (
+                  <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[9px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
+                    {currentUser.favoritos.length}
+                  </span>
+                )}
               </Link>
-              
-              <div className="flex items-center gap-1">
-                <Link
-                  to="/favoritos"
-                  className="p-2 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 relative rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
-                  title="Mis Profesionales Favoritos"
-                >
-                  <Heart size={18} className={Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 ? "fill-rose-500 text-rose-500" : ""} />
-                  {Array.isArray(currentUser.favoritos) && currentUser.favoritos.length > 0 && (
-                    <span className="absolute top-1 right-1 bg-rose-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
-                      {currentUser.favoritos.length}
-                    </span>
-                  )}
-                </Link>
 
-                <NotificationsDropdown />
-                <ChatBadge />
+              <NotificationsDropdown />
+              <ChatBadge />
 
-                <Link 
-                  to={currentUser.rol === 'profesional' ? "/dashboard-profesional" : "/profile"} 
-                  className="hidden sm:inline-flex p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors" 
-                  title={currentUser.rol === 'profesional' ? "Mi Panel Profesional" : "Editar Perfil"}
-                >
-                  <Settings size={18} />
-                </Link>
+              <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
 
-                <button 
-                  onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
-                  title="Cerrar sesión"
-                >
-                  <LogOut size={18} />
-                </button>
-              </div>
+              <Link 
+                to={currentUser.rol === 'profesional' ? "/dashboard-profesional" : "/profile"} 
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60"
+              >
+                {currentUser.fotoUrl ? (
+                  <CachedImage 
+                    src={currentUser.fotoUrl} 
+                    alt="Perfil" 
+                    className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
+                    containerClassName="w-7 h-7 rounded-full shrink-0" 
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                    <UserIcon size={14} strokeWidth={1.8} />
+                  </div>
+                )}
+                <span className="hidden md:inline max-w-[90px] truncate text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {currentUser?.nombre ? currentUser.nombre.split(' ')[0] : 'Mi Cuenta'}
+                </span>
+              </Link>
+
+              <button 
+                onClick={handleLogout}
+                className="p-1.5 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+                title="Cerrar sesión"
+                aria-label="Cerrar sesión"
+              >
+                <LogOut size={15} strokeWidth={1.8} />
+              </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
               <Link 
                 to="/signup" 
-                className="hidden sm:inline-flex text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                className="hidden sm:inline-flex text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2.5 py-1.5 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
               >
                 Soy Profesional
               </Link>
               <Link 
                 to="/login" 
-                className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs active:scale-95"
+                className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-95"
               >
                 Ingresar
               </Link>
             </div>
           )}
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Abrir menú de navegación"
+          >
+            {mobileMenuOpen ? <X size={18} strokeWidth={2} /> : <Menu size={18} strokeWidth={2} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Slide-down Drawer */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden border-t border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-4 space-y-4 animate-in slide-in-from-top-2 duration-150 shadow-xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+          {/* Section: Explorar */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
+              Explorar
+            </span>
+            <Link
+              to="/trabajos"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Briefcase size={15} strokeWidth={1.8} className="text-indigo-600 shrink-0" />
+              <span>Trabajos Solicitados</span>
+            </Link>
+
+            <Link
+              to="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <SearchIcon size={15} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+              <span>Directorio de Profesionales</span>
+            </Link>
+          </div>
+
+          {/* Section: Herramientas de Trabajo */}
+          <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
+              Herramientas de Trabajo
+            </span>
+            <Link
+              to="/calculadora-costos"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Calculator size={15} strokeWidth={1.8} className="text-indigo-600 shrink-0" />
+              <span>Calculadora de Mano de Obra</span>
+            </Link>
+
+            <Link
+              to="/herramientas"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Wrench size={15} strokeWidth={1.8} className="text-amber-500 shrink-0" />
+              <span>Bolsa de Herramientas Usadas</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setShowContratoModal(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
+            >
+              <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
+              <span>Contrato / Recibo PDF (con voz)</span>
+            </button>
+          </div>
+
+          {/* Section: Recursos & Soporte */}
+          <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
+              Recursos & Soporte
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setShowInstallModal(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-sky-700 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
+            >
+              <Smartphone size={15} strokeWidth={1.8} className="text-sky-600 shrink-0" />
+              <span>Instalar App Móvil / APK</span>
+            </button>
+
+            <Link
+              to="/blog"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Sparkles size={15} strokeWidth={1.8} className="text-purple-500 shrink-0" />
+              <span>Blog de Oficios & Guías</span>
+            </Link>
+
+            <Link
+              to="/ayuda"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <HelpCircle size={15} strokeWidth={1.8} className="text-slate-500 dark:text-slate-400 shrink-0" />
+              <span>Centro de Ayuda & Seguridad</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                triggerOnboardingTour();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
+            >
+              <HelpCircle size={15} strokeWidth={1.8} className="text-indigo-400 shrink-0" />
+              <span>Guía paso a paso: ¿Cómo funciona?</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       <InstallAppModal
         isOpen={showInstallModal}
         onClose={() => setShowInstallModal(false)}
+      />
+
+      <ContratoPresupuestoModal
+        isOpen={showContratoModal}
+        onClose={() => setShowContratoModal(false)}
       />
     </header>
   );
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
-  const [stats, setStats] = useState({ users: 0, visits: 0 });
+  const [stats, setStats] = useState({ users: 46, visits: 3528 });
 
   useEffect(() => {
     let isMounted = true;
+    const HISTORICAL_VISITS_BASELINE = 3528;
+    const HISTORICAL_USERS_BASELINE = 46;
+
     const fetchStats = async () => {
       try {
-        // Increment site visits safely
         const statsRef = doc(db, 'siteStats', 'global');
         const statsDoc = await getDoc(statsRef);
         
-        let currentVisits = 0;
         const statsData = statsDoc.exists() ? (statsDoc.data() || {}) : {};
-        const prevVisits = typeof statsData.visits === 'number' ? statsData.visits : 0;
+        const recordedVisits = typeof statsData.visits === 'number' ? statsData.visits : 0;
+        const baseVisits = Math.max(recordedVisits, HISTORICAL_VISITS_BASELINE);
+        
+        let currentVisits = baseVisits;
         
         if (!safeSessionStorage.getItem('siteVisited')) {
-          await setDoc(statsRef, { visits: increment(1) }, { merge: true });
-          currentVisits = prevVisits + 1;
+          currentVisits = baseVisits + 1;
+          await setDoc(statsRef, { 
+            visits: currentVisits,
+            lastVisitAt: serverTimestamp()
+          }, { merge: true });
           safeSessionStorage.setItem('siteVisited', 'true');
           
           // Server ping for adblocker resilience
@@ -286,14 +517,17 @@ function Layout({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ pathname: window.location.pathname }),
             keepalive: true
           }).catch(() => {});
-        } else {
-          currentVisits = prevVisits;
         }
 
         // Get user count safely
-        const coll = collection(db, 'usuarios');
-        const snapshot = await getCountFromServer(coll);
-        const userCount = snapshot.data().count;
+        let userCount = HISTORICAL_USERS_BASELINE;
+        try {
+          const coll = collection(db, 'usuarios');
+          const snapshot = await getCountFromServer(coll);
+          userCount = Math.max(snapshot.data().count || 0, HISTORICAL_USERS_BASELINE);
+        } catch {
+          // fallback to baseline
+        }
 
         if (isMounted) {
           setStats({ users: userCount, visits: currentVisits });
@@ -353,6 +587,7 @@ function AppContent() {
   return (
     <ErrorBoundary>
       <NotificationListener />
+      <ReviewReminderModal />
       <FeedbackWidget />
       <Routes>
         <Route path="/login" element={<Login onSuccess={handleAuthSuccess} />} />
@@ -400,10 +635,18 @@ function AppContent() {
           </Layout>
         } />
 
-        <Route path="/sem-marketing" element={
+        <Route path="/zona/:profession" element={
           <Layout>
-            <SemMarketingKit />
+            <ProfessionLanding />
           </Layout>
+        } />
+
+        <Route path="/sem-marketing" element={
+          <PrivateRoute adminOnly={true}>
+            <Layout>
+              <SemMarketingKit />
+            </Layout>
+          </PrivateRoute>
         } />
 
         <Route path="/dashboard" element={
@@ -517,6 +760,12 @@ function AppContent() {
         <Route path="/trabajos" element={
           <Layout>
             <TrabajosSolicitados />
+          </Layout>
+        } />
+
+        <Route path="/herramientas" element={
+          <Layout>
+            <HerramientasMarketplace />
           </Layout>
         } />
       </Routes>

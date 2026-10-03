@@ -13,6 +13,7 @@ import { getProfessionalBadges } from '../utils/badgeUtils';
 import { ProfessionalBadges } from './ProfessionalBadges';
 import { semTracker } from '../utils/semTracker';
 import { analyticsService } from '../services/analyticsService';
+import { NeighborhoodWhatsAppShareModal } from './NeighborhoodWhatsAppShareModal';
 
 interface ProfessionalCardProps {
   professional: User;
@@ -20,6 +21,7 @@ interface ProfessionalCardProps {
 
 export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => {
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showNeighborhoodShare, setShowNeighborhoodShare] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareFeedback, setShowShareFeedback] = useState(false);
   
@@ -240,9 +242,9 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
             </button>
             <button
               onClick={handleShare}
-              aria-label="Compartir perfil"
+              aria-label="Copiar enlace"
               className="p-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs text-slate-400 hover:text-indigo-600 transition-colors relative"
-              title="Compartir perfil"
+              title="Copiar enlace del perfil"
             >
               {showShareFeedback ? <Check size={14} className="text-emerald-600" /> : <Share2 size={14} />}
               {showShareFeedback && (
@@ -250,6 +252,19 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
                   ¡Copiado!
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowNeighborhoodShare(true);
+              }}
+              aria-label="Recomendar en WhatsApp de barrio"
+              className="p-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors shadow-xs"
+              title="Compartir en grupo de WhatsApp del barrio"
+            >
+              <MessageCircle size={14} className="fill-emerald-500/20 text-emerald-600" />
             </button>
           </div>
         </div>
@@ -496,6 +511,21 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
           </div>
         </div>
       )}
+
+      <NeighborhoodWhatsAppShareModal
+        isOpen={showNeighborhoodShare}
+        onClose={() => setShowNeighborhoodShare(false)}
+        professional={{
+          uid: professional.uid,
+          nombre,
+          rubro,
+          zona,
+          ratingAvg,
+          slug: professional.slug,
+          haceUrgencias
+        }}
+        initialBarrio={zona}
+      />
     </>
   );
 };

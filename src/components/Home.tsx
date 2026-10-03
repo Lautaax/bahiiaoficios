@@ -19,7 +19,6 @@ import { preloadImages } from '../utils/imageCache';
 import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { userSearchService } from '../services/userSearchService';
 import { analyticsService } from '../services/analyticsService';
-import { HomeQuickJobPost } from './HomeQuickJobPost';
 
 export function Home() {
   const { currentUser } = useAuth();
@@ -509,9 +508,6 @@ export function Home() {
         </div>
       </div>
 
-      {/* Componente de Acceso Rápido para Publicar Trabajos Solicitados */}
-      <HomeQuickJobPost />
-
 
 
       {/* Sugerencias personalizadas basadas en búsquedas recientes guardadas en Firestore */}
@@ -820,11 +816,27 @@ export function Home() {
               {[
                 {
                   q: '¿Cómo contratar un plomero o gasista matriculado urgente en Bahía Blanca?',
-                  a: 'En Bahía Oficios podés filtrar por rubro y barrio (Centro, Villa Mitre, Palihue, etc.) y contactar directamente por WhatsApp al profesional para acordar el horario de visita y presupuesto sin costo ni intermediarios.'
+                  a: 'En Bahía Oficios podés filtrar por rubro y barrio (Centro, Villa Mitre, Palihue, Cerri, etc.) y contactar directamente por WhatsApp al profesional para acordar el horario de visita y presupuesto sin costo ni intermediarios.'
+                },
+                {
+                  q: '¿Cómo saber si un gasista está habilitado ante Camuzzi Gas del Sur?',
+                  a: 'Los perfiles verificados de gasistas en Bahía Oficios exhiben su número de matrícula oficial. Siempre podés solicitarle la credencial física de matrícula vigente antes de que intervenga la instalación o presente planos de inspección.'
                 },
                 {
                   q: '¿Los electricistas y techistas atienden emergencias por cortocircuitos o goteras?',
                   a: 'Sí, podés usar el filtro "Urgencias 24h" para encontrar especialistas con guardia activa listos para acudir a cortes de luz o filtraciones urgentes causadas por tormentas y vientos en la ciudad.'
+                },
+                {
+                  q: '¿Cómo fijar techos de chapa contra las ráfagas de viento del sudoeste bahiense?',
+                  a: 'Se recomienda fijar clavaderas con tirafondos reforzados y arandelas vulcanizadas de neopreno, además de sellar babetas de zinguería en los laterales para evitar que el viento embolse la chapa.'
+                },
+                {
+                  q: '¿Cómo acordar presupuestos y plazos por escrito con un trabajador?',
+                  a: 'Podés utilizar gratis nuestra plantilla de Contrato / Recibo Rápido descargable en PDF (con dictado por voz) disponible en la barra de utilidades para dejar asentados los plazos, el valor y la seña.'
+                },
+                {
+                  q: '¿Puedo compartir el contacto de un buen profesional en el grupo de WhatsApp de mi barrio?',
+                  a: '¡Sí! Cada perfil cuenta con el botón "Recomendar en WhatsApp de Barrio" que arma un mensaje optimizado con fotos y calificaciones para que tus vecinos de Palihue, Mitre o Universitario lo contraten con tranquilidad.'
                 },
                 {
                   q: '¿Dónde comprar materiales de construcción y cómo pedir presupuesto de corralón?',

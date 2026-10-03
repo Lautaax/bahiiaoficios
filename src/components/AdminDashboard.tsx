@@ -16,11 +16,12 @@ import { AdminDailyChurnAudit } from './AdminDailyChurnAudit';
 import { AdminAiPromotionInsights } from './AdminAiPromotionInsights';
 import { identifyInactiveProfessionals } from '../services/adminOperationsService';
 import { CachedImage } from './CachedImage';
+import { SemMarketingKit } from './SemMarketingKit';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'resumen_diario_ia' | 'insights_ia' | 'metricas' | 'mapa_calor' | 'reactivacion' | 'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos'>('insights_ia');
+  const [activeTab, setActiveTab] = useState<'resumen_diario_ia' | 'insights_ia' | 'metricas' | 'mapa_calor' | 'reactivacion' | 'usuarios' | 'suscripciones' | 'publicidad' | 'descuentos' | 'sem_marketing'>('insights_ia');
 
   const [users, setUsers] = useState<User[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
@@ -482,6 +483,14 @@ export const AdminDashboard: React.FC = () => {
           <Tag size={20} />
           Descuentos Gremio
         </button>
+
+        <button 
+          onClick={() => setActiveTab('sem_marketing')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'sem_marketing' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
+        >
+          <Sparkles size={20} className="text-amber-400" />
+          Estrategia SEM (Admin)
+        </button>
         
         {activeTab === 'usuarios' && (
           <button 
@@ -900,6 +909,12 @@ export const AdminDashboard: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'sem_marketing' && (
+        <div className="space-y-6">
+          <SemMarketingKit />
         </div>
       )}
 

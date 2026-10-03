@@ -19,6 +19,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UserFeedback } from '../types';
 import { analyticsService } from '../services/analyticsService';
 
+export const OPEN_FEEDBACK_EVENT = 'open-feedback-widget';
+
+export const openFeedbackModal = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(OPEN_FEEDBACK_EVENT));
+  }
+};
+
 export const FeedbackWidget: React.FC = () => {
   const { currentUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -31,6 +39,13 @@ export const FeedbackWidget: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Listen for open events triggered from the Footer or elsewhere
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener(OPEN_FEEDBACK_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, handleOpen);
+  }, []);
 
   // Close on Escape key
   useEffect(() => {
@@ -96,29 +111,6 @@ export const FeedbackWidget: React.FC = () => {
 
   return (
     <>
-      {/* Floating launcher button: bottom-left to balance HelpChatbot on bottom-right */}
-      <div className="fixed bottom-6 left-6 z-40">
-        <button
-          onClick={() => {
-            if (isOpen) {
-              handleResetAndClose();
-            } else {
-              setIsOpen(true);
-            }
-          }}
-          aria-label="Reportar error o sugerir mejora"
-          className="group flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-slate-900/90 hover:bg-slate-900 dark:bg-white/90 dark:hover:bg-white text-white dark:text-slate-900 shadow-xl backdrop-blur-md border border-slate-700/50 dark:border-slate-200/50 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
-        >
-          <div className="relative">
-            <MessageSquarePlus size={18} className="text-amber-400 dark:text-indigo-600 transition-transform group-hover:rotate-6" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          </div>
-          <span className="font-semibold text-xs tracking-tight">
-            Sugerencias / Feedback
-          </span>
-        </button>
-      </div>
-
       {/* Slide-in Modal Drawer */}
       <AnimatePresence>
         {isOpen && (

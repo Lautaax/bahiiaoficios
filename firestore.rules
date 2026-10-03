@@ -209,6 +209,13 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // 15. BOLSA DE HERRAMIENTAS Y MATERIALES USADOS
+    match /herramientas_usadas/{itemId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAuthenticated() && (resource.data.vendedorId == request.auth.uid || isAdmin());
+    }
+
     match /busquedas_recientes/{busquedaId} {
       allow create: if true;
       allow read: if true;

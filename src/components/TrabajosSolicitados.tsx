@@ -17,12 +17,14 @@ import {
   Briefcase, PlusCircle, Search, Filter, Clock, MapPin, DollarSign, 
   Send, CheckCircle2, AlertCircle, MessageCircle, X, ChevronDown, 
   Calendar, Crown, User as UserIcon, Check, Layers, RefreshCw, XCircle, Sparkles,
-  ArrowRight, ShieldAlert, Eye
+  ArrowRight, ShieldAlert, Eye, Bell, Lock, Zap
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RecentRequestedJobs } from './RecentRequestedJobs';
 import { JobDetailModal } from './JobDetailModal';
 import { CachedImage } from './CachedImage';
+import { triggerNotificationPermissionPrompt } from './NotificationPermissionModal';
+import { NeighborhoodWhatsAppShareModal } from './NeighborhoodWhatsAppShareModal';
 
 const POPULAR_RUBROS = [
   'Electricista', 'Plomero', 'Gasista', 'Pintor', 'Albañil', 
@@ -85,6 +87,14 @@ export const TrabajosSolicitados: React.FC = () => {
   // Auth notice modals
   const [showAuthNotice, setShowAuthNotice] = useState(false);
   const [showClientAuthNotice, setShowClientAuthNotice] = useState(false);
+
+  // VIP 15-minute Early Access Modal
+  const [showVipEarlyModal, setShowVipEarlyModal] = useState(false);
+  const [vipTargetJob, setVipTargetJob] = useState<JobPost | null>(null);
+
+  // Neighborhood WhatsApp Share Modal
+  const [sharingJob, setSharingJob] = useState<JobPost | null>(null);
+  const [showJobShareModal, setShowJobShareModal] = useState(false);
 
   // Helper para abrir modal de solicitud requiriendo registro previo
   const handleOpenCreateModal = () => {
@@ -484,6 +494,41 @@ export const TrabajosSolicitados: React.FC = () => {
         </button>
       </div>
 
+      {/* High-Impact Notification Opt-In Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 border border-indigo-500/40 p-5 sm:p-6 text-white shadow-xl shadow-indigo-950/30">
+        <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-amber-300 flex items-center justify-center shrink-0 shadow-inner">
+              <Bell size={24} className="animate-wiggle" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  Alertas en Tiempo Real
+                </span>
+                <span className="text-xs text-indigo-300 font-medium hidden sm:inline">Bahía Blanca</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-white leading-tight mt-0.5">
+                ¿Querés enterarte cuando se publiquen nuevos trabajos?
+              </h3>
+              <p className="text-xs text-indigo-200 mt-1 max-w-xl leading-relaxed">
+                Activá las notificaciones instantáneas en tu dispositivo y recibí alertas inmediatas de pedidos, respuestas y presupuestos sin perder tiempo.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={triggerNotificationPermissionPrompt}
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <Bell size={16} className="text-slate-950" />
+            <span>Activar Alertas Gratis</span>
+          </button>
+        </div>
+      </div>
+
       {/* PANEL DE FILTROS AVANZADOS POR OFICIO Y ZONA GEOGRÁFICA EN BAHÍA BLANCA */}
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-5">
         <div className="flex items-center justify-between">
@@ -684,6 +729,19 @@ export const TrabajosSolicitados: React.FC = () => {
 
             const isTargeted = searchParams.get('jobId') === job.id;
 
+            // VIP 15-minute Early Access Calculation
+            const createdMs = (job.fechaCreacion as any)?.toMillis
+              ? (job.fechaCreacion as any).toMillis()
+              : (job.fechaCreacion as any)?.seconds
+                ? (job.fechaCreacion as any).seconds * 1000
+                : (typeof job.fechaCreacion === 'string' ? new Date(job.fechaCreacion).getTime() : 0);
+
+            const now = Date.now();
+            const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+            const isVipPeriod = createdMs > 0 && (now - createdMs) < FIFTEEN_MINUTES_MS;
+            const remainingVipMinutes = Math.max(1, Math.ceil((FIFTEEN_MINUTES_MS - (now - createdMs)) / 60000));
+            const userIsVip = isVipActive(currentUser?.profesionalInfo || (currentUser as any));
+
             return (
               <div 
                 key={job.id} 
@@ -702,9 +760,24 @@ export const TrabajosSolicitados: React.FC = () => {
                 <div>
                   {/* Top Metadata */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300">
-                      {job.rubro}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300">
+                        {job.rubro}
+                      </span>
+                      {isVipPeriod && (
+                        userIsVip ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 shadow-2xs animate-pulse">
+                            <Crown size={11} className="fill-slate-950" />
+                            VIP ({remainingVipMinutes}m ventaja)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                            <Zap size={10} className="fill-amber-500 text-amber-500" />
+                            Prioridad VIP ({remainingVipMinutes}m)
+                          </span>
+                        )
+                      )}
+                    </div>
                     {getUrgenciaBadge(job.urgencia)}
                   </div>
 
@@ -810,6 +883,28 @@ export const TrabajosSolicitados: React.FC = () => {
                         <div className="flex-1 text-center py-2 text-xs font-medium text-slate-400">
                           Finalizado
                         </div>
+                      ) : isVipPeriod && !userIsVip ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVipTargetJob(job);
+                            setShowVipEarlyModal(true);
+                          }}
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                          title="Publicado hace menos de 15 minutos. Cotización prioritaria para miembros VIP."
+                        >
+                          <Lock size={12} className="text-slate-950" />
+                          <span>Desbloquear con VIP ({remainingVipMinutes}m)</span>
+                        </button>
+                      ) : isVipPeriod && userIsVip ? (
+                        <button
+                          type="button"
+                          onClick={() => setQuotingJob(job)}
+                          className="flex-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-slate-950 font-black py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 ring-2 ring-amber-400/40"
+                        >
+                          <Crown size={13} className="fill-slate-950" />
+                          <span>Cotizar Ahora (Ventaja VIP)</span>
+                        </button>
                       ) : (
                         <button
                           type="button"
@@ -831,6 +926,20 @@ export const TrabajosSolicitados: React.FC = () => {
                         <span>Cotizar</span>
                       </button>
                     )}
+
+                    {/* Botón directo de compartir pedido en WhatsApp de Barrio */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSharingJob(job);
+                        setShowJobShareModal(true);
+                      }}
+                      className="p-2 rounded-xl text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800 transition-colors shrink-0"
+                      title="Compartir pedido en grupos de WhatsApp del barrio"
+                      aria-label="Compartir en WhatsApp del barrio"
+                    >
+                      <MessageCircle size={14} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -852,6 +961,118 @@ export const TrabajosSolicitados: React.FC = () => {
           setSelectedJobForDetail(null);
           setViewingProposalsJob(j);
         }}
+      />
+
+      {/* MODAL: Alerta y Desbloqueo VIP Anticipado (15 minutos antes) */}
+      {showVipEarlyModal && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-amber-300/40 dark:border-amber-500/30 relative animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => {
+                setShowVipEarlyModal(false);
+                setVipTargetJob(null);
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-500 text-slate-950 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20 border-2 border-white dark:border-slate-800 animate-pulse">
+                <Crown size={32} className="fill-slate-950" />
+              </div>
+
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                  Beneficio Exclusivo VIP
+                </span>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mt-2 leading-tight">
+                  Alertas Anticipadas de 15 Minutos
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                  Los profesionales con <strong>Membresía VIP</strong> reciben las alertas y pueden cotizar cada trabajo nuevo <strong>15 minutos antes que el resto</strong>.
+                </p>
+              </div>
+
+              {vipTargetJob && (
+                <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-2xl text-left space-y-1">
+                  <span className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider block">
+                    Trabajo en período de exclusividad VIP:
+                  </span>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {vipTargetJob.titulo}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Rubro: {vipTargetJob.rubro} • Zona: {vipTargetJob.zona}
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 text-left space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                  <Sparkles size={14} className="text-amber-500" />
+                  <span>¿Por qué es clave tener el Plan VIP?</span>
+                </div>
+                <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Ventaja de 15 minutos</strong>: llegás primero cuando el cliente todavía no recibió otras ofertas.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Insignia Dorada VIP</strong>: mayor confianza y más contrataciones cerradas.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Primeros lugares en el directorio</strong> para búsquedas en Bahía Blanca.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <Link
+                  to="/dashboard-profesional"
+                  onClick={() => {
+                    setShowVipEarlyModal(false);
+                    setVipTargetJob(null);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Crown size={15} className="fill-slate-950" />
+                  <span>Activar Membresía VIP</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowVipEarlyModal(false);
+                    setVipTargetJob(null);
+                  }}
+                  className="py-3 px-4 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  Esperar liberación pública
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Compartir Pedido de Trabajo en WhatsApp del Barrio */}
+      <NeighborhoodWhatsAppShareModal
+        isOpen={showJobShareModal}
+        onClose={() => {
+          setShowJobShareModal(false);
+          setSharingJob(null);
+        }}
+        job={sharingJob ? {
+          id: sharingJob.id || '',
+          titulo: sharingJob.titulo,
+          rubro: sharingJob.rubro,
+          zona: sharingJob.zona,
+          presupuestoEstimado: sharingJob.presupuestoAproximado,
+          urgencia: sharingJob.urgencia
+        } : null}
+        initialBarrio={sharingJob?.zona}
       />
 
       {/* COMPONENTE: ProfessionalQuoteAction (Modal para enviar / editar presupuesto) */}

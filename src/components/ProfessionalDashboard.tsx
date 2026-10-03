@@ -20,6 +20,7 @@ import { ProfessionalWeeklyPerformanceChart } from './ProfessionalWeeklyPerforma
 import { fcmService, FcmStatus } from '../services/fcmService';
 import { CachedImage } from './CachedImage';
 import { safeLocalStorage } from '../utils/storage';
+import { triggerNotificationPermissionPrompt } from './NotificationPermissionModal';
 
 type TabType = 'resumen' | 'mis-presupuestos' | 'trabajos' | 'pedidos' | 'perfil' | 'estadisticas' | 'reseñas' | 'favoritos';
 
@@ -41,16 +42,14 @@ export const ProfessionalDashboard: React.FC = () => {
 
   const handleToggleFcm = async () => {
     if (!currentUser) return;
+    if (!fcmStatus?.isEnabled) {
+      triggerNotificationPermissionPrompt();
+      return;
+    }
+
     setActivatingFcm(true);
     try {
-      const res = await fcmService.requestPermissionAndGetToken(currentUser.uid);
-      const st = await fcmService.getStatus();
-      setFcmStatus(st);
-      if (res.success) {
-        await fcmService.triggerTestNotification();
-      } else {
-        alert(res.error || 'No se pudieron activar las notificaciones.');
-      }
+      await fcmService.triggerTestNotification();
     } finally {
       setActivatingFcm(false);
     }

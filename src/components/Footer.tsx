@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Eye, MapPin, Heart, Wrench, Shield, Sparkles, Smartphone } from 'lucide-react';
+import { Users, Eye, MapPin, Heart, Wrench, Shield, Sparkles, Smartphone, Lightbulb, MessageSquarePlus, FileText } from 'lucide-react';
 import { NewsletterSubscription } from './NewsletterSubscription';
 import { InstallAppModal } from './InstallAppModal';
+import { openFeedbackModal } from './FeedbackWidget';
+import { ContratoPresupuestoModal } from './ContratoPresupuestoModal';
 
 interface FooterProps {
   stats: {
@@ -13,6 +15,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ stats }) => {
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [contratoModalOpen, setContratoModalOpen] = useState(false);
 
   return (
     <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 mt-16 transition-colors duration-200">
@@ -76,9 +79,25 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
                 </Link>
               </li>
               <li>
-                <Link to="/sem-marketing" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400">
-                  <span>Campañas Google Ads</span>
-                  <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-extrabold">SEM</span>
+                <Link to="/herramientas" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors inline-flex items-center gap-1.5 font-bold text-amber-600 dark:text-amber-400">
+                  <Wrench size={13} />
+                  <span>Bolsa de Herramientas</span>
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setContratoModalOpen(true)}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 text-left cursor-pointer"
+                >
+                  <FileText size={13} className="text-indigo-600 dark:text-indigo-400" />
+                  <span>Contrato / Recibo Rápido</span>
+                </button>
+              </li>
+              <li>
+                <Link to="/calculadora-costos" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                  <Sparkles size={13} className="text-amber-500" />
+                  <span>Calculadora de Costos</span>
                 </Link>
               </li>
             </ul>
@@ -115,6 +134,16 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
                   <span>Instalar App / Descargar APK</span>
                 </button>
               </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => openFeedbackModal()}
+                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors inline-flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400 text-left cursor-pointer"
+                >
+                  <Lightbulb size={13} className="text-amber-500" />
+                  <span>Sugerencias & Feedback</span>
+                </button>
+              </li>
             </ul>
 
             {/* Site Stats Counter */}
@@ -144,6 +173,38 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
           </div>
         </div>
 
+        {/* Community Feedback & Suggestions Banner inside Footer */}
+        <div className="mt-8 p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800/80 shadow-xs">
+              <Lightbulb size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                  Buzón de Sugerencias
+                </span>
+                <span className="text-xs text-slate-400 font-medium">Bahía Blanca</span>
+              </div>
+              <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight mt-0.5">
+                ¿Tenés una sugerencia, idea o encontraste algún error?
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
+                Tu opinión nos ayuda a seguir mejorando la plataforma para todos los vecinos y profesionales de la ciudad.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => openFeedbackModal()}
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            <MessageSquarePlus size={15} className="text-amber-400 dark:text-indigo-600" />
+            <span>Dejar Sugerencia / Feedback</span>
+          </button>
+        </div>
+
         {/* Bottom Bar: Copyright & Designer */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
           <p>© {new Date().getFullYear()} Bahia Oficios. Todos los derechos reservados.</p>
@@ -165,6 +226,11 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
       <InstallAppModal 
         isOpen={installModalOpen} 
         onClose={() => setInstallModalOpen(false)} 
+      />
+
+      <ContratoPresupuestoModal
+        isOpen={contratoModalOpen}
+        onClose={() => setContratoModalOpen(false)}
       />
     </footer>
   );

@@ -169,7 +169,7 @@ export const HomeQuickJobPost: React.FC = () => {
                   <span>Publicación Rápida • 100% Gratis</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                  ¿Necesitás un profesional hoy? Publicá tu pedido
+                  Solicitud de Trabajo en Bahía Blanca
                 </h2>
                 <p className="text-sm text-slate-300 mt-1">
                   Describí en pocos pasos lo que necesitás y recibí presupuestos directos de trabajadores en Bahía Blanca.

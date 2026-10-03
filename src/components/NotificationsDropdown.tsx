@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Camera, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bell, Camera, Sparkles, CheckCircle2, AlertCircle, Star, Zap } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { fcmService, FcmStatus } from '../services/fcmService';
+import { triggerNotificationPermissionPrompt } from './NotificationPermissionModal';
+import { triggerReviewReminderModal } from './ReviewReminderModal';
 
 export const NotificationsDropdown: React.FC = () => {
   const { currentUser } = useAuth();
@@ -132,31 +134,38 @@ export const NotificationsDropdown: React.FC = () => {
           </div>
 
           {/* FCM Push Notifications Toggle Banner */}
-          <div className="px-4 py-2.5 bg-indigo-50/70 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/40 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${fcmStatus?.isEnabled ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className="text-slate-700 dark:text-slate-300 font-medium">
-                {fcmStatus?.isEnabled ? 'Alertas Push Activas' : 'Alertas Push Inactivas'}
-              </span>
+          <div className="p-3 bg-gradient-to-r from-indigo-900 to-slate-900 border-b border-indigo-500/30 text-white flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${fcmStatus?.isEnabled ? 'bg-emerald-400 ring-2 ring-emerald-400/30' : 'bg-amber-400 animate-pulse'}`} />
+              <div className="min-w-0">
+                <span className="font-bold block text-white truncate text-[11px]">
+                  {fcmStatus?.isEnabled ? 'Alertas en Pantalla Activas' : 'Recibí Alertas de Trabajos'}
+                </span>
+                <span className="text-[10px] text-indigo-200 block truncate">
+                  {fcmStatus?.isEnabled ? 'Recibirás avisos en tiempo real' : 'Enterate al instante de pedidos y mensajes'}
+                </span>
+              </div>
             </div>
             {!fcmStatus?.isEnabled ? (
               <button
                 type="button"
-                onClick={handleEnablePush}
-                disabled={activatingPush}
-                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                onClick={() => {
+                  setIsOpen(false);
+                  triggerNotificationPermissionPrompt();
+                }}
+                className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
               >
-                {activatingPush ? 'Activando...' : 'Activar Alertas'}
+                Activar
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleEnablePush}
                 disabled={activatingPush}
-                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                className="shrink-0 px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-[11px] border border-indigo-400/30 transition-all cursor-pointer"
                 title="Prueba una notificación en tu pantalla"
               >
-                Probar
+                {activatingPush ? 'Probando...' : 'Probar'}
               </button>
             )}
           </div>
@@ -227,6 +236,34 @@ export const NotificationsDropdown: React.FC = () => {
                         >
                           Ver trabajo y cotizar →
                         </Link>
+                      )}
+                      {notif.tipo === 'alerta_vip_nuevo_trabajo' && (
+                        <Link 
+                          to={`/trabajos?jobId=${notif.referenciaId || notif.metadata?.trabajoId || ''}&cotizar=true`}
+                          onClick={() => setIsOpen(false)}
+                          className="inline-flex items-center gap-1.5 text-[11px] text-amber-900 dark:text-amber-200 font-black bg-gradient-to-r from-amber-400/25 to-yellow-400/25 px-2.5 py-1.5 rounded-lg border border-amber-400/50 hover:bg-amber-400/30 transition-all shadow-xs"
+                        >
+                          <Zap size={13} className="text-amber-500 fill-amber-500" />
+                          <span>Cotizar con prioridad VIP (15 min antes) →</span>
+                        </Link>
+                      )}
+                      {notif.tipo === 'recordatorio_calificacion_5d' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOpen(false);
+                            triggerReviewReminderModal({
+                              profesionalId: notif.metadata?.profesionalId,
+                              profesionalNombre: notif.metadata?.profesionalNombre,
+                              rubro: notif.metadata?.rubro,
+                              clienteTelefono: notif.metadata?.clienteTelefono
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 text-[11px] text-amber-800 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 transition-colors shadow-2xs cursor-pointer"
+                        >
+                          <Star size={13} className="fill-amber-400 text-amber-500" />
+                          <span>Calificar atención del profesional ahora →</span>
+                        </button>
                       )}
                       {notif.tipo === 'incentivo_fotos' && (
                         <Link 
