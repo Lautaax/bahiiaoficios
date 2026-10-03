@@ -15,16 +15,28 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "48x48 72x72 96x96 128x128 192x192 256x256 512x512",
-      "type": "image/svg+xml",
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -33,21 +45,21 @@
       "short_name": "Buscar",
       "description": "Buscar oficios y profesionales en Bahía Blanca",
       "url": "/dashboard",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Trabajos Solicitados",
       "short_name": "Trabajos",
       "description": "Ver tablón de trabajos y pedidos de presupuesto",
       "url": "/trabajos",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Publicar Pedido",
       "short_name": "Publicar",
       "description": "Publicar una necesidad de trabajo en tu casa o comercio",
       "url": "/trabajos?crear=true",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

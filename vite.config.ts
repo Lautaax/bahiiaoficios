@@ -98,19 +98,40 @@ export default defineConfig(({mode}) => {
           ],
         },
         manifest: {
-          name: 'Bahía Oficios',
-          short_name: 'Bahía Oficios',
-          description: 'Portal de Profesionales en Bahía Blanca',
+          id: '/',
+          name: 'Bahía Oficios - Profesionales y Servicios',
+          short_name: 'BahíaOficios',
+          description: 'Portal de Profesionales y Servicios en Bahía Blanca',
           theme_color: '#4f46e5',
-          background_color: '#ffffff',
+          background_color: '#0f172a',
           display: 'standalone',
           orientation: 'portrait',
+          start_url: '/',
+          scope: '/',
           icons: [
             {
-              src: 'icon.svg',
+              src: '/icon-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/icon-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/icon-maskable-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/icon.svg',
               sizes: '512x512',
               type: 'image/svg+xml',
-              purpose: 'any maskable'
+              purpose: 'any'
             }
           ]
         }

@@ -79,13 +79,28 @@ define(['./workbox-fa6cb374'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "index.html",
-    "revision": "4f4e1dfe31dc3bc80dfa6122757f1fb8"
+    "revision": "afd26e62e3552c61cefb0844b044757d"
   }, {
     "url": "icon.svg",
     "revision": "443dede249bd5a2bdf1a4c1955f3bee7"
   }, {
+    "url": "icon-maskable-512x512.png",
+    "revision": "60712b61aaab05aefb912858c6e31fce"
+  }, {
+    "url": "icon-512x512.png",
+    "revision": "d58d317c61acc871133351078cc4eb46"
+  }, {
+    "url": "icon-192x192.png",
+    "revision": "3c592ae37c12176ff874fb9f94a9275a"
+  }, {
     "url": "firebase-messaging-sw.js",
     "revision": "99be24cd90a3da861e099ca308170f80"
+  }, {
+    "url": "favicon-32x32.png",
+    "revision": "e9b9b657d73a2fc07f97db1b4f343b02"
+  }, {
+    "url": "apple-touch-icon.png",
+    "revision": "64b699c9cf94eb4de56b91a7d18940a7"
   }, {
     "url": "assets/workbox-window.prod.es5-BIl4cyR9.js",
     "revision": null
@@ -93,26 +108,38 @@ define(['./workbox-fa6cb374'], (function (workbox) { 'use strict';
     "url": "assets/purify.es-BgtpMKW3.js",
     "revision": null
   }, {
-    "url": "assets/index.esm-LocLZMEI.js",
+    "url": "assets/index.esm-BvtMF1gV.js",
     "revision": null
   }, {
-    "url": "assets/index.es-BmvrPI4s.js",
+    "url": "assets/index.es-eqMhR6YS.js",
     "revision": null
   }, {
-    "url": "assets/index-Dj4-Acng.js",
+    "url": "assets/index-PDW4iEwb.js",
     "revision": null
   }, {
-    "url": "assets/index-DHZ0tDKI.css",
+    "url": "assets/index-CvmZGdNa.css",
     "revision": null
   }, {
     "url": "assets/html2canvas.esm-QH1iLAAe.js",
     "revision": null
   }, {
+    "url": "apple-touch-icon.png",
+    "revision": "64b699c9cf94eb4de56b91a7d18940a7"
+  }, {
+    "url": "icon-192x192.png",
+    "revision": "3c592ae37c12176ff874fb9f94a9275a"
+  }, {
+    "url": "icon-512x512.png",
+    "revision": "d58d317c61acc871133351078cc4eb46"
+  }, {
+    "url": "icon-maskable-512x512.png",
+    "revision": "60712b61aaab05aefb912858c6e31fce"
+  }, {
     "url": "icon.svg",
     "revision": "443dede249bd5a2bdf1a4c1955f3bee7"
   }, {
     "url": "manifest.webmanifest",
-    "revision": "cb379c3a3ae464b221aade708f37a055"
+    "revision": "52e8bae2d5874182053b231f00b83efb"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html")));
