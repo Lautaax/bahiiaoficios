@@ -145,7 +145,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
               <button
                 key={star}
                 type="button"
-                className="focus:outline-none transition-transform hover:scale-110"
+                aria-label={`Calificar con ${star} estrella${star > 1 ? 's' : ''}`}
+                aria-pressed={rating === star}
+                className="focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-full transition-transform hover:scale-110"
                 onMouseEnter={() => setHoverRating(star)}
                 onMouseLeave={() => setHoverRating(0)}
                 onClick={() => setRating(star)}
@@ -208,7 +210,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
                   <button
                     type="button"
                     onClick={() => removeImage(idx)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                    aria-label={`Eliminar imagen ${idx + 1}`}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 focus-visible:ring-2 focus-visible:ring-red-400 outline-none"
                   >
                     <X size={12} />
                   </button>
