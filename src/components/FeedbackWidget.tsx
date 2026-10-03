@@ -254,7 +254,9 @@ export const FeedbackWidget: React.FC = () => {
                             onClick={() => setRating(star)}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(null)}
-                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer"
+                            aria-label={`Calificar con ${star} estrella${star > 1 ? 's' : ''}`}
+                            aria-pressed={rating === star}
+                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 focus-visible:ring-2 focus-visible:ring-amber-400 outline-none rounded-full transition-transform cursor-pointer"
                           >
                             <Star
                               size={24}
