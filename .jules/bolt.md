@@ -1,0 +1,3 @@
+## 2024-05-18 - Memoizing ProfessionalCard Component
+**Learning:** In a highly interactive page like Dashboard where the search term changes frequently, components inside a list trigger re-renders even when their specific props don't change. This happens because the parent (`Dashboard`) re-renders when the state (`searchTerm`) updates.
+**Action:** Adding `React.memo` to `ProfessionalCard` prevents it from re-rendering unless its props (the `professional` object) change. This optimization reduces the rendering overhead significantly, especially with a large list of professionals, making the search experience smoother.

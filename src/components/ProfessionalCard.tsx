@@ -19,7 +19,8 @@ interface ProfessionalCardProps {
   professional: User;
 }
 
-export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => {
+// ⚡ Bolt: Memoize ProfessionalCard to prevent re-renders when typing in search
+export const ProfessionalCard: React.FC<ProfessionalCardProps> = React.memo(({ professional }) => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showNeighborhoodShare, setShowNeighborhoodShare] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -528,4 +529,4 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional
       />
     </>
   );
-};
+});
