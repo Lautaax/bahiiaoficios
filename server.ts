@@ -378,9 +378,58 @@ async function startServer() {
     }
   });
 
+  // Helper function to verify admin authentication token
+  async function verifyAdminAuth(req: express.Request): Promise<{ authorized: boolean; uid?: string; error?: string }> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { authorized: false, error: "Missing or invalid Authorization header" };
+    }
+
+    const idToken = authHeader.split('Bearer ')[1]?.trim();
+    if (!idToken) {
+      return { authorized: false, error: "Missing token" };
+    }
+
+    if (admin.apps.length > 0) {
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const email = decodedToken.email || '';
+        const isCustomAdmin = Boolean(decodedToken.admin);
+
+        let isDbAdmin = false;
+        const sDb = getServerDb();
+        if (sDb) {
+          const userDoc = await sDb.collection('usuarios').doc(decodedToken.uid).get();
+          if (userDoc.exists) {
+            const uData = userDoc.data();
+            if (uData?.isAdmin === true || uData?.rol === 'admin') {
+              isDbAdmin = true;
+            }
+          }
+        }
+
+        const isAdminUser = email === "lautaroj.aguilera@gmail.com" || isCustomAdmin || isDbAdmin;
+        if (!isAdminUser) {
+          return { authorized: false, error: "Unauthorized: Admin privileges required" };
+        }
+
+        return { authorized: true, uid: decodedToken.uid };
+      } catch (err: any) {
+        return { authorized: false, error: `Invalid token: ${err.message}` };
+      }
+    }
+
+    return { authorized: false, error: "Server authentication unavailable" };
+  }
+
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
+      const authResult = await verifyAdminAuth(req);
+      if (!authResult.authorized) {
+        return res.status(401).json({ error: authResult.error || "Unauthorized" });
+      }
+
       const { userId, isVip } = req.body || {};
       if (!userId) {
         return res.status(400).json({ error: "Missing userId" });
