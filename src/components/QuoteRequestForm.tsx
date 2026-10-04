@@ -47,6 +47,21 @@ export const QuoteRequestForm: React.FC = () => {
     fetchTargetProf();
   }, [targetProfId]);
 
+  useEffect(() => {
+    const urlRubro = searchParams.get('rubro');
+    const urlZona = searchParams.get('zona');
+    const urlDesc = searchParams.get('descripcion') || searchParams.get('detalle');
+
+    if (urlRubro || urlZona || urlDesc) {
+      setFormData(prev => ({
+        ...prev,
+        rubro: urlRubro || prev.rubro,
+        zona: urlZona || prev.zona,
+        descripcion: urlDesc || prev.descripcion
+      }));
+    }
+  }, [searchParams]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };

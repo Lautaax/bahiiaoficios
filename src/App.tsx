@@ -34,20 +34,30 @@ import { TradeDiscounts } from './components/TradeDiscounts';
 import { PublicidadComercio } from './components/PublicidadComercio';
 import { NotificationListener } from './components/NotificationListener';
 import { CachedImage } from './components/CachedImage';
-import { ProfessionLanding } from './components/ProfessionLanding';
 import { SemMarketingKit } from './components/SemMarketingKit';
 import { TrabajosSolicitados } from './components/TrabajosSolicitados';
 import { Footer } from './components/Footer';
 import { triggerNotificationPermissionPrompt } from './components/NotificationPermissionModal';
 import { HerramientasMarketplace } from './components/HerramientasMarketplace';
-import { ContratoPresupuestoModal } from './components/ContratoPresupuestoModal';
 import { ReviewReminderModal } from './components/ReviewReminderModal';
 import { CalculadoraCostosManoObra } from './components/CalculadoraCostosManoObra';
+import { NavigationLoadingProvider } from './context/NavigationLoadingContext';
+import { ServiceLandingSkeleton } from './components/ServiceLandingSkeleton';
+
+// Lazy-loaded modal and landing sub-components to optimize bundle and avoid navigation flicker
+const ContratoPresupuestoModal = React.lazy(() => 
+  import('./components/ContratoPresupuestoModal').then(m => ({ default: m.ContratoPresupuestoModal }))
+);
+const InstallAppModal = React.lazy(() => 
+  import('./components/InstallAppModal').then(m => ({ default: m.InstallAppModal }))
+);
+const ServiceLanding = React.lazy(() => 
+  import('./components/ServiceLanding').then(m => ({ default: m.ServiceLanding }))
+);
 
 import { ChatBadge } from './components/ChatBadge';
 import { HelpChatbot } from './components/HelpChatbot';
 import { FeedbackWidget } from './components/FeedbackWidget';
-import { InstallAppModal } from './components/InstallAppModal';
 import { GuidedOnboarding, triggerOnboardingTour } from './components/GuidedOnboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { safeSessionStorage } from './utils/storage';
@@ -60,7 +70,9 @@ function Navbar() {
   const [showContratoModal, setShowContratoModal] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
+  const drawerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Close tools dropdown when clicking outside
   useEffect(() => {
@@ -72,6 +84,47 @@ function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const closeMobileMenuSmoothly = (callback?: () => void) => {
+    if (drawerTimeoutRef.current) {
+      clearTimeout(drawerTimeoutRef.current);
+    }
+    setIsDrawerClosing(true);
+    drawerTimeoutRef.current = setTimeout(() => {
+      setMobileMenuOpen(false);
+      setIsDrawerClosing(false);
+      if (callback) callback();
+    }, 200);
+  };
+
+  const handleDrawerLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, to: string) => {
+    e.preventDefault();
+    closeMobileMenuSmoothly(() => {
+      navigate(to);
+    });
+  };
+
+  // Lock body scroll and handle Escape key when mobile menu is open
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeMobileMenuSmoothly();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+      if (drawerTimeoutRef.current) {
+        clearTimeout(drawerTimeoutRef.current);
+      }
+    };
+  }, [mobileMenuOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -619,25 +672,33 @@ function AppContent() {
 
         <Route path="/rubro/:profession" element={
           <Layout>
-            <ProfessionLanding />
+            <React.Suspense fallback={<ServiceLandingSkeleton />}>
+              <ServiceLanding />
+            </React.Suspense>
           </Layout>
         } />
 
         <Route path="/profesion/:profession" element={
           <Layout>
-            <ProfessionLanding />
+            <React.Suspense fallback={<ServiceLandingSkeleton />}>
+              <ServiceLanding />
+            </React.Suspense>
           </Layout>
         } />
 
         <Route path="/professions/:profession" element={
           <Layout>
-            <ProfessionLanding />
+            <React.Suspense fallback={<ServiceLandingSkeleton />}>
+              <ServiceLanding />
+            </React.Suspense>
           </Layout>
         } />
 
         <Route path="/zona/:profession" element={
           <Layout>
-            <ProfessionLanding />
+            <React.Suspense fallback={<ServiceLandingSkeleton />}>
+              <ServiceLanding />
+            </React.Suspense>
           </Layout>
         } />
 
@@ -768,6 +829,18 @@ function AppContent() {
             <HerramientasMarketplace />
           </Layout>
         } />
+
+        <Route path="/calculadora-costos" element={
+          <Layout>
+            <CalculadoraCostosManoObra />
+          </Layout>
+        } />
+
+        <Route path="/calculadora" element={
+          <Layout>
+            <CalculadoraCostosManoObra />
+          </Layout>
+        } />
       </Routes>
     </ErrorBoundary>
   );
@@ -779,7 +852,9 @@ function App() {
       <AuthProvider>
         <ThemeProvider>
           <Router>
-            <AppContent />
+            <NavigationLoadingProvider>
+              <AppContent />
+            </NavigationLoadingProvider>
           </Router>
         </ThemeProvider>
       </AuthProvider>
