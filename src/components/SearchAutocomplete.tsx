@@ -127,6 +127,10 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
         placeholder={placeholder}
         className={inputClassName}
         autoComplete="off"
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-autocomplete="list"
+        aria-label="Buscar por profesión, nombre o servicio"
       />
 
       {isOpen && (
@@ -177,7 +181,8 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
                           e.stopPropagation();
                           onRemoveHistoryItem(item);
                         }}
-                        className="p-1 rounded-full text-slate-400 hover:text-rose-500 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors"
+                        aria-label={`Eliminar "${item}" de búsquedas recientes`}
+                        className="p-1 rounded-full text-slate-400 hover:text-rose-500 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                         title="Eliminar de recientes"
                       >
                         <X size={12} />
