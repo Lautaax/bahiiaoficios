@@ -1055,7 +1055,8 @@ El usuario dicta por voz tareas o materiales de obra en español coloquial argen
 Tu objetivo es extraer con precisión matemática:
 1. descripcion: nombre del trabajo o material (ej: "Revoque", "Codos de termofusión", "Zócalo").
 2. cantidad: número con su unidad correspondiente (ej: "4 m", "3 un", "10 ml", "2 bolsas", "15 m²"). Si no especifica unidad, pon la cantidad con "un" (ej: "3 un").
-3. precio: precio total del ítem en pesos como número entero. Si dice "cada uno" o "el metro", multiplica el valor unitario por la cantidad. (Ej: 3 codos a 5000 cada uno -> 15000; 4 m de revoque a 20.000 -> 20000).`;
+3. precioUnitario: valor por unidad o por metro en pesos como número entero (ej: 5000 en 3 codos a 5000 cada uno).
+4. precio: precio total del ítem en pesos como número entero. Si dice "cada uno" o "el metro", multiplica el valor unitario por la cantidad. (Ej: 3 codos a 5000 cada uno -> precio: 15000; 4 m de revoque a 20.000 -> precio: 20000).`;
 
       const prompt = `Tipo esperado: ${type || 'general'}
 Texto dictado por voz del usuario:
@@ -1067,6 +1068,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este esquema:
     {
       "descripcion": "<nombre limpio del ítem>",
       "cantidad": "<cantidad y unidad, ej: 4 m, 3 un, 10 m²>",
+      "precioUnitario": <número entero con el precio unitario en pesos>,
       "precio": <número entero con el precio total en pesos>
     }
   ]

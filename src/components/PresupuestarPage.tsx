@@ -303,7 +303,8 @@ export const PresupuestarPage: React.FC = () => {
                 id: `t-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
                 descripcion: p.descripcion,
                 cantidad: p.cantidad || '1 un',
-                precio: p.precio
+                precio: p.precio,
+                precioUnitario: p.precioUnitario
               }));
 
               const updated = isFirstEmpty ? newItems : [...prev, ...newItems];
@@ -311,7 +312,11 @@ export const PresupuestarPage: React.FC = () => {
               return updated;
             });
 
-            setAiVoiceFeedback(`✨ ¡Tarea agregada con IA! ${parsedItems.map(i => `${i.cantidad} ${i.descripcion} ($${Number(i.precio || 0).toLocaleString('es-AR')})`).join(', ')}`);
+            const summaryFeedback = parsedItems.map(i => {
+              const unitPart = i.precioUnitario && i.precioUnitario !== i.precio ? ` (unit: $${Number(i.precioUnitario).toLocaleString('es-AR')})` : '';
+              return `${i.cantidad} ${i.descripcion}${unitPart} → $${Number(i.precio || 0).toLocaleString('es-AR')}`;
+            }).join(', ');
+            setAiVoiceFeedback(`✨ ¡Tarea reconocida con IA! ${summaryFeedback}`);
           } else {
             setMaterialesList(prev => {
               const isFirstEmpty = prev.length === 1 && !prev[0].descripcion && !prev[0].precio;
@@ -319,7 +324,8 @@ export const PresupuestarPage: React.FC = () => {
                 id: `m-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
                 descripcion: p.descripcion,
                 cantidad: p.cantidad || '1 un',
-                precio: p.precio
+                precio: p.precio,
+                precioUnitario: p.precioUnitario
               }));
 
               const updated = isFirstEmpty ? newItems : [...prev, ...newItems];
@@ -327,7 +333,11 @@ export const PresupuestarPage: React.FC = () => {
               return updated;
             });
 
-            setAiVoiceFeedback(`✨ ¡Material agregado con IA! ${parsedItems.map(i => `${i.cantidad} ${i.descripcion} ($${Number(i.precio || 0).toLocaleString('es-AR')})`).join(', ')}`);
+            const summaryFeedback = parsedItems.map(i => {
+              const unitPart = i.precioUnitario && i.precioUnitario !== i.precio ? ` (unit: $${Number(i.precioUnitario).toLocaleString('es-AR')})` : '';
+              return `${i.cantidad} ${i.descripcion}${unitPart} → $${Number(i.precio || 0).toLocaleString('es-AR')}`;
+            }).join(', ');
+            setAiVoiceFeedback(`✨ ¡Material reconocido con IA! ${summaryFeedback}`);
           }
 
           setTimeout(() => setAiVoiceFeedback(null), 6000);
@@ -888,8 +898,40 @@ export const PresupuestarPage: React.FC = () => {
     }).catch(e => console.warn('Error guardando en historial:', e));
   };
 
-  // Acción: Descargar PDF Oficial
+  // Guardado persistente inmediato del estado del formulario en localStorage
+  const saveCurrentDraftSnapshot = () => {
+    savePresupuestoDraft({
+      proNombre,
+      proDni,
+      proTelefono,
+      proRubro,
+      proMatricula,
+      clienteNombre,
+      clienteDni,
+      clienteTelefono,
+      clienteDireccion,
+      tituloTrabajo,
+      descripcionTrabajo,
+      plazoEntrega,
+      fechaInicio,
+      montoManoObra,
+      montoMateriales,
+      montoTotal,
+      montoSena,
+      formaPago,
+      tareasList,
+      materialesList
+    });
+    const now = new Date();
+    setLastAutoSaveTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  };
+
+  // Acción: Generar Presupuesto (PDF Oficial)
   const handleGeneratePdf = () => {
+    // 1. Guardar de forma inmediata el estado en localStorage antes de cualquier verificación
+    saveCurrentDraftSnapshot();
+
+    // 2. Verificar autenticación: si no está logueado, abrir modal persistente de registro/login
     if (!currentUser) {
       setPendingAction('pdf');
       setShowAuthModal(true);
@@ -899,12 +941,15 @@ export const PresupuestarPage: React.FC = () => {
     const { doc, cleanFileName } = buildPdfDoc();
     doc.save(cleanFileName);
     persistToHistory();
-    setShareFeedback('✅ PDF descargado exitosamente y guardado en Mis Presupuestos.');
+    setShareFeedback('✅ Presupuesto oficial generado y descargado exitosamente. Guardado en tu cuenta.');
     setTimeout(() => setShareFeedback(null), 4000);
   };
 
   // Acción: Compartir por WhatsApp
   const handleShareWhatsApp = async () => {
+    // 1. Guardar de forma inmediata el estado en localStorage
+    saveCurrentDraftSnapshot();
+
     if (!currentUser) {
       setPendingAction('whatsapp');
       setShowAuthModal(true);
@@ -997,6 +1042,22 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
 
   const handleAuthSuccess = (userData: any) => {
     setShowAuthModal(false);
+
+    // Asegurar que todos los campos del presupuesto persistan intactos desde localStorage
+    const savedDraft = getPresupuestoDraft();
+    if (savedDraft) {
+      if (savedDraft.proNombre && !proNombre) setProNombre(savedDraft.proNombre);
+      if (savedDraft.clienteNombre && !clienteNombre) setClienteNombre(savedDraft.clienteNombre);
+      if (savedDraft.tituloTrabajo && !tituloTrabajo) setTituloTrabajo(savedDraft.tituloTrabajo);
+      if (savedDraft.montoTotal && !montoTotal) setMontoTotal(savedDraft.montoTotal);
+      if (Array.isArray(savedDraft.tareasList) && savedDraft.tareasList.length > 0 && tareasList.every(t => !t.descripcion && !t.precio)) {
+        setTareasList(savedDraft.tareasList);
+      }
+      if (Array.isArray(savedDraft.materialesList) && savedDraft.materialesList.length > 0 && materialesList.every(m => !m.descripcion && !m.precio)) {
+        setMaterialesList(savedDraft.materialesList);
+      }
+    }
+
     if (!proNombre && userData?.nombre) {
       setProNombre(userData.nombre);
     }
@@ -1004,13 +1065,13 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
       setProTelefono(userData.telefono);
     }
 
-    setShareFeedback('🎉 ¡Cuenta conectada con éxito! Generando tu presupuesto oficial...');
+    setShareFeedback('🎉 ¡Cuenta conectada con éxito! Tus datos se conservaron. Generando presupuesto...');
     setTimeout(() => {
       if (pendingAction === 'pdf') {
         const { doc, cleanFileName } = buildPdfDoc();
         doc.save(cleanFileName);
         persistToHistory();
-        setShareFeedback('✅ PDF descargado exitosamente y guardado en Mis Presupuestos.');
+        setShareFeedback('✅ Presupuesto oficial generado y descargado exitosamente. Guardado en tu cuenta.');
       } else if (pendingAction === 'whatsapp') {
         executeShareWhatsApp();
       }
@@ -1766,7 +1827,7 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
               <div>
                 <span className="font-black text-xs block">Generación protegida sin pérdida de datos</span>
                 <span className="leading-relaxed">
-                  Al presionar <strong>"Descargar PDF Oficial"</strong> o <strong>"Enviar por WhatsApp"</strong> se te pedirá crear una cuenta gratuita para vincular el presupuesto a tu historial. <strong>Todos tus cálculos, tareas y precios cargados permanecen 100% seguros y guardados.</strong>
+                  Al presionar <strong>"Generar Presupuesto"</strong> o <strong>"Enviar por WhatsApp"</strong> se te pedirá ingresar o registrarte gratis para asociar el comprobante a tu cuenta. <strong>Todo lo que escribiste (tareas, materiales, precios y datos) queda 100% preservado en tu navegador y se restaura al instante.</strong>
                 </span>
               </div>
             </div>
@@ -1801,10 +1862,10 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
             <button
               type="button"
               onClick={handleGeneratePdf}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black text-xs transition-all shadow-md shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black text-xs sm:text-sm transition-all shadow-md shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
-              <Download size={15} aria-hidden="true" />
-              <span>Descargar PDF Oficial</span>
+              <Download size={16} aria-hidden="true" />
+              <span>Generar Presupuesto (PDF Oficial)</span>
             </button>
           </div>
         </div>

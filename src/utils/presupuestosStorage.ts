@@ -417,6 +417,7 @@ export interface PresupuestoDraftItem {
   id: string;
   descripcion: string;
   precio: string | number;
+  precioUnitario?: string | number;
   cantidad?: string | number;
 }
 

@@ -8,6 +8,7 @@ export interface ParsedBudgetItem {
   descripcion: string;
   cantidad: string;
   precio: number | string;
+  precioUnitario?: number | string;
 }
 
 const SPANISH_NUMBERS: Record<string, number> = {
@@ -122,6 +123,7 @@ export function parseVoiceLocally(rawText: string, type: 'tarea' | 'material'): 
     }
 
     // Si es precio unitario y cantidad > 1, el total es precio * cantidad
+    const unitPrice = isPerUnit ? precio : (numericQty > 0 && precio > 0 ? Math.round(precio / numericQty) : precio);
     if (isPerUnit && numericQty > 1 && precio > 0) {
       precio = precio * numericQty;
     }
@@ -147,7 +149,8 @@ export function parseVoiceLocally(rawText: string, type: 'tarea' | 'material'): 
     results.push({
       descripcion: desc,
       cantidad: `${numericQty} ${unitLabel}`,
-      precio: precio > 0 ? precio : ''
+      precio: precio > 0 ? precio : '',
+      precioUnitario: unitPrice > 0 ? unitPrice : ''
     });
   }
 
@@ -178,7 +181,8 @@ export async function parseVoiceToItems(
         return data.items.map((item: any) => ({
           descripcion: String(item.descripcion || '').trim(),
           cantidad: String(item.cantidad || '1 un').trim(),
-          precio: item.precio !== undefined ? item.precio : ''
+          precio: item.precio !== undefined ? item.precio : '',
+          precioUnitario: item.precioUnitario !== undefined ? item.precioUnitario : ''
         }));
       }
     }
