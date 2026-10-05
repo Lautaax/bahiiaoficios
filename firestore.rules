@@ -28,17 +28,20 @@ service cloud.firestore {
       // Authenticated users and public visitors can view professional profiles in directory
       allow read: if true;
       
-      // User can create their own profile during signup
-      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // User can create their own profile during signup (prevent self-assigned admin privileges)
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (request.auth.uid == userId &&
+         (!request.resource.data.keys().hasAny(['isAdmin']) && request.resource.data.get('rol', '') != 'admin'))
+      );
       
-      // User can update their own data, Admins have full access,
-      // and safe tracking & status updates are allowed without permission errors
-      allow update: if isOwner(userId) || 
-                    isAdmin() ||
+      // User can update their own data (excluding privilege escalation fields), Admins have full access,
+      // and tracking updates use hasOnly to prevent unauthorized field modifications.
+      allow update: if isAdmin() ||
+                    (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'rol'])) ||
                     (
-                      request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                         'profesionalInfo',
-                        'isVip',
                         'updatedAt',
                         'fcmToken',
                         'fcmTokens',
