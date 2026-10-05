@@ -227,7 +227,7 @@ export const PresupuestoAuthModal: React.FC<PresupuestoAuthModalProps> = ({
               <div className="truncate pr-2">
                 <span className="text-[10px] text-blue-200 block uppercase font-bold">Presupuesto en curso:</span>
                 <span className="font-bold text-white truncate block">
-                  {pendingBudgetSummary.titulo || 'Cómputo / Contrato de Obra'}
+                  {pendingBudgetSummary.titulo || 'Presupuesto y Cómputo de Obra'}
                 </span>
                 {pendingBudgetSummary.cliente && (
                   <span className="text-[11px] text-blue-200/80 block">

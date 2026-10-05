@@ -89,7 +89,7 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
   // Detalle del Trabajo
   const [tituloTrabajo, setTituloTrabajo] = useState('');
   const [descripcionTrabajo, setDescripcionTrabajo] = useState('');
-  const [plazoEntrega, setPlazoEntrega] = useState('5 días hábiles');
+  const [plazoEntrega, setPlazoEntrega] = useState('5 días aproximados');
   const [fechaInicio, setFechaInicio] = useState('');
 
   // TAREAS / MANO DE OBRA DESGLOSADA CON PRECIO INDIVIDUAL Y MEDIDA/CANTIDAD
@@ -651,7 +651,7 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
-    doc.text('PRESUPUESTO Y CONTRATO DE TRABAJO', pageWidth - 14, 12, { align: 'right' });
+    doc.text('PRESUPUESTO DE TRABAJO', pageWidth - 14, 12, { align: 'right' });
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
@@ -824,25 +824,26 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
         fontSize: 8.5,
         cellPadding: 3
       },
-      head: [['CONDICIONES Y PLAZOS DE ENTREGA', 'RESUMEN ECONÓMICO FINAL']],
+      head: [['CONDICIONES Y PLAZOS ESTIMADOS', 'RESUMEN ECONÓMICO FINAL']],
       body: [
         [
-          `Fecha pactada de inicio: ${fechaInicio || 'A convenir'}\nPlazo estimado de entrega: ${plazoEntrega || 'A convenir'}\nForma de pago acordada: ${formaPago}`,
+          `Fecha pactada de inicio: ${fechaInicio || 'A convenir'}\nPlazo estimado de ejecución: ${plazoEntrega || 'A convenir'}\nForma de pago acordada: ${formaPago}\n\n* Duración del trabajo sujeto a cambios climáticos.`,
           valoresBreakdownLines.join('\n')
         ]
       ]
     });
 
-    currentY = (doc as any).lastAutoTable.finalY + 6;
+    currentY = (doc as any).lastAutoTable.finalY + 5;
 
-    // Cláusulas de Conformidad y Garantía
+    // Cláusulas y Condiciones del Presupuesto
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
     const clausulas = [
-      '1. El profesional se compromete a realizar las labores encomendadas aplicando reglas del buen arte y materiales aptos.',
-      '2. El cliente entregará la seña indicada para congelar precio o acopio de materiales, cancelando el saldo al finalizar los trabajos tras su inspección.',
-      '3. En caso de discrepancias sobre vicios ocultos, las partes acuerdan intentar una mediación amistosa a través de la comunidad de Bahía Oficios.'
+      '1. Validez de la cotización: 15 días corridos a partir de la fecha de emisión del presente presupuesto.',
+      '2. Plazos de ejecución: Los días consignados son aproximados. La duración del trabajo está sujeta a cambios climáticos y contingencias de obra.',
+      '3. El cliente entregará la seña indicada para congelar precio o acopio de materiales, cancelando el saldo al finalizar los trabajos tras su inspección.',
+      '4. En caso de consultas o discrepancias sobre los trabajos, las partes podrán solicitar una mediación amistosa a través de Bahía Oficios.'
     ];
 
     clausulas.forEach(c => {
@@ -850,9 +851,17 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
       currentY += 4;
     });
 
-    currentY += 12;
+    currentY += 4;
 
-    // Espacio de Firmas
+    // Leyenda de cambios climáticos
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(180, 83, 9);
+    doc.text('IMPORTANTE: Duración del trabajo sujeto a cambios climáticos.', pageWidth / 2, currentY, { align: 'center' });
+
+    currentY += 10;
+
+    // Espacio de Firmas y Conformidad
     doc.setDrawColor(150, 150, 150);
     doc.line(20, currentY, 80, currentY);
     doc.line(pageWidth - 80, currentY, pageWidth - 20, currentY);
@@ -861,7 +870,7 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
     doc.text('FIRMA DEL PROFESIONAL', 50, currentY + 4, { align: 'center' });
-    doc.text('FIRMA DEL CLIENTE / LOCATARIO', pageWidth - 50, currentY + 4, { align: 'center' });
+    doc.text('CONFORMIDAD DEL CLIENTE', pageWidth - 50, currentY + 4, { align: 'center' });
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
@@ -871,9 +880,9 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
 
     // Pie de página oficial
     doc.setFontSize(7);
-    doc.text('Generado a través de Bahía Oficios (bahiaoficios.com) • Directorio de Profesionales de Bahía Blanca', pageWidth / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
+    doc.text('Generado a través de Bahía Oficios (bahiaoficios.com) • Directorio de Profesionales de Bahía Blanca • Duración del trabajo sujeto a cambios climáticos', pageWidth / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
 
-    const cleanFileName = `Contrato_${(tituloTrabajo || 'Trabajo').replace(/\s+/g, '_')}_BahiaOficios.pdf`;
+    const cleanFileName = `Presupuesto_${(tituloTrabajo || 'Trabajo').replace(/\s+/g, '_')}_BahiaOficios.pdf`;
     return { doc, cleanFileName };
   };
 
@@ -990,12 +999,12 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
     if (numManoObra > 0) desgloseManoMat.push(`  • 🛠️ Costo de Mano de Obra: $${numManoObra.toLocaleString('es-AR')}`);
     if (numMateriales > 0) desgloseManoMat.push(`  • 🧱 Costo de Materiales: $${numMateriales.toLocaleString('es-AR')}`);
 
-    const text = `*BAHÍA OFICIOS • CONTRATO Y PRESUPUESTO OFICIAL*
+    const text = `*BAHÍA OFICIOS • PRESUPUESTO OFICIAL*
 📋 *Trabajo:* ${tituloTrabajo || proRubro}
 👷 *Profesional:* ${proNombre || 'A convenir'} (${proTelefono || 'Sin teléfono'})
 👤 *Cliente:* ${clienteNombre || 'A convenir'}
 📍 *Lugar:* ${clienteDireccion || 'Bahía Blanca'}
-🗓️ *Fecha inicio:* ${fechaInicio || 'A convenir'} | *Plazo:* ${plazoEntrega}
+🗓️ *Fecha inicio:* ${fechaInicio || 'A convenir'} | *Plazo estimado:* ${plazoEntrega}
 
 ${tareasLines.length > 0 ? tareasLines.join('\n') + '\n\n' : ''}${materialesLines.length > 0 ? materialesLines.join('\n') + '\n\n' : ''}💰 *TOTAL PRESUPUESTADO:* $${numTotal.toLocaleString('es-AR')}
 ${desgloseManoMat.length > 0 ? desgloseManoMat.join('\n') + '\n' : ''}💵 *Seña acordada:* $${numSena.toLocaleString('es-AR')}
@@ -1005,7 +1014,9 @@ ${desgloseManoMat.length > 0 ? desgloseManoMat.join('\n') + '\n' : ''}💵 *Señ
 📝 *Condiciones y Observaciones:*
 ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
 
-📎 *Se generó y descargó el archivo PDF oficial: ${cleanFileName}*
+⚠️ *Nota:* Duración del trabajo sujeto a cambios climáticos.
+
+📎 *Se generó el archivo PDF oficial: ${cleanFileName}*
 📄 *Bahía Oficios (bahiaoficios.com) • Directorio de Profesionales de Bahía Blanca*`;
 
     // 2. Intentar compartir el archivo PDF nativamente (Web Share API) si el navegador lo admite
@@ -1087,10 +1098,10 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
               Modelo Oficial Descargable
             </span>
             <h3 id="contrato-modal-title" className="text-base sm:text-lg font-black text-white leading-tight mt-0.5">
-              Presupuesto, Cómputo y Contrato de Trabajo
+              Presupuesto y Cómputo de Obra
             </h3>
             <p id="contrato-modal-desc" className="text-xs text-indigo-200">
-              Desglosá tareas y materiales con precio individual, calculá subtotales y generá el PDF listo para firmar.
+              Desglosá tareas y materiales con precio individual, calculá subtotales y generá el presupuesto oficial en PDF.
             </p>
           </div>
         </div>
@@ -1100,7 +1111,7 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
             type="button"
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/80 hover:bg-slate-700 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:outline-none"
-            aria-label="Cerrar modal de contrato"
+            aria-label="Cerrar modal de presupuesto"
           >
             <X size={18} />
           </button>
@@ -1382,7 +1393,7 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
                     value={tarea.precio}
                     onChange={(e) => handleUpdateTarea(tarea.id, 'precio', e.target.value)}
                     placeholder="Precio"
-                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-transparent border-0 focus:ring-0 focus:outline-none text-right"
+                    className="w-full text-xs font-bold text-[#0f245c] dark:text-white bg-transparent border-0 focus:ring-0 focus:outline-none text-right"
                   />
                 </div>
 
@@ -1489,7 +1500,7 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
                     value={material.precio}
                     onChange={(e) => handleUpdateMaterial(material.id, 'precio', e.target.value)}
                     placeholder="Precio"
-                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-transparent border-0 focus:ring-0 focus:outline-none text-right"
+                    className="w-full text-xs font-bold text-[#0f245c] dark:text-white bg-transparent border-0 focus:ring-0 focus:outline-none text-right"
                   />
                 </div>
 
@@ -1644,16 +1655,19 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
               </div>
               <div>
                 <label htmlFor="trabajo-plazo" className="text-[10px] text-slate-500 font-bold block mb-1">
-                  Plazo de Ejecución:
+                  Plazo de Ejecución (Días aproximados):
                 </label>
                 <input
                   id="trabajo-plazo"
                   type="text"
                   value={plazoEntrega}
                   onChange={(e) => setPlazoEntrega(e.target.value)}
-                  placeholder="Ej: 3 días hábiles"
+                  placeholder="Ej: 5 días aproximados"
                   className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1 mt-1">
+                  <span aria-hidden="true">⚠️</span> Duración del trabajo sujeto a cambios climáticos
+                </p>
               </div>
             </div>
 
@@ -1803,17 +1817,21 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
       </div>
 
       {/* Footer / Barra de Acciones */}
-      <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="text-xs text-slate-500 dark:text-slate-400 w-full sm:w-auto text-center sm:text-left">
-          <span>Total a cobrar: </span>
-          <span className="font-black text-slate-900 dark:text-white text-sm sm:text-base">
-            ${numTotal.toLocaleString('es-AR')}
+      <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="w-full sm:w-auto text-center sm:text-left flex flex-col sm:flex-row sm:items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            Total del Presupuesto:
           </span>
-          {numSena > 0 && (
-            <span className="text-[11px] text-slate-400 ml-1.5">
-              (Seña: ${numSena.toLocaleString('es-AR')})
+          <div className="inline-flex items-center justify-center sm:justify-start gap-2">
+            <span className="px-3 py-1 rounded-xl bg-[#0f245c] text-white dark:bg-blue-600 dark:text-white font-black text-base sm:text-lg shadow-xs">
+              ${numTotal.toLocaleString('es-AR')}
             </span>
-          )}
+            {numSena > 0 && (
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
+                Seña: ${numSena.toLocaleString('es-AR')}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -1841,10 +1859,10 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
             type="button"
             onClick={handleGeneratePdf}
             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black text-xs transition-all shadow-md shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
-            aria-label="Descargar contrato y presupuesto oficial en formato PDF"
+            aria-label="Descargar presupuesto oficial en formato PDF"
           >
             <Download size={15} aria-hidden="true" />
-            <span>Descargar PDF Oficial</span>
+            <span>Descargar Presupuesto (PDF)</span>
           </button>
         </div>
       </div>

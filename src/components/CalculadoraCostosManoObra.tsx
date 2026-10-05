@@ -911,7 +911,7 @@ ${lines.join('\n')}${calculation.activeItems.length > 15 ? `\n... y ${calculatio
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
-                  title="Abrir presupuestador y contrato en otra página (/presupuestar)"
+                  title="Abrir presupuestador online en otra página (/presupuestar)"
                 >
                   <ExternalLink size={13} className="text-blue-200" />
                   <span>Presupuestar Online</span>
@@ -1364,7 +1364,7 @@ ${lines.join('\n')}${calculation.activeItems.length > 15 ? `\n... y ${calculatio
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-5 py-2.5 rounded-xl bg-[#0f245c] hover:bg-[#163683] text-white font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                  title="Abrir herramienta de contrato y recibo en una pestaña dedicada (/presupuestar)"
+                  title="Abrir presupuestador online en una pestaña dedicada (/presupuestar)"
                 >
                   <ExternalLink size={15} className="text-amber-300" />
                   <span>Abrir /presupuestar</span>
@@ -1456,7 +1456,7 @@ ${lines.join('\n')}${calculation.activeItems.length > 15 ? `\n... y ${calculatio
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3.5 py-1.5 rounded-xl bg-[#0f245c] hover:bg-[#163683] text-white font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-                title="Abrir presupuestador y contrato en una nueva pestaña (/presupuestar)"
+                title="Abrir presupuestador online en una nueva pestaña (/presupuestar)"
               >
                 <ExternalLink size={13} className="text-amber-300" />
                 <span>/presupuestar</span>

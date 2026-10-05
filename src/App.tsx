@@ -266,7 +266,7 @@ function Navbar() {
                           Presupuestar Online
                         </span>
                         <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                          Contrato y recibo en nueva pestaña (/presupuestar)
+                          Presupuesto y cómputo en nueva pestaña (/presupuestar)
                         </span>
                       </div>
                     </div>
