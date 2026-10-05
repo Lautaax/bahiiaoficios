@@ -1036,6 +1036,59 @@ Responde ÚNICAMENTE con un JSON con esta estructura exacta:
     }
   });
 
+  // Endpoint de Dictado por Voz con IA para Presupuestador (Gemini 3.8 Flash)
+  app.post("/api/parse-presupuesto-voice", async (req, res) => {
+    try {
+      const { text, type } = req.body;
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: "Texto requerido" });
+      }
+
+      const ai = getGeminiClient();
+      if (!ai) {
+        return res.json({ items: [], source: "no-gemini-key" });
+      }
+
+      const systemPrompt = `Eres un asistente inteligente para la plataforma de oficios y construcción "Bahía Oficios" en Bahía Blanca, Argentina.
+El usuario dicta por voz tareas o materiales de obra en español coloquial argentino (ej: "4 metros de revoque a 20.000 pesos", "tres codos de termofusión valen cada uno 5.000 pesos", "10 metros lineales de zócalo a 4500 el metro", "dos bolsas de cemento a 18 mil pesos cada una").
+
+Tu objetivo es extraer con precisión matemática:
+1. descripcion: nombre del trabajo o material (ej: "Revoque", "Codos de termofusión", "Zócalo").
+2. cantidad: número con su unidad correspondiente (ej: "4 m", "3 un", "10 ml", "2 bolsas", "15 m²"). Si no especifica unidad, pon la cantidad con "un" (ej: "3 un").
+3. precio: precio total del ítem en pesos como número entero. Si dice "cada uno" o "el metro", multiplica el valor unitario por la cantidad. (Ej: 3 codos a 5000 cada uno -> 15000; 4 m de revoque a 20.000 -> 20000).`;
+
+      const prompt = `Tipo esperado: ${type || 'general'}
+Texto dictado por voz del usuario:
+"${text}"
+
+Devuelve ÚNICAMENTE un objeto JSON válido con este esquema:
+{
+  "items": [
+    {
+      "descripcion": "<nombre limpio del ítem>",
+      "cantidad": "<cantidad y unidad, ej: 4 m, 3 un, 10 m²>",
+      "precio": <número entero con el precio total en pesos>
+    }
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          systemInstruction: systemPrompt
+        }
+      });
+
+      const parsed = JSON.parse(response.text || '{"items":[]}');
+      res.json(parsed);
+    } catch (err: any) {
+      console.warn("Error en /api/parse-presupuesto-voice:", err);
+      res.json({ items: [], error: err.message });
+    }
+  });
+
   // Helper to generate fallback churn audit report if Gemini API is unreachable
   function generateFallbackChurnAudit(prosData: any[], jobsData: any[], quotesData: any[]) {
     const todayStr = new Date().toISOString().split('T')[0];

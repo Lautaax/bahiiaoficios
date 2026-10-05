@@ -3,7 +3,7 @@ import {
   MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, 
   ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone, Bell, Wrench, 
   FileText, Calculator, Menu, ChevronDown, X, Sparkles, Search as SearchIcon,
-  FolderOpen
+  FolderOpen, ExternalLink
 } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -250,23 +250,28 @@ function Navbar() {
                     </div>
                   </Link>
 
-                  <Link
-                    to="/presupuestar"
+                  <a
+                    href="/presupuestar"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => setToolsMenuOpen(false)}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer text-left"
+                    className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer text-left"
                   >
-                    <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors shrink-0">
-                      <FileText size={14} strokeWidth={1.8} />
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors shrink-0">
+                        <FileText size={14} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          Presupuestar Online
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Contrato y recibo en nueva pestaña (/presupuestar)
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        Presupuestar Online
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                        Contrato y recibo con enlace directo /presupuestar
-                      </span>
-                    </div>
-                  </Link>
+                    <ExternalLink size={12} className="text-slate-400 group-hover:text-emerald-500 transition-colors shrink-0" />
+                  </a>
 
                   {/* Section: Recursos y Comunidad */}
                   <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -487,14 +492,19 @@ function Navbar() {
               <span>Bolsa de Herramientas Usadas</span>
             </Link>
 
-            <Link
-              to="/presupuestar"
+            <a
+              href="/presupuestar"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
             >
-              <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
-              <span>Presupuestar Online (/presupuestar)</span>
-            </Link>
+              <div className="flex items-center gap-2.5">
+                <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
+                <span>Presupuestar Online (/presupuestar)</span>
+              </div>
+              <ExternalLink size={12} className="text-slate-400 shrink-0" />
+            </a>
           </div>
 
           {/* Section: Recursos & Soporte */}

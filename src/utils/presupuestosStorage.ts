@@ -410,3 +410,66 @@ export async function sharePresupuestoWhatsApp(p: SavedPresupuesto) {
 
   window.open(url, '_blank');
 }
+
+export const PRESUPUESTO_DRAFT_KEY = 'bahiaoficios_presupuesto_draft';
+
+export interface PresupuestoDraftItem {
+  id: string;
+  descripcion: string;
+  precio: string | number;
+  cantidad?: string | number;
+}
+
+export interface PresupuestoDraft {
+  proNombre?: string;
+  proDni?: string;
+  proTelefono?: string;
+  proRubro?: string;
+  proMatricula?: string;
+  clienteNombre?: string;
+  clienteDni?: string;
+  clienteTelefono?: string;
+  clienteDireccion?: string;
+  tituloTrabajo?: string;
+  descripcionTrabajo?: string;
+  plazoEntrega?: string;
+  fechaInicio?: string;
+  montoManoObra?: string;
+  montoMateriales?: string;
+  montoTotal?: string;
+  montoSena?: string;
+  formaPago?: string;
+  tareasList?: PresupuestoDraftItem[];
+  materialesList?: PresupuestoDraftItem[];
+  savedAt?: number;
+}
+
+export function savePresupuestoDraft(draft: PresupuestoDraft): void {
+  try {
+    localStorage.setItem(PRESUPUESTO_DRAFT_KEY, JSON.stringify({
+      ...draft,
+      savedAt: Date.now()
+    }));
+  } catch (e) {
+    console.warn('Error guardando borrador:', e);
+  }
+}
+
+export function getPresupuestoDraft(): PresupuestoDraft | null {
+  try {
+    const raw = localStorage.getItem(PRESUPUESTO_DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+export function clearPresupuestoDraft(): void {
+  try {
+    localStorage.removeItem(PRESUPUESTO_DRAFT_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+

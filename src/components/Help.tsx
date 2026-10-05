@@ -121,14 +121,26 @@ export const Help: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowContratoModal(true)}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
-          >
-            <FileText size={15} />
-            <span>Descargar Modelo de Contrato PDF</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <a
+              href="/presupuestar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <FileText size={15} />
+              <span>Abrir /presupuestar</span>
+              <ExternalLink size={13} className="text-emerald-200" />
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setShowContratoModal(true)}
+              className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <span>Ver Modelo Rápido</span>
+            </button>
+          </div>
         </div>
 
         {/* 4 Pautas Clave de Mediación Comunitaria */}
