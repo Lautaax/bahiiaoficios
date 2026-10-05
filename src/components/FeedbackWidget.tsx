@@ -187,14 +187,15 @@ export const FeedbackWidget: React.FC = () => {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Type Selector Buttons */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      <label id="feedback-type-label" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
                         ¿De qué se trata tu mensaje?
                       </label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-2" role="group" aria-labelledby="feedback-type-label">
                         <button
                           type="button"
                           onClick={() => setTipo('error')}
-                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
+                          aria-pressed={tipo === 'error'}
+                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 outline-none ${
                             tipo === 'error'
                               ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
                               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -207,7 +208,8 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('mejora')}
-                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
+                          aria-pressed={tipo === 'mejora'}
+                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 outline-none ${
                             tipo === 'mejora'
                               ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20'
                               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -220,7 +222,8 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('calificacion')}
-                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
+                          aria-pressed={tipo === 'calificacion'}
+                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 outline-none ${
                             tipo === 'calificacion'
                               ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20'
                               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -235,7 +238,7 @@ export const FeedbackWidget: React.FC = () => {
                     {/* Star Rating Scale */}
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/60">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <span id="feedback-star-label" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                           ¿Cómo calificarías tu experiencia hoy?
                         </span>
                         <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
@@ -246,7 +249,7 @@ export const FeedbackWidget: React.FC = () => {
                           {rating === 1 && 'Necesita mejorar'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" role="group" aria-labelledby="feedback-star-label">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             type="button"
@@ -254,7 +257,9 @@ export const FeedbackWidget: React.FC = () => {
                             onClick={() => setRating(star)}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(null)}
-                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer"
+                            aria-label={`${star} de 5 estrellas`}
+                            aria-pressed={star <= rating}
+                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 rounded-lg outline-none"
                           >
                             <Star
                               size={24}
@@ -271,10 +276,11 @@ export const FeedbackWidget: React.FC = () => {
 
                     {/* Category Dropdown */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      <label htmlFor="feedback-categoria" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                         Área o sección relacionada
                       </label>
                       <select
+                        id="feedback-categoria"
                         value={categoria}
                         onChange={(e) => setCategoria(e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
@@ -292,7 +298,7 @@ export const FeedbackWidget: React.FC = () => {
                     {/* Message Textarea */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <label htmlFor="feedback-mensaje" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                           {tipo === 'error' && '¿Qué error ocurrió y cómo reproducirlo?'}
                           {tipo === 'mejora' && '¿Qué idea o mejora te gustaría tener?'}
                           {tipo === 'calificacion' && 'Comentarios o sugerencias'}
@@ -302,6 +308,7 @@ export const FeedbackWidget: React.FC = () => {
                         </span>
                       </div>
                       <textarea
+                        id="feedback-mensaje"
                         rows={3}
                         maxLength={500}
                         value={mensaje}
@@ -327,10 +334,11 @@ export const FeedbackWidget: React.FC = () => {
                       </div>
                     ) : (
                       <div>
-                        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        <label htmlFor="feedback-email" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                           Tu email (opcional, si querés que te avisemos la resolución)
                         </label>
                         <input
+                          id="feedback-email"
                           type="email"
                           value={contactEmail}
                           onChange={(e) => setContactEmail(e.target.value)}
