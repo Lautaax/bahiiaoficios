@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, 
   ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone, Bell, Wrench, 
-  FileText, Calculator, Menu, ChevronDown, X, Sparkles, Search as SearchIcon 
+  FileText, Calculator, Menu, ChevronDown, X, Sparkles, Search as SearchIcon,
+  FolderOpen
 } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -41,6 +42,8 @@ import { triggerNotificationPermissionPrompt } from './components/NotificationPe
 import { HerramientasMarketplace } from './components/HerramientasMarketplace';
 import { ReviewReminderModal } from './components/ReviewReminderModal';
 import { CalculadoraCostosManoObra } from './components/CalculadoraCostosManoObra';
+import { MisPresupuestos } from './components/MisPresupuestos';
+import { PresupuestarPage } from './components/PresupuestarPage';
 import { NavigationLoadingProvider } from './context/NavigationLoadingContext';
 import { ServiceLandingSkeleton } from './components/ServiceLandingSkeleton';
 
@@ -212,6 +215,24 @@ function Navbar() {
                   </Link>
 
                   <Link
+                    to="/mis-presupuestos"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0f245c] dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors shrink-0">
+                      <FolderOpen size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        Mis Presupuestos
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Historial de cotizaciones y PDFs
+                      </span>
+                    </div>
+                  </Link>
+
+                  <Link
                     to="/herramientas"
                     onClick={() => setToolsMenuOpen(false)}
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
@@ -229,12 +250,9 @@ function Navbar() {
                     </div>
                   </Link>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setToolsMenuOpen(false);
-                      setShowContratoModal(true);
-                    }}
+                  <Link
+                    to="/presupuestar"
+                    onClick={() => setToolsMenuOpen(false)}
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer text-left"
                   >
                     <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors shrink-0">
@@ -242,13 +260,13 @@ function Navbar() {
                     </div>
                     <div>
                       <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        Contrato y Recibo PDF
+                        Presupuestar Online
                       </span>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                        Plantilla legal rápida con dictado por voz
+                        Contrato y recibo con enlace directo /presupuestar
                       </span>
                     </div>
-                  </button>
+                  </Link>
 
                   {/* Section: Recursos y Comunidad */}
                   <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -452,6 +470,15 @@ function Navbar() {
             </Link>
 
             <Link
+              to="/mis-presupuestos"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <FolderOpen size={15} strokeWidth={1.8} className="text-blue-600 shrink-0" />
+              <span>Mis Presupuestos (Historial)</span>
+            </Link>
+
+            <Link
               to="/herramientas"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -460,17 +487,14 @@ function Navbar() {
               <span>Bolsa de Herramientas Usadas</span>
             </Link>
 
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setShowContratoModal(true);
-              }}
+            <Link
+              to="/presupuestar"
+              onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
             >
               <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
-              <span>Contrato / Recibo PDF (con voz)</span>
-            </button>
+              <span>Presupuestar Online (/presupuestar)</span>
+            </Link>
           </div>
 
           {/* Section: Recursos & Soporte */}
@@ -839,6 +863,18 @@ function AppContent() {
         <Route path="/calculadora" element={
           <Layout>
             <CalculadoraCostosManoObra />
+          </Layout>
+        } />
+
+        <Route path="/mis-presupuestos" element={
+          <Layout>
+            <MisPresupuestos />
+          </Layout>
+        } />
+
+        <Route path="/presupuestar" element={
+          <Layout>
+            <PresupuestarPage />
           </Layout>
         } />
       </Routes>

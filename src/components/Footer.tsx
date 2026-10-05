@@ -85,14 +85,13 @@ export const Footer: React.FC<FooterProps> = ({ stats }) => {
                 </Link>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={() => setContratoModalOpen(true)}
-                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 text-left cursor-pointer"
+                <Link
+                  to="/presupuestar"
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 text-left"
                 >
                   <FileText size={13} className="text-indigo-600 dark:text-indigo-400" />
-                  <span>Contrato / Recibo Rápido</span>
-                </button>
+                  <span>Presupuestar Online (/presupuestar)</span>
+                </Link>
               </li>
               <li>
                 <Link to="/calculadora-costos" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">

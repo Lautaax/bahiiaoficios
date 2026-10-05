@@ -23,10 +23,12 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuth } from '../context/AuthContext';
 import { PROFESSIONS } from '../constants';
+import { savePresupuesto } from '../utils/presupuestosStorage';
 
 interface ContratoPresupuestoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isStandalonePage?: boolean;
   initialJobTitle?: string;
   initialRubro?: string;
   initialClientName?: string;
@@ -40,6 +42,7 @@ interface ContratoPresupuestoModalProps {
 export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> = ({
   isOpen,
   onClose,
+  isStandalonePage = false,
   initialJobTitle = '',
   initialRubro = '',
   initialClientName = '',
@@ -472,17 +475,42 @@ export const ContratoPresupuestoModal: React.FC<ContratoPresupuestoModalProps> =
     return { doc, cleanFileName };
   };
 
+  const persistToHistory = () => {
+    savePresupuesto({
+      titulo: tituloTrabajo || `${proRubro} - ${clienteNombre || 'Presupuesto de Trabajo'}`,
+      rubro: proRubro || 'Construcción y Oficios',
+      fecha: new Date().toLocaleDateString('es-AR'),
+      items: [],
+      montoManoObra: numManoObra,
+      montoMateriales: numMateriales,
+      montoTotal: numTotal,
+      montoSena: numSena,
+      montoSaldo: numSaldo,
+      formaPago,
+      plazoEntrega,
+      fechaInicio,
+      clienteNombre,
+      clienteTelefono,
+      clienteDireccion,
+      proNombre,
+      proTelefono,
+      observaciones: descripcionTrabajo
+    }).catch(e => console.warn('Error guardando en historial:', e));
+  };
+
   // Generación del documento PDF oficial
   const handleGeneratePdf = () => {
     const { doc, cleanFileName } = buildPdfDoc();
     doc.save(cleanFileName);
-    setShareFeedback('✅ PDF descargado exitosamente en tu dispositivo.');
+    persistToHistory();
+    setShareFeedback('✅ PDF descargado exitosamente y guardado en Mis Presupuestos.');
     setTimeout(() => setShareFeedback(null), 4000);
   };
 
   // Enviar resumen por WhatsApp e integración para compartir el PDF directamente
   const handleShareWhatsApp = async () => {
     const { doc, cleanFileName } = buildPdfDoc();
+    persistToHistory();
 
     // 1. SIEMPRE generar y descargar el archivo PDF en el dispositivo para que el usuario cuente con el archivo
     try {
@@ -544,45 +572,39 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
     window.open(url, '_blank');
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isStandalonePage) return null;
 
-  return (
+  const cardContent = (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      ref={modalRef}
+      className={`relative w-full ${isStandalonePage ? 'max-w-4xl mx-auto my-0' : 'max-w-3xl my-8 max-h-[92vh]'} bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col focus:outline-none`}
+      role={isStandalonePage ? 'region' : 'dialog'}
+      aria-modal={!isStandalonePage}
+      aria-labelledby="contrato-modal-title"
+      aria-describedby="contrato-modal-desc"
+      tabIndex={-1}
+      onClick={(e) => e.stopPropagation()}
     >
-      <div 
-        ref={modalRef}
-        className="relative w-full max-w-3xl my-8 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] focus:outline-none"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="contrato-modal-title"
-        aria-describedby="contrato-modal-desc"
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header Membretado */}
-        <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-amber-300 flex items-center justify-center shrink-0 shadow-inner" aria-hidden="true">
-              <FileText size={22} />
-            </div>
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                Modelo Oficial Descargable
-              </span>
-              <h3 id="contrato-modal-title" className="text-base sm:text-lg font-black text-white leading-tight mt-0.5">
-                Contrato y Recibo Rápido de Trabajo
-              </h3>
-              <p id="contrato-modal-desc" className="text-xs text-indigo-200">
-                Dejá asentado el presupuesto, seña y plazos en un PDF listo para imprimir y firmar.
-              </p>
-            </div>
+      {/* Header Membretado */}
+      <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-amber-300 flex items-center justify-center shrink-0 shadow-inner" aria-hidden="true">
+            <FileText size={22} />
           </div>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+              Modelo Oficial Descargable
+            </span>
+            <h3 id="contrato-modal-title" className="text-base sm:text-lg font-black text-white leading-tight mt-0.5">
+              Contrato y Recibo Rápido de Trabajo
+            </h3>
+            <p id="contrato-modal-desc" className="text-xs text-indigo-200">
+              Dejá asentado el presupuesto, seña y plazos en un PDF listo para imprimir y firmar.
+            </p>
+          </div>
+        </div>
 
+        {!isStandalonePage && (
           <button
             type="button"
             onClick={onClose}
@@ -591,9 +613,10 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
           >
             <X size={18} />
           </button>
-        </div>
+        )}
+      </div>
 
-        {/* Form Body */}
+      {/* Form Body */}
         <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-slate-800 dark:text-slate-100">
           {/* SECCIÓN 1: PARTES INTERVINIENTES */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1006,6 +1029,21 @@ ${descripcionTrabajo.trim() || 'Mano de obra y materiales acordados'}
           </div>
         </div>
       </div>
+  );
+
+  if (isStandalonePage) {
+    return cardContent;
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {cardContent}
     </div>
   );
 };
