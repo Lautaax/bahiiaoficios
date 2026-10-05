@@ -208,7 +208,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
                   <button
                     type="button"
                     onClick={() => removeImage(idx)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                    aria-label={`Eliminar imagen ${idx + 1}`}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500 focus-visible:outline-none"
                   >
                     <X size={12} />
                   </button>

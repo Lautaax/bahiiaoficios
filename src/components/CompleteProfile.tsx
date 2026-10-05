@@ -458,7 +458,7 @@ export const CompleteProfile: React.FC = () => {
                         value={p.precio}
                         onChange={(e) => updatePrecio(index, 'precio', e.target.value)}
                       />
-                      <button type="button" onClick={() => removePrecio(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                      <button type="button" onClick={() => removePrecio(index)} aria-label={`Eliminar precio de ${p.servicio || 'servicio'}`} className="p-2 text-red-500 hover:bg-red-50 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none">
                         <AlertCircle size={18} />
                       </button>
                     </div>
