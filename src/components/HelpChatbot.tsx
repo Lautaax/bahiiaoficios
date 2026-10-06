@@ -43,6 +43,17 @@ export const HelpChatbot: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -103,7 +114,11 @@ export const HelpChatbot: React.FC = () => {
                   <p className="text-[10px] opacity-80">Bahia Oficios AI</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+              <button
+                onClick={() => setIsOpen(false)}
+                aria-label="Cerrar asistente virtual"
+                className="hover:bg-white/20 p-1 rounded-lg transition-colors"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -176,6 +191,7 @@ export const HelpChatbot: React.FC = () => {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
+                  aria-label="Enviar mensaje"
                   className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors"
                 >
                   <Send size={20} />
@@ -188,6 +204,8 @@ export const HelpChatbot: React.FC = () => {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={isOpen ? "Cerrar asistente de ayuda" : "Abrir asistente de ayuda"}
+        aria-expanded={isOpen}
         className={`p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center gap-2 ${isOpen ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-white' : 'bg-indigo-600 text-white'}`}
       >
         {isOpen ? <X size={24} /> : (
