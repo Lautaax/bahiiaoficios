@@ -378,9 +378,52 @@ async function startServer() {
     }
   });
 
+  // Security Helper: Verify Admin Authorization (Fail Closed)
+  async function verifyAdminAuth(req: express.Request): Promise<{ authorized: boolean; uid?: string; error?: string }> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return { authorized: false, error: "Missing or invalid Authorization header" };
+    }
+
+    const token = authHeader.split("Bearer ")[1]?.trim();
+    if (!token) {
+      return { authorized: false, error: "Token missing" };
+    }
+
+    if (!admin.apps.length) {
+      return { authorized: false, error: "Authentication service unavailable" };
+    }
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(token);
+      if (decoded.admin === true) {
+        return { authorized: true, uid: decoded.uid };
+      }
+
+      const sDb = getServerDb();
+      if (sDb) {
+        const uDoc = await sDb.collection('usuarios').doc(decoded.uid).get();
+        if (uDoc.exists) {
+          const uData = uDoc.data();
+          if (uData?.isAdmin === true || uData?.rol === 'admin') {
+            return { authorized: true, uid: decoded.uid };
+          }
+        }
+      }
+      return { authorized: false, error: "User is not authorized as admin" };
+    } catch (err: any) {
+      return { authorized: false, error: "Invalid or expired token" };
+    }
+  }
+
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
+      const authResult = await verifyAdminAuth(req);
+      if (!authResult.authorized) {
+        return res.status(403).json({ error: authResult.error || "Unauthorized access to admin endpoint" });
+      }
+
       const { userId, isVip } = req.body || {};
       if (!userId) {
         return res.status(400).json({ error: "Missing userId" });
