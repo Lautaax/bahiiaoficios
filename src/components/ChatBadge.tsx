@@ -37,10 +37,16 @@ export const ChatBadge: React.FC = () => {
   }, [currentUser]);
 
   return (
-    <Link to="/chats" id="onboarding-nav-chat" className="relative p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors" title="Mis Mensajes">
-      <MessageSquare size={20} />
+    <Link 
+      to="/chats" 
+      id="onboarding-nav-chat" 
+      className="relative p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors" 
+      title="Mis Chats y Presupuestos"
+      aria-label="Mis Chats y Presupuestos"
+    >
+      <MessageSquare size={18} strokeWidth={1.8} />
       {unreadCount > 0 && (
-        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-500 rounded-full">
+        <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-black leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-900 animate-pulse">
           {unreadCount}
         </span>
       )}

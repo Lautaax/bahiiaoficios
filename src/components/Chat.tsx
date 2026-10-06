@@ -140,7 +140,11 @@ export const Chat: React.FC = () => {
         lastMessageTime: serverTimestamp(),
         updatedAt: serverTimestamp(),
         lastMessageSenderId: currentUser.uid,
-        hasUnread: true
+        hasUnread: true,
+        hasQuote: true,
+        lastQuoteAmount: amount,
+        lastQuoteDescription: desc,
+        lastQuoteDate: serverTimestamp()
       });
     } catch (error) {
       console.error("Error sending quote:", error);

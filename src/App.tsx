@@ -3,7 +3,7 @@ import {
   MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, 
   ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone, Bell, Wrench, 
   FileText, Calculator, Menu, ChevronDown, X, Sparkles, Search as SearchIcon,
-  FolderOpen, ExternalLink
+  FolderOpen, ExternalLink, HardHat, Calendar
 } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -44,6 +44,8 @@ import { ReviewReminderModal } from './components/ReviewReminderModal';
 import { CalculadoraCostosManoObra } from './components/CalculadoraCostosManoObra';
 import { MisPresupuestos } from './components/MisPresupuestos';
 import { PresupuestarPage } from './components/PresupuestarPage';
+import { BolsaEmpleoAyudantes } from './components/BolsaEmpleoAyudantes';
+import { MantenimientoPreventivo } from './components/MantenimientoPreventivo';
 import { NavigationLoadingProvider } from './context/NavigationLoadingContext';
 import { ServiceLandingSkeleton } from './components/ServiceLandingSkeleton';
 
@@ -233,6 +235,60 @@ function Navbar() {
                   </Link>
 
                   <Link
+                    to="/chats"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors shrink-0">
+                      <MessageSquare size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        Mis Chats & Presupuestos
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Historial de mensajes y cotizaciones
+                      </span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    to="/ayudantes-obra"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/50 transition-colors shrink-0">
+                      <HardHat size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                        Bolsa de Ayudantes de Obra
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Peones y aprendices para contratistas y MMO
+                      </span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    to="/mantenimiento-preventivo"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/50 transition-colors shrink-0">
+                      <Calendar size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                        Mantenimiento Preventivo
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Alertas estacionales de gas, techos y tanques
+                      </span>
+                    </div>
+                  </Link>
+
+                  <Link
                     to="/herramientas"
                     onClick={() => setToolsMenuOpen(false)}
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
@@ -406,6 +462,7 @@ function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
+              <ChatBadge />
               <Link 
                 to="/signup" 
                 className="hidden sm:inline-flex text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2.5 py-1.5 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
@@ -481,6 +538,33 @@ function Navbar() {
             >
               <FolderOpen size={15} strokeWidth={1.8} className="text-blue-600 shrink-0" />
               <span>Mis Presupuestos (Historial)</span>
+            </Link>
+
+            <Link
+              to="/chats"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <MessageSquare size={15} strokeWidth={1.8} className="text-indigo-600 shrink-0" />
+              <span>Mis Chats & Consultas</span>
+            </Link>
+
+            <Link
+              to="/ayudantes-obra"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <HardHat size={15} strokeWidth={1.8} className="text-amber-500 shrink-0" />
+              <span>Bolsa de Ayudantes de Obra</span>
+            </Link>
+
+            <Link
+              to="/mantenimiento-preventivo"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Calendar size={15} strokeWidth={1.8} className="text-sky-500 shrink-0" />
+              <span>Recordatorios de Mantenimiento</span>
             </Link>
 
             <Link
@@ -885,6 +969,24 @@ function AppContent() {
         <Route path="/presupuestar" element={
           <Layout>
             <PresupuestarPage />
+          </Layout>
+        } />
+
+        <Route path="/ayudantes-obra" element={
+          <Layout>
+            <BolsaEmpleoAyudantes />
+          </Layout>
+        } />
+
+        <Route path="/bolsa-empleo" element={
+          <Layout>
+            <BolsaEmpleoAyudantes />
+          </Layout>
+        } />
+
+        <Route path="/mantenimiento-preventivo" element={
+          <Layout>
+            <MantenimientoPreventivo />
           </Layout>
         } />
       </Routes>

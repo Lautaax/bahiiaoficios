@@ -797,8 +797,8 @@ export const TrabajosSolicitados: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <DollarSign size={13} className="text-slate-400 shrink-0" />
-                      <span>Presupuesto: <strong className="text-slate-700 dark:text-slate-200 font-medium">{job.presupuestoAproximado || 'A convenir'}</strong></span>
+                      <DollarSign size={13} className="text-indigo-500 shrink-0" />
+                      <span>Presupuesto: <strong className="text-indigo-700 dark:text-indigo-300 font-bold">{job.presupuestoAproximado || 'A convenir'}</strong></span>
                     </div>
 
                     <div className="flex items-center gap-2">

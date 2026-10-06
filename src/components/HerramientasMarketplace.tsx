@@ -404,10 +404,10 @@ export const HerramientasMarketplace: React.FC = () => {
 
                     {/* Precio */}
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-baseline justify-between">
-                      <span className="text-xs text-slate-400 font-medium">Precio:</span>
-                      <span className="text-xl font-black text-slate-900 dark:text-white">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Precio:</span>
+                      <span className="text-xl font-black text-indigo-700 dark:text-indigo-300">
                         {item.esPrecioAConvenir ? (
-                          <span className="text-sm text-indigo-600 dark:text-indigo-400 font-bold uppercase">
+                          <span className="text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md uppercase tracking-wider">
                             A convenir / Permuta
                           </span>
                         ) : (
