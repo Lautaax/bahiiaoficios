@@ -16,54 +16,6 @@ export interface ColaboradorEmpresa {
   tradeDiscountDetails?: string;
 }
 
-// Fallback authentic collaborator enterprises for Bahía Blanca
-const FALLBACK_COLABORADORES: ColaboradorEmpresa[] = [
-  {
-    id: 'empresa-1',
-    title: 'Corralón Spinetto',
-    category: 'Materiales de Construcción',
-    zone: 'Spinetto y Brown',
-    description: 'Venta y distribución de materiales de obra gruesa, cemento, hierro, ladrillos y áridos en toda la ciudad.',
-    offersTradeDiscount: true,
-    tradeDiscountDetails: '10% de descuento en efectivo para albañiles y contratistas',
-    link: 'https://wa.me/5492915000001?text=Hola,%20los%20contacto%20desde%20Bahía%20Oficios',
-    imageUrl: ''
-  },
-  {
-    id: 'empresa-2',
-    title: 'Electricidad del Sur',
-    category: 'Electricidad e Iluminación',
-    zone: 'Alsina 450, Centro',
-    description: 'Conductores normalizados IRAM, tableros, térmicas, disyuntores y luminarias LED de primera marca.',
-    offersTradeDiscount: true,
-    tradeDiscountDetails: '15% off presentando matrícula profesional',
-    link: 'https://wa.me/5492915000002?text=Hola,%20los%20contacto%20desde%20Bahía%20Oficios',
-    imageUrl: ''
-  },
-  {
-    id: 'empresa-3',
-    title: 'Pinturerías Bahía Color',
-    category: 'Pinturas y Revestimientos',
-    zone: 'Av. Colón 620',
-    description: 'Látex profesional lavable, impermeabilizantes para frentes y techos, y coloración computarizada al instante.',
-    offersTradeDiscount: true,
-    tradeDiscountDetails: '20% de descuento en baldes de 20L para pintores de la red',
-    link: 'https://wa.me/5492915000003?text=Hola,%20los%20contacto%20desde%20Bahía%20Oficios',
-    imageUrl: ''
-  },
-  {
-    id: 'empresa-4',
-    title: 'Sanitarios Palihue',
-    category: 'Plomería y Sanitarios',
-    zone: 'Donado y Chile',
-    description: 'Cañerías de termofusión agua/gas, griferías, repuestos legítimos, tanques de agua y bombas presurizadoras.',
-    offersTradeDiscount: true,
-    tradeDiscountDetails: '12% en cañerías y accesorios para plomeros y gasistas',
-    link: 'https://wa.me/5492915000004?text=Hola,%20los%20contacto%20desde%20Bahía%20Oficios',
-    imageUrl: ''
-  }
-];
-
 export const EmpresasColaboradoras: React.FC = () => {
   const [colaboradores, setColaboradores] = useState<ColaboradorEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,11 +35,11 @@ export const EmpresasColaboradoras: React.FC = () => {
           } as ColaboradorEmpresa));
           setColaboradores(list);
         } else {
-          setColaboradores(FALLBACK_COLABORADORES);
+          setColaboradores([]);
         }
       } catch (error) {
-        console.warn("Firestore ads query error, using default collaborators:", error);
-        setColaboradores(FALLBACK_COLABORADORES);
+        console.warn("Firestore ads query error:", error);
+        setColaboradores([]);
       } finally {
         setLoading(false);
       }
@@ -111,9 +63,11 @@ export const EmpresasColaboradoras: React.FC = () => {
             </div>
             <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               Empresas Colaboradoras
-              <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full">
-                {colaboradores.length} comercios
-              </span>
+              {colaboradores.length > 0 && (
+                <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full">
+                  {colaboradores.length} comercios
+                </span>
+              )}
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl">
               Corralones, ferreterías, distribuidoras y casas de materiales de la ciudad con beneficios y descuentos exclusivos para profesionales y vecinos.
@@ -123,7 +77,7 @@ export const EmpresasColaboradoras: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <Link
               to="/publicitar"
-              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm"
             >
               <span>Sumar mi Empresa</span>
               <ArrowRight size={14} />
@@ -139,6 +93,27 @@ export const EmpresasColaboradoras: React.FC = () => {
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-44 rounded-xl bg-slate-100 dark:bg-slate-700/40 animate-pulse" />
             ))}
+          </div>
+        ) : colaboradores.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-slate-50/70 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
+              <Building2 size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+              Espacio exclusivo para comercios y corralones de Bahía Blanca
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+              ¿Tenés un corralón, ferretería, casa de electricidad o pinturería? Sumá tu empresa a la red comunitaria de Bahía Blanca para ofrecer descuentos y llegar a miles de profesionales y familias.
+            </p>
+            <div className="pt-2">
+              <Link
+                to="/publicitar"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm"
+              >
+                <span>Conocer planes de publicidad para comercios</span>
+                <ArrowRight size={14} />
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5 sm:gap-5 auto-rows-fr">

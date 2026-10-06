@@ -3,7 +3,7 @@ import {
   MapPin, LogOut, User as UserIcon, Settings, MessageSquare, Users, Eye, 
   ShieldCheck, Briefcase, Heart, HelpCircle, Smartphone, Bell, Wrench, 
   FileText, Calculator, Menu, ChevronDown, X, Sparkles, Search as SearchIcon,
-  FolderOpen, ExternalLink, HardHat, Calendar
+  FolderOpen, ExternalLink, HardHat, Calendar, LayoutDashboard
 } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -74,16 +74,21 @@ function Navbar() {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [showContratoModal, setShowContratoModal] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const drawerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Close tools dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target as Node)) {
         setToolsMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -217,42 +222,6 @@ function Navbar() {
                   </Link>
 
                   <Link
-                    to="/mis-presupuestos"
-                    onClick={() => setToolsMenuOpen(false)}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0f245c] dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors shrink-0">
-                      <FolderOpen size={14} strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        Mis Presupuestos
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                        Historial de cotizaciones y PDFs
-                      </span>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/chats"
-                    onClick={() => setToolsMenuOpen(false)}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors shrink-0">
-                      <MessageSquare size={14} strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        Mis Chats & Presupuestos
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                        Historial de mensajes y cotizaciones
-                      </span>
-                    </div>
-                  </Link>
-
-                  <Link
                     to="/ayudantes-obra"
                     onClick={() => setToolsMenuOpen(false)}
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
@@ -305,29 +274,6 @@ function Navbar() {
                       </span>
                     </div>
                   </Link>
-
-                  <a
-                    href="/presupuestar"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setToolsMenuOpen(false)}
-                    className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer text-left"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors shrink-0">
-                        <FileText size={14} strokeWidth={1.8} />
-                      </div>
-                      <div>
-                        <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                          Presupuestar Online
-                        </span>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                          Presupuesto y cómputo en nueva pestaña (/presupuestar)
-                        </span>
-                      </div>
-                    </div>
-                    <ExternalLink size={12} className="text-slate-400 group-hover:text-emerald-500 transition-colors shrink-0" />
-                  </a>
 
                   {/* Section: Recursos y Comunidad */}
                   <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -429,36 +375,238 @@ function Navbar() {
 
               <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
 
-              <Link 
-                to={currentUser.rol === 'profesional' ? "/dashboard-profesional" : "/profile"} 
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60"
-              >
-                {currentUser.fotoUrl ? (
-                  <CachedImage 
-                    src={currentUser.fotoUrl} 
-                    alt="Perfil" 
-                    className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
-                    containerClassName="w-7 h-7 rounded-full shrink-0" 
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-                    <UserIcon size={14} strokeWidth={1.8} />
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className={`inline-flex items-center gap-1.5 text-xs font-semibold p-1 pr-2 rounded-xl transition-all cursor-pointer ${
+                    userMenuOpen
+                      ? 'bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 ring-2 ring-indigo-500/20'
+                      : 'text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                  }`}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="true"
+                  title="Menú de Usuario y Mi Perfil"
+                >
+                  {currentUser.fotoUrl ? (
+                    <CachedImage 
+                      src={currentUser.fotoUrl} 
+                      alt="Perfil" 
+                      className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
+                      containerClassName="w-7 h-7 rounded-full shrink-0" 
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                      <UserIcon size={14} strokeWidth={1.8} />
+                    </div>
+                  )}
+                  <span className="hidden sm:inline max-w-[90px] truncate text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {currentUser?.nombre ? currentUser.nombre.split(' ')[0] : 'Mi Perfil'}
+                  </span>
+                  <ChevronDown size={12} strokeWidth={2} className={`transition-transform duration-200 text-slate-400 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {/* Header: User Info Card */}
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 mb-2">
+                      <div className="flex items-center gap-3">
+                        {currentUser.fotoUrl ? (
+                          <CachedImage 
+                            src={currentUser.fotoUrl} 
+                            alt={currentUser.nombre || 'Perfil'} 
+                            className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
+                            containerClassName="w-10 h-10 rounded-full shrink-0" 
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800 shrink-0 font-bold text-sm">
+                            {(currentUser.nombre || 'U')[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <span className="block text-xs font-black text-slate-900 dark:text-white truncate">
+                            {currentUser.nombre || 'Usuario'}
+                          </span>
+                          <span className="block text-[11px] text-slate-400 truncate">
+                            {currentUser.email}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                              currentUser.rol === 'profesional'
+                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300'
+                            }`}>
+                              {currentUser.rol === 'profesional' ? 'Profesional' : 'Cliente / Vecino'}
+                            </span>
+                            {currentUser.zona && (
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                {currentUser.zona}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section: Mi Actividad & Presupuestos (PARTE DEL USUARIO) */}
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Mi Actividad & Presupuestos
+                    </div>
+
+                    <Link
+                      to="/mis-presupuestos"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0f245c] dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors shrink-0">
+                        <FolderOpen size={15} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          Mis Presupuestos
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Historial de cotizaciones, cómputos y PDFs
+                        </span>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/chats"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors shrink-0">
+                        <MessageSquare size={15} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          Mis Chats & Consultas
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Historial de mensajes con profesionales
+                        </span>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/presupuestar"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors shrink-0">
+                        <FileText size={15} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          Presupuestar Online
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Crear y calcular presupuesto en línea
+                        </span>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/favoritos"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/50 transition-colors shrink-0">
+                        <Heart size={15} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                          Mis Profesionales Favoritos
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          {Array.isArray(currentUser.favoritos) ? currentUser.favoritos.length : 0} profesionales guardados
+                        </span>
+                      </div>
+                    </Link>
+
+                    {/* Section: Configuración de Perfil */}
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Mi Perfil
+                    </div>
+
+                    {currentUser.rol === 'profesional' && (
+                      <>
+                        <Link
+                          to="/dashboard-profesional"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                        >
+                          <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors shrink-0">
+                            <LayoutDashboard size={15} strokeWidth={1.8} />
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                              Panel Profesional
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                              Métricas, solicitudes recibidas y reputación
+                            </span>
+                          </div>
+                        </Link>
+
+                        <Link
+                          to={`/profesional/${currentUser.uid}`}
+                          onClick={() => setUserMenuOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                        >
+                          <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/50 transition-colors shrink-0">
+                            <Eye size={15} strokeWidth={1.8} />
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                              Ver Mi Ficha Pública
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                              Cómo te encuentran los vecinos en la web
+                            </span>
+                          </div>
+                        </Link>
+                      </>
+                    )}
+
+                    <Link
+                      to="/profile"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors shrink-0">
+                        <UserIcon size={15} strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          Editar Mi Perfil & Ajustes
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Zona, teléfono, foto y preferencias
+                        </span>
+                      </div>
+                    </Link>
+
+                    {/* Logout */}
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-xs font-bold cursor-pointer"
+                      >
+                        <LogOut size={15} strokeWidth={1.8} />
+                        <span>Cerrar sesión</span>
+                      </button>
+                    </div>
                   </div>
                 )}
-                <span className="hidden md:inline max-w-[90px] truncate text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {currentUser?.nombre ? currentUser.nombre.split(' ')[0] : 'Mi Cuenta'}
-                </span>
-              </Link>
-
-              <button 
-                onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
-                title="Cerrar sesión"
-                aria-label="Cerrar sesión"
-              >
-                <LogOut size={15} strokeWidth={1.8} />
-              </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -493,8 +641,149 @@ function Navbar() {
       {/* Mobile Slide-down Drawer */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-4 space-y-4 animate-in slide-in-from-top-2 duration-150 shadow-xl max-h-[calc(100vh-4rem)] overflow-y-auto">
-          {/* Section: Explorar */}
+          {/* Section: Mi Perfil & Actividades del Usuario (PARTE DEL USUARIO) */}
           <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
+              Mi Cuenta & Actividades
+            </span>
+            {currentUser ? (
+              <>
+                <Link
+                  to={currentUser.rol === 'profesional' ? "/dashboard-profesional" : "/profile"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80"
+                >
+                  {currentUser.fotoUrl ? (
+                    <CachedImage 
+                      src={currentUser.fotoUrl} 
+                      alt="Perfil" 
+                      className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700" 
+                      containerClassName="w-8 h-8 rounded-full shrink-0" 
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                      <UserIcon size={16} />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {currentUser.nombre || 'Mi Perfil'}
+                    </span>
+                    <span className="block text-[10px] text-slate-400 truncate">
+                      {currentUser.rol === 'profesional' ? 'Profesional' : 'Cliente / Vecino'} • {currentUser.zona || 'Bahía Blanca'}
+                    </span>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/mis-presupuestos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <FolderOpen size={15} strokeWidth={1.8} className="text-blue-600 shrink-0" />
+                  <span>Mis Presupuestos (Historial y PDFs)</span>
+                </Link>
+
+                <Link
+                  to="/chats"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <MessageSquare size={15} strokeWidth={1.8} className="text-indigo-600 shrink-0" />
+                  <span>Mis Chats & Consultas</span>
+                </Link>
+
+                <Link
+                  to="/presupuestar"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
+                  <span>Presupuestar Online</span>
+                </Link>
+
+                <Link
+                  to="/favoritos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <Heart size={15} strokeWidth={1.8} className="text-rose-500 shrink-0" />
+                  <span>Mis Profesionales Favoritos</span>
+                </Link>
+
+                {currentUser.rol === 'profesional' && (
+                  <Link
+                    to="/dashboard-profesional"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <LayoutDashboard size={15} strokeWidth={1.8} className="text-purple-600 shrink-0" />
+                    <span>Panel Profesional</span>
+                  </Link>
+                )}
+
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <UserIcon size={15} strokeWidth={1.8} className="text-slate-400 shrink-0" />
+                  <span>Editar Mi Perfil & Ajustes</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-left transition-colors cursor-pointer"
+                >
+                  <LogOut size={15} strokeWidth={1.8} className="shrink-0" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </>
+            ) : (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-2">
+                <Link
+                  to="/presupuestar"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                >
+                  <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
+                  <span>Presupuestar Online</span>
+                </Link>
+                <Link
+                  to="/mis-presupuestos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                >
+                  <FolderOpen size={15} strokeWidth={1.8} className="text-blue-600 shrink-0" />
+                  <span>Mis Presupuestos (Historial)</span>
+                </Link>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-center py-2 px-3 rounded-xl bg-indigo-600 text-white font-bold text-xs text-center"
+                  >
+                    Ingresar
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-center py-2 px-3 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs text-center"
+                  >
+                    Registrarme
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section: Explorar */}
+          <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
               Explorar
             </span>
@@ -532,24 +821,6 @@ function Navbar() {
             </Link>
 
             <Link
-              to="/mis-presupuestos"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              <FolderOpen size={15} strokeWidth={1.8} className="text-blue-600 shrink-0" />
-              <span>Mis Presupuestos (Historial)</span>
-            </Link>
-
-            <Link
-              to="/chats"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              <MessageSquare size={15} strokeWidth={1.8} className="text-indigo-600 shrink-0" />
-              <span>Mis Chats & Consultas</span>
-            </Link>
-
-            <Link
               to="/ayudantes-obra"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -575,20 +846,6 @@ function Navbar() {
               <Wrench size={15} strokeWidth={1.8} className="text-amber-500 shrink-0" />
               <span>Bolsa de Herramientas Usadas</span>
             </Link>
-
-            <a
-              href="/presupuestar"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5">
-                <FileText size={15} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
-                <span>Presupuestar Online (/presupuestar)</span>
-              </div>
-              <ExternalLink size={12} className="text-slate-400 shrink-0" />
-            </a>
           </div>
 
           {/* Section: Recursos & Soporte */}

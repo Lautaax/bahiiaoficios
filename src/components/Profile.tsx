@@ -5,16 +5,19 @@ import { db, storage } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { User as UserType, Role } from '../types';
-import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings, Heart } from 'lucide-react';
+import { Camera, Save, AlertCircle, Upload, UserCog, FileText, Phone, MapPin, Mail, CheckCircle, AlertTriangle, RefreshCw, User, Briefcase, Trash2, Image as IconImage, ShieldCheck, Star, LayoutDashboard, CreditCard, BadgeCheck, Sun, Moon, Settings, Heart, FolderOpen, MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
 import { VipButton } from './VipButton';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { PROFESSIONS, ZONAS } from '../constants';
 import { motion } from 'motion/react';
 import { UserFavoritesSection } from './UserFavoritesSection';
+import { MisPresupuestos } from './MisPresupuestos';
 import { safeLocalStorage } from '../utils/storage';
 
+export type ProfileSection = 'datos' | 'presupuestos' | 'chats' | 'presupuestar' | 'favoritos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
+
 interface ProfileProps {
-  initialSection?: 'datos' | 'favoritos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias';
+  initialSection?: ProfileSection;
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
@@ -24,7 +27,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
-  const [activeSection, setActiveSection] = useState<'datos' | 'favoritos' | 'profesional' | 'portafolio' | 'precios' | 'verificacion' | 'preferencias'>(initialSection || 'datos');
+  const [activeSection, setActiveSection] = useState<ProfileSection>(initialSection || 'datos');
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') || searchParams.get('section');
+    if (tabParam && ['datos', 'presupuestos', 'chats', 'presupuestar', 'favoritos', 'profesional', 'portafolio', 'precios', 'verificacion', 'preferencias'].includes(tabParam)) {
+      setActiveSection(tabParam as ProfileSection);
+    }
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -468,6 +478,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
 
   const sections = [
     { id: 'datos', label: 'Datos Básicos', icon: User },
+    { id: 'presupuestos', label: 'Mis Presupuestos', icon: FolderOpen },
+    { id: 'chats', label: 'Mis Chats & Consultas', icon: MessageSquare },
+    { id: 'presupuestar', label: 'Presupuestar Online', icon: FileText },
     { id: 'favoritos', label: 'Mis Favoritos', icon: Heart },
     { id: 'profesional', label: 'Info Profesional', icon: Briefcase, hide: formData.rol !== 'profesional' },
     { id: 'portafolio', label: 'Portafolio', icon: IconImage, hide: formData.rol !== 'profesional' },
@@ -481,7 +494,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Profile Header */}
-      <div className="relative mb-8 rounded-2xl overflow-hidden bg-slate-900 h-32 sm:h-48 border border-slate-800 shadow-sm">
+      <div className="relative mb-6 rounded-2xl overflow-hidden bg-slate-900 h-32 sm:h-48 border border-slate-800 shadow-sm">
         <div className="absolute inset-0 bg-slate-900"></div>
         <div className="absolute inset-0 flex items-end p-6 sm:p-8">
           <div className="flex items-center gap-4 sm:gap-6">
@@ -498,11 +511,86 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
             <div className="text-white">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{formData.nombre || 'Tu Perfil'}</h1>
               <p className="text-slate-300 text-sm sm:text-base font-medium">
-                {formData.rol === 'profesional' ? (formData.rubros[0] || 'Profesional') : 'Cliente'} • {formData.zona || 'Bahía Blanca'}
+                {formData.rol === 'profesional' ? (formData.rubros[0] || 'Profesional') : 'Cliente / Vecino'} • {formData.zona || 'Bahía Blanca'}
               </p>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Barra de Acceso Rápido del Usuario */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        <button
+          type="button"
+          onClick={() => setActiveSection('presupuestos')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+            activeSection === 'presupuestos'
+              ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/20'
+              : 'bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:border-blue-300 text-slate-700 dark:text-slate-200'
+          }`}
+        >
+          <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 shrink-0">
+            <FolderOpen size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold truncate">Mis Presupuestos</span>
+            <span className="block text-[10px] text-slate-400 truncate">Historial & PDFs</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection('chats')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+            activeSection === 'chats'
+              ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20'
+              : 'bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:border-indigo-300 text-slate-700 dark:text-slate-200'
+          }`}
+        >
+          <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shrink-0">
+            <MessageSquare size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold truncate">Mis Chats</span>
+            <span className="block text-[10px] text-slate-400 truncate">Consultas activas</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection('presupuestar')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+            activeSection === 'presupuestar'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20'
+              : 'bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:border-emerald-300 text-slate-700 dark:text-slate-200'
+          }`}
+        >
+          <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <FileText size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold truncate">Presupuestar</span>
+            <span className="block text-[10px] text-slate-400 truncate">Cómputo online</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection('favoritos')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+            activeSection === 'favoritos'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
+              : 'bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:border-rose-300 text-slate-700 dark:text-slate-200'
+          }`}
+        >
+          <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 shrink-0">
+            <Heart size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold truncate">Mis Favoritos</span>
+            <span className="block text-[10px] text-slate-400 truncate">Profesionales</span>
+          </div>
+        </button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -552,6 +640,115 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
         <div className="flex-1 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
           {activeSection === 'favoritos' ? (
             <UserFavoritesSection />
+          ) : activeSection === 'presupuestos' ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-5">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FolderOpen className="text-blue-600" size={24} />
+                    <span>Mis Presupuestos</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Historial de cotizaciones guardadas, cómputos de obra y exportación a PDF oficial.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/presupuestar"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all"
+                  >
+                    <FileText size={14} />
+                    <span>Armar Nuevo Presupuesto</span>
+                  </Link>
+                </div>
+              </div>
+              <MisPresupuestos />
+            </div>
+          ) : activeSection === 'chats' ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-5">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <MessageSquare className="text-indigo-600" size={24} />
+                    <span>Mis Chats & Presupuestos</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Conversaciones privadas, cotizaciones enviadas y consultas recibidas en tiempo real.
+                  </p>
+                </div>
+                <Link
+                  to="/chats"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-all"
+                >
+                  <MessageSquare size={14} />
+                  <span>Abrir Centro de Mensajes</span>
+                </Link>
+              </div>
+
+              <div className="p-8 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
+                  <MessageSquare size={28} />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Historial de Consultas y Presupuestos
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
+                  Accedé rápidamente a tus conversaciones con profesionales de Bahía Blanca, revisá cotizaciones recibidas o continuá charlas previas sin intermediarios.
+                </p>
+                <div className="flex justify-center gap-3 pt-2">
+                  <Link
+                    to="/chats"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition-all"
+                  >
+                    <span>Ir a Mis Chats</span>
+                    <ExternalLink size={13} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : activeSection === 'presupuestar' ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-5">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FileText className="text-emerald-600" size={24} />
+                    <span>Presupuestar Online</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Herramienta digital para generar cotizaciones, cómputos métricos y contratos en Bahía Blanca.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-emerald-200/80 dark:border-emerald-800/60 space-y-5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-bold">
+                  <Sparkles size={13} />
+                  <span>Cómputo & Cotizador Oficial</span>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                  Generá presupuestos claros y profesionales en segundos
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
+                  Sumá ítems de mano de obra y materiales, calculá totales con seña y saldo, agregá plazos de obra estimados y exportá contratos en PDF con validez entre partes.
+                </p>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <Link
+                    to="/presupuestar"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md hover:scale-102 transition-all"
+                  >
+                    <span>Iniciar Generador de Presupuesto</span>
+                    <ExternalLink size={14} />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('presupuestos')}
+                    className="px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 transition-all cursor-pointer"
+                  >
+                    Ver Presupuestos Guardados
+                  </button>
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex justify-between items-center mb-8">

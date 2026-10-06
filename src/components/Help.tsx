@@ -84,20 +84,18 @@ export const Help: React.FC = () => {
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
                 <MessageCircle size={18} className="text-emerald-600 dark:text-emerald-400" />
-                WhatsApp de Atención Vecinal
+                Atención Vecinal Bahía Oficios
               </h3>
               <p className="text-slate-600 dark:text-slate-300 text-xs mb-4 leading-relaxed">
-                Canal ágil para consultas rápidas sobre cómo usar la web o validar un perfil profesional en Bahía Blanca.
+                Canal ágil para consultas sobre cómo usar la web, mediaciones o validación de perfiles profesionales en Bahía Blanca.
               </p>
             </div>
             <a 
-              href="https://wa.me/5492911234567?text=Hola,%20tengo%20una%20consulta%20sobre%20Bahia%20Oficios" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+              href="mailto:soporte@bahiaoficios.com?subject=Consulta%20Bahia%20Oficios" 
               className="inline-flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors w-fit"
             >
-              <MessageCircle size={14} />
-              <span>Contactar por WhatsApp</span>
+              <Mail size={14} />
+              <span>Contactar Soporte Vecinal</span>
             </a>
           </div>
         </div>
