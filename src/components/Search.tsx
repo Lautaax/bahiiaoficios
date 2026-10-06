@@ -311,6 +311,7 @@ export function Search() {
                         onClick={(e) => handleRemoveHistoryItem(e, item)}
                         className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-rose-500 transition-colors"
                         title="Eliminar de recientes"
+                        aria-label={`Eliminar "${item}" de búsquedas recientes`}
                       >
                         <X size={11} />
                       </button>

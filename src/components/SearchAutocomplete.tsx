@@ -179,6 +179,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
                         }}
                         className="p-1 rounded-full text-slate-400 hover:text-rose-500 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors"
                         title="Eliminar de recientes"
+                        aria-label={`Eliminar "${item}" de búsquedas recientes`}
                       >
                         <X size={12} />
                       </button>
