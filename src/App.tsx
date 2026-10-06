@@ -46,6 +46,7 @@ import { MisPresupuestos } from './components/MisPresupuestos';
 import { PresupuestarPage } from './components/PresupuestarPage';
 import { BolsaEmpleoAyudantes } from './components/BolsaEmpleoAyudantes';
 import { MantenimientoPreventivo } from './components/MantenimientoPreventivo';
+import { ForoConsultasTecnicas } from './components/ForoConsultasTecnicas';
 import { NavigationLoadingProvider } from './context/NavigationLoadingContext';
 import { ServiceLandingSkeleton } from './components/ServiceLandingSkeleton';
 
@@ -271,6 +272,24 @@ function Navbar() {
                       </span>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500">
                         Compra y venta entre colegas de oficio
+                      </span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    to="/foro-tecnico"
+                    onClick={() => setToolsMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors shrink-0">
+                      <MessageSquare size={14} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        Foro Técnico entre Oficios
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        Salinidad en White, pampero y tosca
                       </span>
                     </div>
                   </Link>
@@ -846,6 +865,15 @@ function Navbar() {
               <Wrench size={15} strokeWidth={1.8} className="text-amber-500 shrink-0" />
               <span>Bolsa de Herramientas Usadas</span>
             </Link>
+
+            <Link
+              to="/foro-tecnico"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <MessageSquare size={15} strokeWidth={1.8} className="text-indigo-600 shrink-0" />
+              <span>Foro Técnico entre Oficios</span>
+            </Link>
           </div>
 
           {/* Section: Recursos & Soporte */}
@@ -1244,6 +1272,18 @@ function AppContent() {
         <Route path="/mantenimiento-preventivo" element={
           <Layout>
             <MantenimientoPreventivo />
+          </Layout>
+        } />
+
+        <Route path="/foro-tecnico" element={
+          <Layout>
+            <ForoConsultasTecnicas />
+          </Layout>
+        } />
+
+        <Route path="/foro-consultas" element={
+          <Layout>
+            <ForoConsultasTecnicas />
           </Layout>
         } />
       </Routes>

@@ -5,9 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { 
   X, MapPin, DollarSign, Clock, User as UserIcon, 
   Briefcase, Send, MessageCircle, CheckCircle2, 
-  Share2, AlertCircle, Phone, Check, ExternalLink 
+  Share2, AlertCircle, Phone, Check, ExternalLink,
+  Play, Film, Camera
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { isMediaExpired, getDaysRemaining, formatBytes } from '../utils/mediaCompressor';
 
 interface JobDetailModalProps {
   job: JobPost | null;
@@ -197,6 +199,83 @@ export const JobDetailModal: React.FC<JobDetailModalProps> = ({
               {job.descripcion}
             </div>
           </div>
+
+          {/* Archivos Adjuntos: Fotos o Videos Cortos */}
+          {Boolean(
+            (job as any).archivosAdjuntos?.length || 
+            job.fotos?.length || 
+            (job as any).videos?.length
+          ) && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Camera size={13} className="text-indigo-600" />
+                  Fotos y Videos Adjuntos de la Falla
+                </h4>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Conservación temporal 30 días
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Regular photos array */}
+                {job.fotos?.map((fotoUrl, idx) => (
+                  <div key={`photo-${idx}`} className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900 group">
+                    <img 
+                      src={fotoUrl} 
+                      alt={`Foto adjunta ${idx + 1}`} 
+                      className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
+                    <div className="p-2 bg-slate-50 dark:bg-slate-800/90 text-[10px] text-slate-500 flex justify-between items-center">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">Foto WebP Optimizada</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">Sin pérdida de calidad</span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Video attachments */}
+                {((job as any).videos || []).map((video: any, vIdx: number) => {
+                  const expired = isMediaExpired(video.expiresAt);
+                  const daysLeft = getDaysRemaining(video.expiresAt);
+
+                  return (
+                    <div key={`video-${vIdx}`} className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-950 flex flex-col">
+                      <div className="relative aspect-video flex items-center justify-center bg-black">
+                        {expired ? (
+                          <div className="p-4 text-center text-slate-400">
+                            <Clock size={24} className="mx-auto mb-1 text-amber-500" />
+                            <p className="text-xs font-bold text-slate-300">Video Expirado</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">El plazo de conservación de 1 mes ha finalizado.</p>
+                          </div>
+                        ) : (
+                          <video 
+                            src={video.url} 
+                            poster={video.posterUrl}
+                            controls 
+                            playsInline 
+                            className="w-full h-full object-contain"
+                          />
+                        )}
+                      </div>
+
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-800/90 text-[10px] flex items-center justify-between">
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                          <Film size={12} /> Video Corto ({video.duration ? `${video.duration}s` : 'Clip'})
+                        </span>
+                        {!expired ? (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                            <Clock size={11} /> Expira en {daysLeft} días
+                          </span>
+                        ) : (
+                          <span className="text-rose-500 font-bold">Depurado</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Date info */}
           <div className="flex items-center gap-2 text-xs text-slate-400">

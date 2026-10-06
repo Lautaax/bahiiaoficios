@@ -67,7 +67,7 @@ export function generateLocalBusinessSchema(
     });
   }
 
-  const defaultImage = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=1200&h=630';
+  const defaultImage = 'https://bahiaoficios.com/og-image.png';
   const mainImage = images.length > 0 ? images[0] : defaultImage;
 
   // Build localized description

@@ -5,6 +5,8 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, doc,
 import { PROFESSIONS, ZONAS } from '../constants';
 import { Send, CheckCircle, AlertCircle, User as UserIcon, Briefcase, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { QuoteMediaUploader } from './QuoteMediaUploader';
+import { CompressedMediaItem } from '../utils/mediaCompressor';
 
 export const QuoteRequestForm: React.FC = () => {
   const { currentUser } = useAuth();
@@ -17,6 +19,7 @@ export const QuoteRequestForm: React.FC = () => {
     descripcion: '',
     telefono: ''
   });
+  const [mediaList, setMediaList] = useState<CompressedMediaItem[]>([]);
   const [targetProfessional, setTargetProfessional] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingProf, setLoadingProf] = useState(false);
@@ -124,6 +127,14 @@ export const QuoteRequestForm: React.FC = () => {
         rubro: formData.rubro,
         zona: formData.zona,
         descripcion: formData.descripcion,
+        archivosAdjuntos: mediaList,
+        fotos: mediaList.filter(m => m.type === 'foto').map(m => m.url),
+        videos: mediaList.filter(m => m.type === 'video').map(m => ({
+          url: m.url,
+          posterUrl: m.posterUrl,
+          duration: m.duration,
+          expiresAt: m.expiresAt
+        })),
         fecha: serverTimestamp(),
         estado: 'pendiente',
         profesionalesAsignados: assignedProfessionals,
@@ -294,6 +305,15 @@ export const QuoteRequestForm: React.FC = () => {
             placeholder="Ej: Necesito instalar un aire acondicionado split de 3000 frigorías en un primer piso..."
             className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 resize-none"
           ></textarea>
+        </div>
+
+        {/* Adjuntar fotos y videos cortos comprimidos con auto-borrado a 30 días */}
+        <div className="pt-2">
+          <QuoteMediaUploader
+            mediaList={mediaList}
+            onChange={setMediaList}
+            maxFiles={5}
+          />
         </div>
 
         <button

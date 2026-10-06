@@ -828,7 +828,7 @@ export function Home() {
                 },
                 {
                   q: '¿Cómo fijar techos de chapa contra las ráfagas de viento del sudoeste bahiense?',
-                  a: 'Se recomienda fijar clavaderas con tirafondos reforzados y arandelas vulcanizadas de neopreno, además de sellar babetas de zinguería en los laterales para evitar que el viento embolse la chapa.'
+                  a: 'Se recomienda fijar clavaderas con tirafondos reforzados y arandelas vulcanizadas de neopreno, además de sellar babetas de zinguería en los laterales para evitar que el viento embolse la chapa. Podés debatir y consultar más soluciones en nuestro Foro Técnico entre Oficios.'
                 },
                 {
                   q: '¿Cómo acordar presupuestos y plazos por escrito con un trabajador?',

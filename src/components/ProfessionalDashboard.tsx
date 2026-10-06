@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { doc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, limit, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag, Crown, AlertTriangle, Heart } from 'lucide-react';
+import { Eye, MessageSquare, Clock, ShieldCheck, AlertCircle, Send, LayoutDashboard, UserCircle, BarChart3, ClipboardList, Star, ChevronRight, Menu, X, Bell, Settings, LogOut, MapPin, CheckCircle, MessageCircle, Briefcase, CreditCard, Tag, Crown, AlertTriangle, Heart, FileDown, FileText, Download } from 'lucide-react';
 import { VipButton } from './VipButton';
 import { Link, useNavigate } from 'react-router-dom';
+import { generateProfessionalMonthlyReportPdf } from '../utils/professionalReportPdf';
 import { ProfessionalOnboarding } from './ProfessionalOnboarding';
 import { Profile } from './Profile';
 import { UserFavoritesSection } from './UserFavoritesSection';
@@ -52,6 +53,30 @@ export const ProfessionalDashboard: React.FC = () => {
       await fcmService.triggerTestNotification();
     } finally {
       setActivatingFcm(false);
+    }
+  };
+
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfSuccess, setPdfSuccess] = useState(false);
+
+  const handleDownloadMonthlyPdf = async (customMonth?: string) => {
+    if (!currentUser) return;
+    setGeneratingPdf(true);
+    try {
+      await generateProfessionalMonthlyReportPdf({
+        professional: currentUser,
+        statsData,
+        reviewsCount: currentUser.profesionalInfo?.reviewCount || 0,
+        ratingAvg: currentUser.profesionalInfo?.ratingAvg || 5.0,
+        monthName: customMonth,
+        year: new Date().getFullYear()
+      });
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 4000);
+    } catch (err) {
+      console.error("Error al generar reporte mensual PDF:", err);
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -530,6 +555,41 @@ export const ProfessionalDashboard: React.FC = () => {
                 onNavigateToQuotes={() => setActiveTab('pedidos')} 
               />
 
+              {/* Generación de Reporte Mensual en Formato PDF */}
+              <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-800/80 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3.5 bg-indigo-600/30 text-indigo-300 rounded-2xl border border-indigo-500/30 shrink-0">
+                    <FileDown size={28} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-indigo-400/20">
+                        Documento Oficial Descargable
+                      </span>
+                      <span className="text-xs text-indigo-200 font-medium">
+                        Auditoría Bahía Blanca
+                      </span>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold">Reporte Mensual de Rendimiento (PDF)</h3>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
+                      Generá y descargá tu informe formal en formato PDF con las métricas de clics recibidos a WhatsApp, vistas reales al perfil, tasa de conversión y reputación promedio vecinal.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="shrink-0 w-full md:w-auto flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadMonthlyPdf()}
+                    disabled={generatingPdf}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-indigo-950 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <FileText size={18} />
+                    <span>{generatingPdf ? 'Generando PDF Oficial...' : 'Descargar Reporte Mensual (PDF)'}</span>
+                  </button>
+                </div>
+              </div>
+
               {/* VIP Promotion */}
               {!profesionalInfo?.isVip && (
                 <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800 shadow-sm">
@@ -591,7 +651,23 @@ export const ProfessionalDashboard: React.FC = () => {
 
           {activeTab === 'estadisticas' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Estadísticas Detalladas</h2>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Estadísticas Detalladas</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Análisis de rendimiento, búsquedas bahienses y conversión en WhatsApp.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadMonthlyPdf()}
+                  disabled={generatingPdf}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                >
+                  <FileDown size={16} />
+                  <span>{generatingPdf ? 'Generando PDF...' : 'Exportar Reporte Mensual (PDF)'}</span>
+                </button>
+              </div>
               
               <ProfessionalWeeklyPerformanceChart 
                 professional={currentUser} 

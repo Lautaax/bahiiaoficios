@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
@@ -82,26 +82,78 @@ export const AdminDashboard: React.FC = () => {
   }, [currentUser, navigate]);
 
   const handleVerifyIdentity = async (userId: string, currentStatus: boolean) => {
-    if (!window.confirm(`¿Estás seguro de que quieres ${currentStatus ? 'quitar la verificación de identidad' : 'verificar la identidad'} de este profesional?`)) return;
-    
+    const newStatus = !currentStatus;
     try {
-      await updateDoc(doc(db, 'usuarios', userId), {
-        'profesionalInfo.isVerified': !currentStatus
+      const userRef = doc(db, 'usuarios', userId);
+      await setDoc(userRef, {
+        isVerified: newStatus,
+        profesionalInfo: {
+          isVerified: newStatus
+        }
+      }, { merge: true });
+
+      setUsers(prevUsers => prevUsers.map(u => {
+        if (u.uid === userId) {
+          const updatedInfo = u.profesionalInfo ? { ...u.profesionalInfo, isVerified: newStatus } : { isVerified: newStatus } as any;
+          return {
+            ...u,
+            isVerified: newStatus,
+            profesionalInfo: updatedInfo
+          };
+        }
+        return u;
+      }));
+
+      setViewingDni(prev => {
+        if (prev && prev.uid === userId) {
+          return {
+            ...prev,
+            isVerified: newStatus,
+            profesionalInfo: prev.profesionalInfo ? { ...prev.profesionalInfo, isVerified: newStatus } : { isVerified: newStatus } as any
+          };
+        }
+        return prev;
       });
-      setUsers(users.map(u => u.uid === userId && u.profesionalInfo ? { ...u, profesionalInfo: { ...u.profesionalInfo, isVerified: !currentStatus } } : u));
     } catch (error) {
-      console.error("Error updating verification:", error);
-      alert("Error al actualizar la verificación.");
+      console.error("Error updating identity verification:", error);
     }
   };
 
   const handleToggleMatricula = async (userId: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
     try {
-      await updateDoc(doc(db, 'usuarios', userId), {
-        'profesionalInfo.matriculaVerified': !currentStatus,
-        'profesionalInfo.matriculado': !currentStatus
+      const userRef = doc(db, 'usuarios', userId);
+      await setDoc(userRef, {
+        profesionalInfo: {
+          matriculaVerified: newStatus,
+          matriculado: newStatus
+        }
+      }, { merge: true });
+
+      setUsers(prevUsers => prevUsers.map(u => {
+        if (u.uid === userId) {
+          const updatedInfo = u.profesionalInfo ? { ...u.profesionalInfo, matriculaVerified: newStatus, matriculado: newStatus } : { matriculaVerified: newStatus, matriculado: newStatus } as any;
+          return {
+            ...u,
+            profesionalInfo: updatedInfo
+          };
+        }
+        return u;
+      }));
+
+      setViewingDni(prev => {
+        if (prev && prev.uid === userId) {
+          return {
+            ...prev,
+            profesionalInfo: prev.profesionalInfo ? {
+              ...prev.profesionalInfo,
+              matriculaVerified: newStatus,
+              matriculado: newStatus
+            } : { matriculaVerified: newStatus, matriculado: newStatus } as any
+          };
+        }
+        return prev;
       });
-      setUsers(users.map(u => u.uid === userId && u.profesionalInfo ? { ...u, profesionalInfo: { ...u.profesionalInfo, matriculaVerified: !currentStatus, matriculado: !currentStatus } } : u));
     } catch (error) {
       console.error("Error toggling matricula:", error);
     }

@@ -25,6 +25,8 @@ import { JobDetailModal } from './JobDetailModal';
 import { CachedImage } from './CachedImage';
 import { triggerNotificationPermissionPrompt } from './NotificationPermissionModal';
 import { NeighborhoodWhatsAppShareModal } from './NeighborhoodWhatsAppShareModal';
+import { QuoteMediaUploader } from './QuoteMediaUploader';
+import { CompressedMediaItem } from '../utils/mediaCompressor';
 
 const POPULAR_RUBROS = [
   'Electricista', 'Plomero', 'Gasista', 'Pintor', 'Albañil', 
@@ -73,6 +75,7 @@ export const TrabajosSolicitados: React.FC = () => {
     clienteNombre: currentUser?.nombre || '',
     clienteTelefono: currentUser?.profesionalInfo?.telefono || ''
   });
+  const [createMediaList, setCreateMediaList] = useState<CompressedMediaItem[]>([]);
 
   // Modal: Detalle Completo de Trabajo
   const [selectedJobForDetail, setSelectedJobForDetail] = useState<JobPost | null>(null);
@@ -198,6 +201,14 @@ export const TrabajosSolicitados: React.FC = () => {
         clienteEmail: currentUser.email || '',
         clienteTelefono: (newJob.clienteTelefono || currentUser.profesionalInfo?.telefono || '').trim(),
         clienteFoto: currentUser.fotoUrl || '',
+        fotos: createMediaList.filter(m => m.type === 'foto').map(m => m.url),
+        videos: createMediaList.filter(m => m.type === 'video').map(m => ({
+          url: m.url,
+          posterUrl: m.posterUrl,
+          duration: m.duration,
+          expiresAt: m.expiresAt
+        })),
+        archivosAdjuntos: createMediaList,
         fechaCreacion: serverTimestamp(),
         estado: 'abierto',
         presupuestos: []
@@ -217,6 +228,7 @@ export const TrabajosSolicitados: React.FC = () => {
       setTimeout(() => {
         setCreateSuccess(false);
         setShowCreateModal(false);
+        setCreateMediaList([]);
         setNewJob({
           titulo: '',
           rubro: PROFESSIONS[0]?.name || 'Electricista',
@@ -1267,6 +1279,15 @@ export const TrabajosSolicitados: React.FC = () => {
                     placeholder="Detallá el arreglo: ¿Qué falla presenta? ¿Contás con los repuestos/materiales o debe incluirlos el profesional? Indicá dimensiones aproximadas si corresponde..."
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
                   ></textarea>
+                </div>
+
+                {/* Adjuntar fotos y videos cortos con compresión y auto-borrado a 1 mes */}
+                <div className="pt-1">
+                  <QuoteMediaUploader
+                    mediaList={createMediaList}
+                    onChange={setCreateMediaList}
+                    maxFiles={5}
+                  />
                 </div>
 
                 {/* Datos de Contacto de la cuenta autenticada */}
