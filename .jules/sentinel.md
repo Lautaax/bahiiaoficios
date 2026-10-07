@@ -1,0 +1,4 @@
+## 2026-03-22 - Missing Authentication on Server-Side Admin API Routes
+**Vulnerability:** `/api/admin/*` endpoints (such as `/api/admin/toggle-vip`, `/api/admin/ai-optimize`, `/api/admin/daily-churn-audit`, `/api/admin/category-promotion-insights`) were exposed without verifying caller authentication or admin authorization headers, allowing any unauthenticated user to trigger administrative actions or grant/revoke VIP privileges.
+**Learning:** API routes implemented in server middleware were assuming client-side route guards or direct database rules were sufficient, leaving Express API routes completely unauthenticated.
+**Prevention:** Always implement an Express authentication and authorization middleware (e.g. `verifyAdminToken`) on all `/api/admin/*` routes to verify Firebase ID tokens (`admin.auth().verifyIdToken`) and check admin role claims/database roles before executing privileged server operations.
