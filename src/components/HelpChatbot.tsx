@@ -103,7 +103,12 @@ export const HelpChatbot: React.FC = () => {
                   <p className="text-[10px] opacity-80">Bahia Oficios AI</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+              <button
+                onClick={() => setIsOpen(false)}
+                aria-label="Cerrar chat de asistencia"
+                title="Cerrar chat"
+                className="hover:bg-white/20 p-1 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -176,7 +181,9 @@ export const HelpChatbot: React.FC = () => {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors"
+                  aria-label="Enviar mensaje"
+                  title="Enviar mensaje"
+                  className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <Send size={20} />
                 </button>
@@ -188,7 +195,10 @@ export const HelpChatbot: React.FC = () => {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center gap-2 ${isOpen ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-white' : 'bg-indigo-600 text-white'}`}
+        aria-label={isOpen ? "Cerrar asistente virtual" : "Abrir asistente virtual de ayuda"}
+        aria-expanded={isOpen}
+        title={isOpen ? "Cerrar asistente virtual" : "Abrir asistente virtual"}
+        className={`p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isOpen ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-white' : 'bg-indigo-600 text-white'}`}
       >
         {isOpen ? <X size={24} /> : (
           <>
