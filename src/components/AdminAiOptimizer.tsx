@@ -16,6 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { AdminAnalyticsReport } from '../services/analyticsService';
+import { auth } from '../firebase';
 
 interface AdminAiOptimizerProps {
   analytics: AdminAnalyticsReport;
@@ -56,9 +57,13 @@ export const AdminAiOptimizer: React.FC<AdminAiOptimizerProps> = ({
   const runAudit = async () => {
     setLoading(true);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/ai-optimize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+        },
         body: JSON.stringify({
           metrics: {
             traffic: analytics.traffic,

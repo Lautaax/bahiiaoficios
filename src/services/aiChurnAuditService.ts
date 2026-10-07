@@ -1,6 +1,6 @@
 import { ChurnAuditReport, ChurnRiskAlert, User } from '../types';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { sendPushNotification } from '../utils/notifications';
 
 export async function getDailyChurnAudit(
@@ -105,9 +105,13 @@ export async function getDailyChurnAudit(
     });
 
     // 3. Post to backend to run Gemini
+    const idToken = await auth.currentUser?.getIdToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+
     const res = await fetch(`/api/admin/daily-churn-audit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         force,
         prosData,
@@ -136,7 +140,13 @@ export async function getDailyChurnAudit(
     return { fromCache: data.fromCache, audit };
   } catch (err: any) {
     console.warn('[aiChurnAuditService] POST with data failed, trying fallback GET:', err);
-    const fallbackRes = await fetch(`/api/admin/daily-churn-audit${force ? '?force=true' : ''}`);
+    const idTokenFallback = await auth.currentUser?.getIdToken();
+    const fallbackHeaders: Record<string, string> = {};
+    if (idTokenFallback) fallbackHeaders['Authorization'] = `Bearer ${idTokenFallback}`;
+
+    const fallbackRes = await fetch(`/api/admin/daily-churn-audit${force ? '?force=true' : ''}`, {
+      headers: fallbackHeaders
+    });
     if (fallbackRes.ok) {
       return await fallbackRes.json();
     }

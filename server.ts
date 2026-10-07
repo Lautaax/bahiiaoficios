@@ -378,6 +378,53 @@ async function startServer() {
     }
   });
 
+  // Admin Verification Middleware
+  // Security protection for all /api/admin/* endpoints
+  app.use("/api/admin", async (req, res, next) => {
+    if (!admin.apps.length || !isServerFirestoreAvailable) {
+      // Container running in client-database mode without server credentials
+      return next();
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Authentication required: missing Bearer token" });
+    }
+
+    const idToken = authHeader.substring(7);
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const sDb = getServerDb();
+
+      let isAdminUser = false;
+      if (
+        decodedToken.email === "lautaroj.aguilera@gmail.com" ||
+        decodedToken.admin === true ||
+        (decodedToken as any).rol === "admin"
+      ) {
+        isAdminUser = true;
+      } else if (sDb) {
+        const userDoc = await sDb.collection('usuarios').doc(decodedToken.uid).get();
+        if (userDoc.exists) {
+          const uData = userDoc.data();
+          if (uData?.isAdmin === true || uData?.rol === "admin") {
+            isAdminUser = true;
+          }
+        }
+      }
+
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Access denied: Admin privileges required" });
+      }
+
+      (req as any).user = decodedToken;
+      next();
+    } catch (error: any) {
+      console.error("Admin verification token error:", error.message);
+      return res.status(401).json({ error: "Invalid or expired authorization token" });
+    }
+  });
+
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
