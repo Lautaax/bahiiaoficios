@@ -378,9 +378,58 @@ async function startServer() {
     }
   });
 
+  // Helper to verify if request comes from an authenticated admin user
+  async function verifyAdminAuthorization(req: express.Request): Promise<{ isAdmin: boolean; requesterUid?: string; error?: string }> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { isAdmin: false, error: "Missing or invalid authorization token" };
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    if (!idToken) {
+      return { isAdmin: false, error: "Missing authorization token" };
+    }
+
+    if (!admin.apps.length) {
+      // Fail closed when Firebase Admin SDK is not initialized
+      return { isAdmin: false, error: "Server authentication unavailable" };
+    }
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const email = decodedToken.email || '';
+      const uid = decodedToken.uid;
+
+      if (email === "lautaroj.aguilera@gmail.com" || decodedToken.admin === true) {
+        return { isAdmin: true, requesterUid: uid };
+      }
+
+      const sDb = getServerDb();
+      if (sDb) {
+        const userDoc = await sDb.collection('usuarios').doc(uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          if (userData?.isAdmin === true || userData?.rol === "admin") {
+            return { isAdmin: true, requesterUid: uid };
+          }
+        }
+      }
+
+      return { isAdmin: false, error: "Forbidden: Admin privileges required" };
+    } catch (err: any) {
+      console.warn("Authorization token verification failed:", err.message);
+      return { isAdmin: false, error: "Invalid or expired authorization token" };
+    }
+  }
+
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
+      const authResult = await verifyAdminAuthorization(req);
+      if (!authResult.isAdmin) {
+        return res.status(403).json({ error: authResult.error || "Unauthorized: Admin access required" });
+      }
+
       const { userId, isVip } = req.body || {};
       if (!userId) {
         return res.status(400).json({ error: "Missing userId" });
