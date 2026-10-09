@@ -156,10 +156,13 @@ export const Dashboard: React.FC = () => {
   // Client-side filtering for Rubro, Zona, and Search Term
   // (Doing this client-side allows for more flexible text search without Algolia/Elasticsearch)
   const filteredProfessionals = useMemo(() => {
-    return professionals.filter(p => {
-      const isCategory = PROFESSIONS.some(prof => prof.category === selectedRubro);
-      const professionsInCategory = isCategory ? PROFESSIONS.filter(prof => prof.category === selectedRubro).map(prof => prof.name) : [];
+    // ⚡ Bolt: Cache invariant variables outside the loop to prevent O(N * M) redundant calculations
+    const isCategory = PROFESSIONS.some(prof => prof.category === selectedRubro);
+    const professionsInCategory = isCategory ? PROFESSIONS.filter(prof => prof.category === selectedRubro).map(prof => prof.name) : [];
+    const normalizedZona = selectedZona && selectedZona !== 'Todas' ? normalizeString(selectedZona) : '';
+    const term = normalizeString(searchTerm.trim());
 
+    return professionals.filter(p => {
       const matchesRubro = selectedRubro === 'Todos' || 
         (isCategory ? 
           ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.some(r => professionsInCategory.includes(r))) || 
@@ -168,9 +171,9 @@ export const Dashboard: React.FC = () => {
           ((p.profesionalInfo?.rubros && p.profesionalInfo.rubros.includes(selectedRubro)) || 
           p.profesionalInfo?.rubro === selectedRubro)
         );
-      const matchesZona = !selectedZona || selectedZona === 'Todas' || (p.zona && normalizeString(p.zona).includes(normalizeString(selectedZona)));
       
-      const term = normalizeString(searchTerm.trim());
+      const matchesZona = !normalizedZona || (p.zona && normalizeString(p.zona).includes(normalizedZona));
+
       const matchesSearch = !term || 
         normalizeString(p.nombre).includes(term) || 
         normalizeString(p.profesionalInfo?.descripcion || '').includes(term) ||
