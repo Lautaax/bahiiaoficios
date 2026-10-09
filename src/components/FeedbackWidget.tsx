@@ -194,7 +194,8 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('error')}
-                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
+                          aria-pressed={tipo === 'error'}
+                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${
                             tipo === 'error'
                               ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
                               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -207,7 +208,8 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('mejora')}
-                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
+                          aria-pressed={tipo === 'mejora'}
+                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                             tipo === 'mejora'
                               ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20'
                               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -220,7 +222,8 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('calificacion')}
-                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
+                          aria-pressed={tipo === 'calificacion'}
+                          className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
                             tipo === 'calificacion'
                               ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20'
                               : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -251,10 +254,11 @@ export const FeedbackWidget: React.FC = () => {
                           <button
                             type="button"
                             key={star}
+                            aria-label={`${star} estrella${star > 1 ? 's' : ''} de 5`}
                             onClick={() => setRating(star)}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(null)}
-                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer"
+                            className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg"
                           >
                             <Star
                               size={24}
