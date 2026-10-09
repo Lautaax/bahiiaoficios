@@ -381,12 +381,45 @@ async function startServer() {
   // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
+      // Security Check: Verify Firebase ID Token and Admin Role
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Unauthorized: Missing or invalid authorization token" });
+      }
+
+      const idToken = authHeader.split('Bearer ')[1];
+      let decodedToken: admin.auth.DecodedIdToken;
+      try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+      } catch (authErr) {
+        console.error("Token verification failed in /api/admin/toggle-vip:", authErr);
+        return res.status(401).json({ error: "Unauthorized: Invalid token" });
+      }
+
+      const sDb = getServerDb();
+      let isAdminUser = decodedToken.email === 'lautaroj.aguilera@gmail.com' || decodedToken.admin === true;
+
+      if (!isAdminUser && sDb) {
+        try {
+          const requesterDoc = await sDb.collection('usuarios').doc(decodedToken.uid).get();
+          if (requesterDoc.exists) {
+            const reqData = requesterDoc.data();
+            isAdminUser = reqData?.isAdmin === true || reqData?.rol === 'admin';
+          }
+        } catch (dbAuthErr) {
+          console.warn("Error checking admin status in Firestore:", dbAuthErr);
+        }
+      }
+
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Forbidden: Admin privileges required" });
+      }
+
       const { userId, isVip } = req.body || {};
       if (!userId) {
         return res.status(400).json({ error: "Missing userId" });
       }
 
-      const sDb = getServerDb();
       if (sDb) {
         const updateData: any = {
           isVip: Boolean(isVip),
