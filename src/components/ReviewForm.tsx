@@ -145,7 +145,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ profesionalId, profesion
               <button
                 key={star}
                 type="button"
-                className="focus:outline-none transition-transform hover:scale-110"
+                aria-label={`${star} estrella${star > 1 ? 's' : ''} de 5`}
+                className="p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-md transition-transform hover:scale-110"
                 onMouseEnter={() => setHoverRating(star)}
                 onMouseLeave={() => setHoverRating(0)}
                 onClick={() => setRating(star)}
