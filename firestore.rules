@@ -31,21 +31,8 @@ service cloud.firestore {
       // User can create their own profile during signup
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       
-      // User can update their own data, Admins have full access,
-      // and safe tracking & status updates are allowed without permission errors
-      allow update: if isOwner(userId) || 
-                    isAdmin() ||
-                    (
-                      request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                        'profesionalInfo',
-                        'isVip',
-                        'updatedAt',
-                        'fcmToken',
-                        'fcmTokens',
-                        'fcmPushEnabled',
-                        'fcmUpdatedAt'
-                      ])
-                    );
+      // User can update their own data, Admins have full access
+      allow update: if isOwner(userId) || isAdmin();
                     
       // Only Admins can delete users
       allow delete: if isAdmin();
@@ -53,7 +40,7 @@ service cloud.firestore {
       // Subcollection: Professional Stats
       match /stats/{statId} {
         allow read: if isOwner(userId) || isAdmin() || isAuthenticated();
-        allow write: if true;
+        allow write: if isOwner(userId) || isAdmin();
       }
     }
 
