@@ -661,21 +661,21 @@ export const TrabajosSolicitados: React.FC = () => {
             {selectedRubro !== 'todos' && (
               <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md font-medium">
                 Oficio: {selectedRubro}
-                <button onClick={() => setSelectedRubro('todos')} className="hover:text-red-500"><X size={12} /></button>
+                <button aria-label="Quitar filtro de oficio" onClick={() => setSelectedRubro('todos')} className="hover:text-red-500"><X size={12} /></button>
               </span>
             )}
 
             {selectedZona !== 'todas' && (
               <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md font-medium">
                 Zona: {selectedZona}
-                <button onClick={() => setSelectedZona('todas')} className="hover:text-red-500"><X size={12} /></button>
+                <button aria-label="Quitar filtro de zona" onClick={() => setSelectedZona('todas')} className="hover:text-red-500"><X size={12} /></button>
               </span>
             )}
 
             {selectedUrgencia !== 'todas' && (
               <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md font-medium">
                 Urgencia: {selectedUrgencia}
-                <button onClick={() => setSelectedUrgencia('todas')} className="hover:text-red-500"><X size={12} /></button>
+                <button aria-label="Quitar filtro de urgencia" onClick={() => setSelectedUrgencia('todas')} className="hover:text-red-500"><X size={12} /></button>
               </span>
             )}
           </div>

@@ -964,8 +964,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                   {existingWorkImages.map((item, idx) => (
                     <div key={`ex-${idx}`} className="group relative aspect-square rounded-xl overflow-hidden border border-gray-200">
                       <img src={item.url} className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => removeExistingWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
-                      <button type="button" onClick={() => setFormData({...formData, fotoPortada: item.url})} className={`absolute bottom-1 right-1 p-1 rounded-full ${formData.fotoPortada === item.url ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 opacity-0 group-hover:opacity-100'}`}><Star size={12} fill={formData.fotoPortada === item.url ? "currentColor" : "none"} /></button>
+                      <button type="button" aria-label="Eliminar foto de trabajos anteriores" onClick={() => removeExistingWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
+                      <button type="button" aria-label="Seleccionar como foto de portada" onClick={() => setFormData({...formData, fotoPortada: item.url})} className={`absolute bottom-1 right-1 p-1 rounded-full ${formData.fotoPortada === item.url ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 opacity-0 group-hover:opacity-100'}`}><Star size={12} fill={formData.fotoPortada === item.url ? "currentColor" : "none"} /></button>
                     </div>
                   ))}
                   {newWorkPreviews.map((url, idx) => {
@@ -985,7 +985,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                             <span className="text-[10px] font-bold">{Math.round(progress)}%</span>
                           </div>
                         )}
-                        <button type="button" onClick={() => removeNewWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
+                        <button type="button" aria-label="Eliminar foto nueva" onClick={() => removeNewWorkImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
                       </div>
                     );
                   })}
@@ -999,7 +999,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialSection }) => {
                   <div key={idx} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
                     <input type="text" value={item.servicio} onChange={(e) => updatePriceReference(idx, 'servicio', e.target.value)} placeholder="Servicio" className="flex-1 px-4 py-2 rounded-xl border" />
                     <input type="text" value={item.precio} onChange={(e) => updatePriceReference(idx, 'precio', e.target.value)} placeholder="Precio" className="w-32 px-4 py-2 rounded-xl border" />
-                    <button type="button" onClick={() => removePriceReference(idx)} className="text-red-500"><Trash2 size={20} /></button>
+                    <button type="button" aria-label="Eliminar precio de referencia" onClick={() => removePriceReference(idx)} className="text-red-500"><Trash2 size={20} /></button>
                   </div>
                 ))}
                 <button type="button" onClick={addPriceReference} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-500 hover:text-indigo-600 transition-all font-bold">+ Agregar Precio</button>
