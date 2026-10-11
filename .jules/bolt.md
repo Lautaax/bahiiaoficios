@@ -1,0 +1,3 @@
+## 2024-05-15 - Prevent Unnecessary Re-renders in Large Lists
+**Learning:** In list views that render many complex components (like `ProfessionalCard` in `Dashboard` and `Search`), if the list item component isn't memoized, it will re-render completely every time the parent component state changes (e.g., when filtering, changing tabs, or updating unrelated states).
+**Action:** Always wrap highly-repeated list item components in `React.memo` (especially when they only depend on primitive props or simple objects that don't change often) to prevent massive re-render waterfalls in grid/list layouts.
