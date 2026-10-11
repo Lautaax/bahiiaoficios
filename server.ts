@@ -53,6 +53,41 @@ function getServerDb(): admin.firestore.Firestore | null {
   return isServerFirestoreAvailable && serverDb ? serverDb : null;
 }
 
+// Security: Helper to verify admin authorization for sensitive endpoints
+async function verifyAdminAuth(req: express.Request): Promise<boolean> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+  const token = authHeader.split('Bearer ')[1];
+  if (!token) return false;
+
+  try {
+    if (admin.apps.length > 0) {
+      const decoded = await admin.auth().verifyIdToken(token);
+      if (
+        decoded.email === 'lautaroj.aguilera@gmail.com' ||
+        decoded.admin === true
+      ) {
+        return true;
+      }
+      const sDb = getServerDb();
+      if (sDb) {
+        const userDoc = await sDb.collection('usuarios').doc(decoded.uid).get();
+        if (userDoc.exists) {
+          const uData = userDoc.data();
+          if (uData?.isAdmin === true || uData?.rol === 'admin') {
+            return true;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Admin verification error:", error);
+  }
+  return false;
+}
+
 // Mercado Pago Client Management
 let mpClient: MercadoPagoConfig | null = null;
 let mpAccessToken: string | null = null;
@@ -388,6 +423,12 @@ async function startServer() {
 
       const sDb = getServerDb();
       if (sDb) {
+        // Security check: Verify admin authorization before making administrative changes
+        const isAdmin = await verifyAdminAuth(req);
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Unauthorized. Admin privileges required." });
+        }
+
         const updateData: any = {
           isVip: Boolean(isVip),
           'profesionalInfo.isVip': Boolean(isVip),

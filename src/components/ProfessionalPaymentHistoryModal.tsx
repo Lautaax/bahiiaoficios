@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, PaymentRecord } from '../types';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { 
   X, 
   CreditCard, 
@@ -114,10 +114,14 @@ export const ProfessionalPaymentHistoryModal: React.FC<ProfessionalPaymentHistor
         });
       }
 
-      // Also call server API in background
+      // Also call server API in background with auth token
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
       fetch('/api/admin/toggle-vip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ userId: currentUserData.uid, isVip: false })
       }).catch(() => {});
 
