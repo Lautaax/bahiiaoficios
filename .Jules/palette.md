@@ -1,0 +1,1 @@
+## 2024-05-24 - Accessibility labels on Chatbot\n**Learning:** Added aria-label to HelpChatbot for better screen reader accessibility.\n**Action:** Always ensure icon-only buttons have an accessible label.
