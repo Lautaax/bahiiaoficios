@@ -194,6 +194,7 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('error')}
+                          aria-pressed={tipo === 'error'}
                           className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
                             tipo === 'error'
                               ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
@@ -207,6 +208,7 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('mejora')}
+                          aria-pressed={tipo === 'mejora'}
                           className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
                             tipo === 'mejora'
                               ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20'
@@ -220,6 +222,7 @@ export const FeedbackWidget: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setTipo('calificacion')}
+                          aria-pressed={tipo === 'calificacion'}
                           className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 ${
                             tipo === 'calificacion'
                               ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20'
@@ -246,7 +249,7 @@ export const FeedbackWidget: React.FC = () => {
                           {rating === 1 && 'Necesita mejorar'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" role="group" aria-label="Calificación de 1 a 5 estrellas">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             type="button"
@@ -254,6 +257,8 @@ export const FeedbackWidget: React.FC = () => {
                             onClick={() => setRating(star)}
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(null)}
+                            aria-label={`Calificar con ${star} de 5 estrellas`}
+                            aria-pressed={star <= rating}
                             className="p-1 text-slate-300 dark:text-slate-600 hover:scale-110 transition-transform cursor-pointer"
                           >
                             <Star
