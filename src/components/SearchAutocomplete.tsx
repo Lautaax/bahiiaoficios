@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, User as UserIcon, Star, Crown, ChevronRight, Briefcase, Clock, X } from 'lucide-react';
 import { PROFESSIONS } from '../constants';
@@ -42,30 +42,34 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
 
   const cleanTerm = value.trim().toLowerCase();
 
-  // Filter professions
-  const matchingProfessions = cleanTerm.length > 0
-    ? PROFESSIONS.filter(p => 
-        p.name.toLowerCase().includes(cleanTerm) ||
-        p.category.toLowerCase().includes(cleanTerm)
-      ).slice(0, 5)
-    : [];
+  // ⚡ Bolt: Memoize filtered professions to prevent unnecessary recalcs on focus/keyboard nav
+  const matchingProfessions = useMemo(() => {
+    return cleanTerm.length > 0
+      ? PROFESSIONS.filter(p =>
+          p.name.toLowerCase().includes(cleanTerm) ||
+          p.category.toLowerCase().includes(cleanTerm)
+        ).slice(0, 5)
+      : [];
+  }, [cleanTerm]);
 
-  // Filter professionals
-  const matchingProfessionals = cleanTerm.length > 0
-    ? professionals.filter(pro => {
-        const nameMatches = pro.nombre.toLowerCase().includes(cleanTerm);
-        const tradeMatches = (pro.profesionalInfo?.rubro || '').toLowerCase().includes(cleanTerm);
-        const tradesMatches = (pro.profesionalInfo?.rubros || []).some(r => r.toLowerCase().includes(cleanTerm));
-        const businessMatches = (pro.profesionalInfo?.nombreNegocio || '').toLowerCase().includes(cleanTerm);
-        return nameMatches || tradeMatches || tradesMatches || businessMatches;
-      }).slice(0, 5)
-    : [];
+  // ⚡ Bolt: Memoize filtered professionals to avoid expensive string matching on every render
+  const matchingProfessionals = useMemo(() => {
+    return cleanTerm.length > 0
+      ? professionals.filter(pro => {
+          const nameMatches = pro.nombre.toLowerCase().includes(cleanTerm);
+          const tradeMatches = (pro.profesionalInfo?.rubro || '').toLowerCase().includes(cleanTerm);
+          const tradesMatches = (pro.profesionalInfo?.rubros || []).some(r => r.toLowerCase().includes(cleanTerm));
+          const businessMatches = (pro.profesionalInfo?.nombreNegocio || '').toLowerCase().includes(cleanTerm);
+          return nameMatches || tradeMatches || tradesMatches || businessMatches;
+        }).slice(0, 5)
+      : [];
+  }, [cleanTerm, professionals]);
 
-  // Flattened items for keyboard navigation
-  const allSuggestions = [
+  // ⚡ Bolt: Memoize the flattened list for keyboard navigation
+  const allSuggestions = useMemo(() => [
     ...matchingProfessions.map(p => ({ type: 'profession' as const, data: p })),
     ...matchingProfessionals.map(pro => ({ type: 'professional' as const, data: pro }))
-  ];
+  ], [matchingProfessions, matchingProfessionals]);
 
   // Close on outside click
   useEffect(() => {

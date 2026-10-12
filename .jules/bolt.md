@@ -1,0 +1,3 @@
+## 2024-10-12 - Prevented Redundant String Matching on Navigation
+**Learning:** During focus or keyboard navigation on autocomplete components, if state changes (like `highlightedIndex` or `isOpen`) the component re-renders. Unmemoized array `.filter()` operations containing case conversion (`.toLowerCase()`) and string matching (`.includes()`) run on every re-render and become a performance bottleneck on large sets, blocking the main UI thread and degrading input responsiveness.
+**Action:** Always memoize derived filtered lists (e.g., using `useMemo`) based exclusively on changes to the search input text and source data dependencies, preventing full recalculations when merely traversing search suggestions.
