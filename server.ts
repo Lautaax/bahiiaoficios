@@ -53,6 +53,39 @@ function getServerDb(): admin.firestore.Firestore | null {
   return isServerFirestoreAvailable && serverDb ? serverDb : null;
 }
 
+/**
+ * Security Helper: Verify that request comes from an authenticated admin.
+ * Prevents unauthorized privilege escalation on administrative endpoints.
+ */
+export async function verifyAdminAuth(req: express.Request): Promise<boolean> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+  const token = authHeader.substring(7).trim();
+  if (!token) return false;
+
+  if (admin.apps.length > 0) {
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      if (decodedToken.email === 'lautaroj.aguilera@gmail.com' || decodedToken.admin === true) {
+        return true;
+      }
+      const sDb = getServerDb();
+      if (sDb) {
+        const userDoc = await sDb.collection('usuarios').doc(decodedToken.uid).get();
+        if (userDoc.exists && userDoc.data()?.isAdmin === true) {
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn("[Security] Admin token verification failed:", err);
+      return false;
+    }
+  }
+  return false;
+}
+
 // Mercado Pago Client Management
 let mpClient: MercadoPagoConfig | null = null;
 let mpAccessToken: string | null = null;
@@ -378,7 +411,7 @@ async function startServer() {
     }
   });
 
-  // Admin Toggle VIP API (Manual removal or activation with guaranteed server persistence)
+  // Admin Toggle VIP API (Secured: requires admin authorization when server Firestore is active)
   app.post("/api/admin/toggle-vip", async (req, res) => {
     try {
       const { userId, isVip } = req.body || {};
@@ -388,6 +421,12 @@ async function startServer() {
 
       const sDb = getServerDb();
       if (sDb) {
+        // Security Check: Verify admin token before performing administrative database mutations
+        const isAdmin = await verifyAdminAuth(req);
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Forbidden: Admin authorization required" });
+        }
+
         const updateData: any = {
           isVip: Boolean(isVip),
           'profesionalInfo.isVip': Boolean(isVip),
@@ -411,7 +450,7 @@ async function startServer() {
       return res.json({ success: true, message: "Client-side update authorized" });
     } catch (err: any) {
       console.error("Server /api/admin/toggle-vip error:", err);
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -2032,4 +2071,6 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
   });
 }
 
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
