@@ -661,21 +661,21 @@ export const TrabajosSolicitados: React.FC = () => {
             {selectedRubro !== 'todos' && (
               <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md font-medium">
                 Oficio: {selectedRubro}
-                <button onClick={() => setSelectedRubro('todos')} className="hover:text-red-500"><X size={12} /></button>
+                <button aria-label="Eliminar filtro de oficio" onClick={() => setSelectedRubro('todos')} className="hover:text-red-500 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><X size={12} /></button>
               </span>
             )}
 
             {selectedZona !== 'todas' && (
               <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md font-medium">
                 Zona: {selectedZona}
-                <button onClick={() => setSelectedZona('todas')} className="hover:text-red-500"><X size={12} /></button>
+                <button aria-label="Eliminar filtro de zona" onClick={() => setSelectedZona('todas')} className="hover:text-red-500 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><X size={12} /></button>
               </span>
             )}
 
             {selectedUrgencia !== 'todas' && (
               <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md font-medium">
                 Urgencia: {selectedUrgencia}
-                <button onClick={() => setSelectedUrgencia('todas')} className="hover:text-red-500"><X size={12} /></button>
+                <button aria-label="Eliminar filtro de urgencia" onClick={() => setSelectedUrgencia('todas')} className="hover:text-red-500 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><X size={12} /></button>
               </span>
             )}
           </div>
@@ -984,7 +984,7 @@ export const TrabajosSolicitados: React.FC = () => {
                 setShowVipEarlyModal(false);
                 setVipTargetJob(null);
               }}
-              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="Cerrar modal"
             >
               <X size={18} />
             </button>
@@ -1112,7 +1112,7 @@ export const TrabajosSolicitados: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowCreateModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="Cerrar modal"
             >
               <X size={20} />
             </button>
@@ -1349,7 +1349,7 @@ export const TrabajosSolicitados: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 relative animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <button
               onClick={() => setViewingProposalsJob(null)}
-              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="Cerrar modal"
             >
               <X size={20} />
             </button>
@@ -1584,7 +1584,7 @@ export const TrabajosSolicitados: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 text-center relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowClientAuthNotice(false)}
-              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="Cerrar modal"
             >
               <X size={20} />
             </button>
